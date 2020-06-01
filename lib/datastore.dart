@@ -47,7 +47,7 @@ abstract class Datastore extends State<DatastoreWidget> {
     return _metadataBox.get(key, defaultValue: defaultValue);
   }
 
-  putMetadata<E>(String key, E value) {
+  Future<void> putMetadata<E>(String key, E value) {
     return _metadataBox.put(key, value);
   }
 
@@ -74,7 +74,7 @@ abstract class Datastore extends State<DatastoreWidget> {
   Future<void> initializeHive();
 
   Future<void> deleteEverything() async {
-    widget.logger.log('Clearing Data');
+    widget.logger.log('Cleating all data');
     await Hive.deleteFromDisk();
   }
 
@@ -152,7 +152,7 @@ abstract class Datastore extends State<DatastoreWidget> {
       await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
     }
     if (response.containsKey('data')) {
-      parseData(response['data'] as Map<String, dynamic>);
+      await parseData(response['data'] as Map<String, dynamic>);
     }
     if (response.containsKey('debug')) {
       widget.logger.log(response['debug'].toString());
@@ -160,7 +160,7 @@ abstract class Datastore extends State<DatastoreWidget> {
     debugPrint('Response parsed');
   }
 
-  void parseData(Map<String, dynamic> data);
+  Future<void> parseData(Map<String, dynamic> data);
 
   @override
   Widget build(BuildContext context) => _InheritedDatastore(
