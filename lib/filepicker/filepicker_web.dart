@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:html';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 
 import 'picked_file_data.dart';
 
@@ -19,7 +20,7 @@ Future<PickedFileData> _pickFile(BuildContext context) {
     for (final file in files) {
       final reader = new FileReader();
       reader.onLoad.listen((e2) {
-        completer.complete(new PickedFileData(reader.result, file.name));
+        completer.complete(new PickedFileData(reader.result, path.extension(file.name)));
       });
       reader.onError.listen((e2) {
         completer.completeError(e2);

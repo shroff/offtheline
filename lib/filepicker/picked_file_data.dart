@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:path/path.dart' as path;
-
 const _imageExts = [
   '.jpg',
   '.jpeg',
@@ -22,7 +20,7 @@ class PickedFileData {
   final Uint8List contents;
   final String ext;
 
-  PickedFileData(this.contents, String name) : this.ext = path.extension(name);
+  PickedFileData(this.contents, this.ext);
 
   bool get isKnownImageExt => _imageExts.contains(ext);
 }

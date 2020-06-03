@@ -31,7 +31,7 @@ class _InheritedDatastore extends InheritedWidget {
 }
 
 abstract class Datastore extends State<DatastoreWidget> {
-  final _completer = Completer<void>();
+  var _completer = Completer<void>();
   Future<void> get initialized => _completer.future;
   bool get isInitialized => _completer.isCompleted;
   bool _initializationStarted = false;
@@ -83,6 +83,7 @@ abstract class Datastore extends State<DatastoreWidget> {
     await initialized;
     debugPrint('Clearing datastore');
 
+    _completer = Completer<void>();
     await _metadataBox.deleteFromDisk();
     _metadataBox = await Hive.openBox(_boxNameMetadata);
     await openBoxes(clear: true);

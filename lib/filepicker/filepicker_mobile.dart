@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:path/path.dart';
+import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -37,7 +37,7 @@ Future<PickedFileData> _pickFile(BuildContext context) async {
       ? null
       : file
           .readAsBytes()
-          .then((value) => new PickedFileData(value, basename(file.path)));
+          .then((value) => new PickedFileData(value, path.extension(file.path)));
 }
 
 Future<PickedFileData> _capturePhoto(BuildContext context) {
@@ -45,11 +45,11 @@ Future<PickedFileData> _capturePhoto(BuildContext context) {
       .push(MaterialPageRoute(
     builder: (context) => PhotoCapturePage(),
   ))
-      .then((path) {
-    return path == null
+      .then((filePath) {
+    return filePath == null
         ? null
-        : File(path)
+        : File(filePath)
             .readAsBytes()
-            .then((value) => new PickedFileData(value, basename(path)));
+            .then((value) => new PickedFileData(value, path.extension(filePath)));
   });
 }
