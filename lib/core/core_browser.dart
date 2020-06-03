@@ -19,12 +19,12 @@ class _ProxiedLocalStorage extends Storage {
   }
 
   @override
-  Future<dynamic> read({String key}) async {
+  Future<String> read({String key}) async {
     return storage.getItem(key);
   }
 
   @override
-  Future<void> write({String key, dynamic value}) async {
+  Future<void> write({String key, String value}) async {
     return storage.setItem(key, value);
   }
 

@@ -16,12 +16,12 @@ class _ProxiedSecureStorage extends Storage {
   }
 
   @override
-  Future<dynamic> read({String key}) {
+  Future<String> read({String key}) {
     return storage.read(key: key);
   }
 
   @override
-  Future<void> write({String key, value}) {
+  Future<void> write({String key, String value}) {
     return storage.write(key: key, value: value);
   }
 

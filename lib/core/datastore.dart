@@ -32,14 +32,15 @@ class _InheritedDatastore extends InheritedWidget {
 
 abstract class Datastore extends State<DatastoreWidget> {
   final _completer = Completer<void>();
+  Future<void> get initialized => _completer.future;
+  bool get isInitialized => _completer.isCompleted;
+  bool _initializationStarted = false;
 
   BehaviorSubject<bool> _loadingSubject;
 
   ValueStream<bool> get loadingStream => _loadingSubject.stream;
 
   Box _metadataBox;
-
-  Future<void> get initialized => _completer.future;
 
   E getMetadata<E>(String key, {E defaultValue}) {
     return _metadataBox.get(key, defaultValue: defaultValue);
@@ -54,26 +55,37 @@ abstract class Datastore extends State<DatastoreWidget> {
   @override
   void initState() {
     super.initState();
-    debugPrint('Datastore Initializing');
-    _loadingSubject = BehaviorSubject.seeded(false);
     initializeAsync();
   }
 
   Future<void> initializeAsync() async {
+    if (_initializationStarted) return;
+    _initializationStarted = true;
+
+    debugPrint('Datastore Initializing');
+    _loadingSubject = BehaviorSubject.seeded(false);
     if (!kIsWeb) await Hive.initFlutter();
+    registerTypeAdapters();
+
     _metadataBox = await Hive.openBox(_boxNameMetadata);
-    await initializeHive();
+    await openBoxes();
 
     debugPrint('Datastore Ready');
     _completer.complete();
     fetchUpdates();
   }
 
-  Future<void> initializeHive();
+  void registerTypeAdapters();
 
-  Future<void> deleteEverything() async {
-    debugPrint('Cleating all data');
-    await Hive.deleteFromDisk();
+  Future<void> openBoxes({bool clear = false});
+
+  Future<void> clear() async {
+    await initialized;
+    debugPrint('Clearing datastore');
+
+    await _metadataBox.deleteFromDisk();
+    _metadataBox = await Hive.openBox(_boxNameMetadata);
+    await openBoxes(clear: true);
   }
 
   @override
@@ -144,7 +156,7 @@ abstract class Datastore extends State<DatastoreWidget> {
     });
     await initialized;
     if (clearData || response.containsKey('clearData') && response['clearData']) {
-      await deleteEverything();
+      await clear();
     }
     if (response.containsKey('session')) {
       await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);

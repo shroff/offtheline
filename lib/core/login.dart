@@ -87,6 +87,11 @@ class _InheritedLogin extends InheritedWidget {
 }
 
 class _LoginState extends State<Login> {
+  final _completer = Completer<void>();
+  Future<void> get initialized => _completer.future;
+  bool get isInitialized => _completer.isCompleted;
+  bool _initializationStarted = false;
+
   final Storage storage = createStorage();
 
   final BaseClient _client = createHttpClient();
@@ -109,34 +114,46 @@ class _LoginState extends State<Login> {
   @override
   void initState() {
     super.initState();
-    initialize().then((value) => setState(() {}));
+    initializeAsync();
   }
 
-  Future<void> initialize() async {
+  Future<void> initializeAsync() async {
+    if (_initializationStarted) return;
+    _initializationStarted = true;
     await storage.initialize();
     _serverUrl = await storage.read(key: _keyServerUrl);
     final sessionId = await storage.read(key: _keySessionId);
-    final usedIds = int.tryParse(await storage.read(key: _keyUsedIds));
-    final gid = int.tryParse(await storage.read(key: _keyGid));
-    final userId = int.tryParse(await storage.read(key: _keyUserId));
+    final gidString = await storage.read(key: _keyGid);
+    final usedIdsString = await storage.read(key: _keyUsedIds);
+    final userIdString = await storage.read(key: _keyUserId);
     final userName = await storage.read(key: _keyUserName);
-    final permissions = int.tryParse(await storage.read(key: _keyPermissions));
+    final permissionsString = await storage.read(key: _keyPermissions);
     if (serverUrl != null &&
         sessionId != null &&
-        gid != null &&
-        usedIds != null &&
-        permissions != null &&
-        userId != null) {
-      setState(() {
-        _sessionId = sessionId;
-        _gid = gid;
-        _usedIds = usedIds;
-        _userId = userId;
-        _userName = userName;
-        _permissions = permissions;
-        authHeaders['Authorization'] = 'SessionId $_sessionId';
-      });
+        gidString != null &&
+        usedIdsString != null &&
+        permissionsString != null &&
+        userIdString != null) {
+      final gid = int.tryParse(gidString);
+      final usedIds = int.tryParse(usedIdsString);
+      final userId = int.tryParse(userIdString);
+      final permissions = int.tryParse(permissionsString);
+      if (gid != null &&
+          usedIds != null &&
+          permissions != null &&
+          userId != null) {
+        setState(() {
+          _sessionId = sessionId;
+          _gid = gid;
+          _usedIds = usedIds;
+          _userId = userId;
+          _userName = userName;
+          _permissions = permissions;
+          authHeaders['Authorization'] = 'SessionId $_sessionId';
+        });
+      }
     }
+    _completer.complete();
   }
 
   void setServerUrl(Uri serverUri) async {
@@ -147,40 +164,31 @@ class _LoginState extends State<Login> {
 
   Future<String> loginWithGoogle(
       BuildContext context, String email, String idToken) async {
+    debugPrint('Logging In with Google');
     final request =
         Request('post', Uri.parse('$serverUrl/v1/login/google-id-token'));
     request.headers['Authorization'] = 'Bearer $idToken';
-    try {
-      final response = await _client.send(request);
-      if (response.statusCode == 200) {
-        _usedIds = 0;
-        await storage.write(key: _keyUsedIds, value: '0');
-        Core.datastore(context)._parseResponse(response);
-        debugPrint("Login Successful");
-
-        return null;
-      } else {
-        return response.stream.bytesToString();
-      }
-    } on Exception catch (e) {
-      if (e is SocketException) {
-        return "Server Unreachable";
-      } else {
-        return e.toString();
-      }
-    }
+    return sendLoginRequest(context, request);
   }
 
   Future<String> loginWithSessionId(
       BuildContext context, String sessionId) async {
+    debugPrint('Logging In with Session ID');
     final request = Request('get', Uri.parse('$serverUrl/v1/sync'));
     request.headers['Authorization'] = 'SessionId $sessionId';
+    return sendLoginRequest(context, request);
+  }
+
+  Future<String> sendLoginRequest(BuildContext context, Request request) async {
+    debugPrint('Clearing Data.');
+    await Core.datastore(context).clear();
+    debugPrint('Data Cleared, sending request');
     try {
       final response = await _client.send(request);
       if (response.statusCode == 200) {
         _usedIds = 0;
         await storage.write(key: _keyUsedIds, value: '0');
-        Core.datastore(context)._parseResponse(response);
+        await Core.datastore(context)._parseResponse(response);
         debugPrint("Login Successful");
 
         return null;
@@ -270,7 +278,8 @@ class _LoginState extends State<Login> {
   Future<void> signOut(BuildContext context) async {
     await storage.deleteAll();
     await storage.write(key: _keyServerUrl, value: serverUrl);
-    Core.datastore(context).deleteEverything();
+    await Core.datastore(context).clear();
+    await Core.api(context).clearQueue();
     authHeaders.remove('Authorization');
     setState(() {
       _sessionId = null;
@@ -280,7 +289,6 @@ class _LoginState extends State<Login> {
       _userId = null;
       _userName = null;
     });
-    SystemNavigator.pop().then((value) => exit(0));
   }
 
   void printSessionDetails() {

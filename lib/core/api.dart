@@ -25,6 +25,7 @@ class _InheritedApi extends InheritedWidget {
 class _ApiState extends State<Api> {
   final _completer = Completer<void>();
   Future<void> get initialized => _completer.future;
+  bool get isInitialized => _completer.isCompleted;
   bool _initializationStarted = false;
 
   Box<ApiRequest> requestQueue;
@@ -50,33 +51,41 @@ class _ApiState extends State<Api> {
   Future<void> initializeAsync() async {
     if (_initializationStarted) return;
     _initializationStarted = true;
-    debugPrint('API Waiting for Datastore');
+
+    debugPrint('API Waiting for initialization');
+    await Core.login(context).initialized;
     await Core.datastore(context).initialized;
+
     debugPrint('API Initializing');
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
     requestQueue = await Hive.openBox(_boxNameRequestQueue);
+
     debugPrint('API Ready');
     _completer.complete();
-    _updateStatus(ApiStatus.DONE);
-    sync();
+    sendNextRequest();
   }
 
-  void enqueue(ApiRequest request) async {
+  Future<void> enqueue(ApiRequest request) async {
     debugPrint('Request enqueued');
     await initialized;
-    requestQueue.add(request);
-    sync();
+    await requestQueue.add(request);
+    sendNextRequest();
   }
 
-  void deleteFirstRequest() async {
+  Future<void> deleteFirstRequest() async {
     await initialized;
     if (requestQueue.isEmpty) return;
-    requestQueue.deleteAt(0);
-    sync();
+    await requestQueue.deleteAt(0);
+    sendNextRequest();
   }
 
-  void sync() async {
+  Future<void> clearQueue() async {
+    await initialized;
+    await requestQueue.clear();
+  }
+
+  void sendNextRequest() async {
     debugPrint('Sync triggered');
     await initialized;
     if (requestQueue.isEmpty) {
@@ -88,14 +97,15 @@ class _ApiState extends State<Api> {
       debugPrint('Syncing ongoing');
       return;
     }
-    final request = requestQueue.getAt(0);
-    _updateStatus(ApiStatus.SYNCING, details: request.description);
     final login = Core.login(context);
     if (!login.isSignedIn) {
-      _updateStatus(ApiStatus.WAITING_AUTH);
+      debugPrint('API Not Signed In. Clearing');
+      await clearQueue();
+      _updateStatus(ApiStatus.DONE);
       return;
     }
-    await Core.datastore(context).initialized;
+    final request = requestQueue.getAt(0);
+    _updateStatus(ApiStatus.SYNCING, details: request.description);
 
     final queryParams = Core.datastore(context).createLastSyncParams();
     final uriBuilder =
