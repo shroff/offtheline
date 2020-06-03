@@ -1,4 +1,4 @@
-part of 'appcore.dart';
+part of 'core.dart';
 
 const _boxNameRequestQueue = 'requestQueue';
 

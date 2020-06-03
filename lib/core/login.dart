@@ -1,4 +1,4 @@
-part of 'appcore.dart';
+part of 'core.dart';
 
 const _gidShift = 10; // Must match up with the server
 const _keyServerUrl = "serverUrl";

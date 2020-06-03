@@ -1,4 +1,4 @@
-library appcore;
+library core;
 
 import 'dart:async';
 import 'dart:convert';
@@ -18,9 +18,9 @@ import 'upload_api_request.dart';
 
 import 'core_stub.dart'
 // ignore: uri_does_not_exist
-    if (dart.library.html) 'browser_core.dart'
+    if (dart.library.html) 'core_browser.dart'
 // ignore: uri_does_not_exist
-    if (dart.library.io) 'mobile_core.dart';
+    if (dart.library.io) 'core_mobile.dart';
 import 'storage.dart';
 import 'api_request.dart';
 

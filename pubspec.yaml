@@ -1,6 +1,6 @@
 name: appcore
-description: Basic Application Core using Hive
-version: 0.2.0
+description: Basic Application Core using Hive and other common components
+version: 0.3.0
 author: Abhishek Shroff
 homepage: https://kudosoft.net
 
@@ -17,6 +17,8 @@ dependencies:
   localstorage:
   rxdart: ^0.23.1
   uri:
+  image:
+  exif:
 
 dev_dependencies:
 #   flutter_test:
