@@ -21,6 +21,7 @@ dependencies:
   uri:
   image:
   exif:
+  intl:
 
 dev_dependencies:
 #   flutter_test:
