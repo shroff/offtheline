@@ -3,10 +3,9 @@ part of 'core.dart';
 const _boxNameRequestQueue = 'requestQueue';
 
 class Api extends StatefulWidget {
-  final Logger logger;
   final Widget child;
 
-  const Api({Key key, this.logger, @required this.child}) : super(key: key);
+  const Api({Key key, @required this.child}) : super(key: key);
 
   @override
   State<Api> createState() => _ApiState();
@@ -51,20 +50,20 @@ class _ApiState extends State<Api> {
   Future<void> initializeAsync() async {
     if (_initializationStarted) return;
     _initializationStarted = true;
-    widget.logger.log('API Waiting for Datastore');
+    debugPrint('API Waiting for Datastore');
     await Core.datastore(context).initialized;
-    widget.logger.log('API Initializing');
+    debugPrint('API Initializing');
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
     requestQueue = await Hive.openBox(_boxNameRequestQueue);
-    widget.logger.log('API Ready');
+    debugPrint('API Ready');
     _completer.complete();
     _updateStatus(ApiStatus.DONE);
     sync();
   }
 
   void enqueue(ApiRequest request) async {
-    widget.logger.log('Request enqueued');
+    debugPrint('Request enqueued');
     await initialized;
     requestQueue.add(request);
     sync();
@@ -78,15 +77,15 @@ class _ApiState extends State<Api> {
   }
 
   void sync() async {
-    widget.logger.log('Sync triggered');
+    debugPrint('Sync triggered');
     await initialized;
     if (requestQueue.isEmpty) {
       _updateStatus(ApiStatus.DONE);
-      widget.logger.log('Nothing to sync');
+      debugPrint('Nothing to sync');
       return;
     }
     if (_status == ApiStatus.SYNCING) {
-      widget.logger.log('Syncing ongoing');
+      debugPrint('Syncing ongoing');
       return;
     }
     final request = requestQueue.getAt(0);
@@ -128,7 +127,7 @@ class _ApiState extends State<Api> {
   }
 
   void _updateStatus(ApiStatus status, {String details}) {
-    widget.logger.log('$status: $details');
+    debugPrint('$status: $details');
     setState(() {
       _status = status;
       _statusDetails = details;

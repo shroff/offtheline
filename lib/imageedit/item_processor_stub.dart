@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'item_processor.dart';
 
 Future<Map<K, R>> processItems<K, T, R>(
@@ -7,7 +9,7 @@ Future<Map<K, R>> processItems<K, T, R>(
 ) async {
   final result = <K, R>{};
   for (final entry in items.entries) {
-    // debug.log('Processing ${entry.key}');
+    debugPrint('Processing ${entry.key}');
     result[entry.key] = await processItem(
       entry.value
     );

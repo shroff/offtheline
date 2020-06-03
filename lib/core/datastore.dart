@@ -3,13 +3,11 @@ part of 'core.dart';
 const _boxNameMetadata = 'metadata';
 
 class DatastoreWidget<T extends Datastore> extends StatefulWidget {
-  final Logger logger;
   final Widget child;
   final T Function() createDatastore;
 
   const DatastoreWidget({
     Key key,
-    this.logger,
     @required this.child,
     @required this.createDatastore,
   }) : super(key: key);
@@ -56,7 +54,7 @@ abstract class Datastore extends State<DatastoreWidget> {
   @override
   void initState() {
     super.initState();
-    widget.logger.log('Datastore Initializing');
+    debugPrint('Datastore Initializing');
     _loadingSubject = BehaviorSubject.seeded(false);
     initializeAsync();
   }
@@ -66,7 +64,7 @@ abstract class Datastore extends State<DatastoreWidget> {
     _metadataBox = await Hive.openBox(_boxNameMetadata);
     await initializeHive();
 
-    widget.logger.log('Datastore Ready');
+    debugPrint('Datastore Ready');
     _completer.complete();
     fetchUpdates();
   }
@@ -74,7 +72,7 @@ abstract class Datastore extends State<DatastoreWidget> {
   Future<void> initializeHive();
 
   Future<void> deleteEverything() async {
-    widget.logger.log('Cleating all data');
+    debugPrint('Cleating all data');
     await Hive.deleteFromDisk();
   }
 
@@ -92,7 +90,7 @@ abstract class Datastore extends State<DatastoreWidget> {
       return;
     }
     _setLoading(true);
-    widget.logger.log('Fetching Updates');
+    debugPrint('Fetching Updates');
 
     final uriBuilder = UriBuilder.fromUri(Uri.parse('${login._serverUrl}/v1/sync'));
     uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: incremental));
@@ -108,7 +106,7 @@ abstract class Datastore extends State<DatastoreWidget> {
         _setLoading(false);
       } else {
         String responseString = await response.stream.bytesToString();
-        widget.logger.log(responseString);
+        debugPrint(responseString);
         _setLoadingError(responseString);
       }
     } on Exception catch (e) {
@@ -155,7 +153,7 @@ abstract class Datastore extends State<DatastoreWidget> {
       await parseData(response['data'] as Map<String, dynamic>);
     }
     if (response.containsKey('debug')) {
-      widget.logger.log(response['debug'].toString());
+      debugPrint(response['debug'].toString());
     }
     debugPrint('Response parsed');
   }

@@ -30,13 +30,11 @@ part 'login.dart';
 BaseClient createCoreHttpClient() => createHttpClient();
 
 class Core<T extends Datastore> extends StatelessWidget {
-  final Logger logger;
   final Widget child;
   final T Function() createDatastore;
 
   const Core({
     Key key,
-    this.logger,
     @required this.child,
     @required this.createDatastore,
   }) : super(key: key);
@@ -57,22 +55,11 @@ class Core<T extends Datastore> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Login(
-        logger: logger,
         child: DatastoreWidget<T>(
-          logger: logger,
           createDatastore: createDatastore,
           child: Api(
-            logger: logger,
             child: child,
           ),
         ),
       );
-}
-
-abstract class Logger {
-  void setUserName(String userName);
-
-  void setUserEmail(String userEmail);
-
-  void log(String msg);
 }
