@@ -36,8 +36,7 @@ abstract class Datastore extends State<DatastoreWidget> {
   bool get isInitialized => _completer.isCompleted;
   bool _initializationStarted = false;
 
-  BehaviorSubject<bool> _loadingSubject;
-
+  final BehaviorSubject<bool> _loadingSubject = BehaviorSubject.seeded(false);
   ValueStream<bool> get loadingStream => _loadingSubject.stream;
 
   Box _metadataBox;
@@ -63,7 +62,6 @@ abstract class Datastore extends State<DatastoreWidget> {
     _initializationStarted = true;
 
     debugPrint('Datastore Initializing');
-    _loadingSubject = BehaviorSubject.seeded(false);
     if (!kIsWeb) await Hive.initFlutter();
     registerTypeAdapters();
 
@@ -143,14 +141,14 @@ abstract class Datastore extends State<DatastoreWidget> {
     final responseString = await response.stream.bytesToString();
     if (responseString.isNotEmpty) {
       final responseMap = jsonDecode(responseString) as Map<String, dynamic>;
-      _parseResponseMap(responseMap);
+      await _parseResponseMap(responseMap);
       setState(() {
         // Notify any listening widgets
       });
     }
   }
 
-  void _parseResponseMap(Map<String, dynamic> response, {bool clearData = false}) async {
+  Future<void> _parseResponseMap(Map<String, dynamic> response, {bool clearData = false}) async {
     debugPrint('Parsing response map');
     response.keys.forEach((element) {
       debugPrint(element);
@@ -159,11 +157,11 @@ abstract class Datastore extends State<DatastoreWidget> {
     if (clearData || response.containsKey('clearData') && response['clearData']) {
       await clear();
     }
-    if (response.containsKey('session')) {
-      await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
-    }
     if (response.containsKey('data')) {
       await parseData(response['data'] as Map<String, dynamic>);
+    }
+    if (response.containsKey('session')) {
+      await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
     }
     if (response.containsKey('debug')) {
       debugPrint(response['debug'].toString());
