@@ -3,7 +3,7 @@ library imageedit;
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:appcore/dialogs.dart';
+import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'image_resize.dart';
 
