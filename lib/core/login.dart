@@ -9,12 +9,6 @@ const _keyUserName = "userName";
 const _keyPermissions = "permissions";
 const _keyUsedIds = "usedIds";
 
-const VIEW_BASIC = 1 << 0;
-const VIEW_CONTRIBUTIONS = 1 << 1;
-const VIEW_SENSITIVE = 1 << 2;
-const VIEW_FILES = 1 << 3;
-const VIEW_CONTACTS = 1 << 4;
-
 // Basic permissions
 const permissionViewBasic = 1 << 0; // Model - BasicVolunteer, BasicStay
 const permissionAddCheckin = 1 << 1; // Action - Add Checkin
