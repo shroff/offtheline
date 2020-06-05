@@ -70,6 +70,8 @@ class _ApiState extends State<Api> {
         '[api] Request enqueued: ${request.endpoint} | ${request.description}');
     await initialized;
     await requestQueue.add(request);
+    setState(() {
+    });
     sendNextRequest();
   }
 
@@ -77,6 +79,8 @@ class _ApiState extends State<Api> {
     await initialized;
     if (requestQueue.isEmpty) return;
     await requestQueue.deleteAt(0);
+    setState(() {
+    });
     sendNextRequest();
   }
 
