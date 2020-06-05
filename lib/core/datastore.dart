@@ -1,6 +1,6 @@
 part of 'core.dart';
 
-const _boxNameMetadata = 'metadata';
+const _boxNameDatastoreMetadata = 'datastoreMetadata';
 
 class DatastoreWidget<T extends Datastore> extends StatefulWidget {
   final Widget child;
@@ -61,14 +61,14 @@ abstract class Datastore extends State<DatastoreWidget> {
     if (_initializationStarted) return;
     _initializationStarted = true;
 
-    debugPrint('Datastore Initializing');
+    debugPrint('[datastore] Initializing');
     if (!kIsWeb) await Hive.initFlutter();
-    registerTypeAdapters();
+    _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);
 
-    _metadataBox = await Hive.openBox(_boxNameMetadata);
+    registerTypeAdapters();
     await openBoxes();
 
-    debugPrint('Datastore Ready');
+    debugPrint('[datastore] Ready');
     _completer.complete();
     fetchUpdates();
   }
@@ -79,12 +79,14 @@ abstract class Datastore extends State<DatastoreWidget> {
 
   Future<void> clear() async {
     await initialized;
-    debugPrint('Clearing datastore');
+    debugPrint('[datastore] Clearing');
 
     _completer = Completer<void>();
     await _metadataBox.deleteFromDisk();
-    _metadataBox = await Hive.openBox(_boxNameMetadata);
+    _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);
     await openBoxes(clear: true);
+
+    debugPrint('[datastore] Clearing Done');
     _completer.complete();
   }
 
@@ -102,7 +104,7 @@ abstract class Datastore extends State<DatastoreWidget> {
       return;
     }
     _setLoading(true);
-    debugPrint('Fetching Updates');
+    debugPrint('[datastore] Fetching Updates');
 
     final uriBuilder = UriBuilder.fromUri(Uri.parse('${login._serverUrl}/v1/sync'));
     uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: incremental));
@@ -150,23 +152,23 @@ abstract class Datastore extends State<DatastoreWidget> {
   }
 
   Future<void> _parseResponseMap(Map<String, dynamic> response, {bool clearData = false}) async {
-    debugPrint('Parsing response map');
+    debugPrint('[datastore] Parsing response map');
     await initialized;
     if (clearData || response.containsKey('clearData') && response['clearData']) {
       await clear();
     }
     if (response.containsKey('data')) {
-      debugPrint('Parsing data');
+      debugPrint('[datastore] Parsing data');
       await parseData(response['data'] as Map<String, dynamic>);
     }
     if (response.containsKey('session')) {
-      debugPrint('Parsing session');
+      debugPrint('[datastore] Parsing session');
       await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
     }
     if (response.containsKey('debug')) {
       debugPrint(response['debug'].toString());
     }
-    debugPrint('Response parsed');
+    debugPrint('[datastore] Response parsed');
   }
 
   Future<void> parseData(Map<String, dynamic> data);

@@ -110,7 +110,7 @@ class _LoginState extends State<Login> {
 
   Future<String> loginWithGoogle(
       BuildContext context, String email, String idToken) async {
-    debugPrint('Logging In with Google');
+    debugPrint('[login] Google');
     final request =
         Request('post', Uri.parse('$serverUrl/v1/login/google-id-token'));
     request.headers['Authorization'] = 'Bearer $idToken';
@@ -119,23 +119,25 @@ class _LoginState extends State<Login> {
 
   Future<String> loginWithSessionId(
       BuildContext context, String sessionId) async {
-    debugPrint('Logging In with Session ID');
+    debugPrint('[login] SessionID');
     final request = Request('get', Uri.parse('$serverUrl/v1/sync'));
     request.headers['Authorization'] = 'SessionId $sessionId';
     return sendLoginRequest(context, request);
   }
 
   Future<String> sendLoginRequest(BuildContext context, Request request) async {
-    debugPrint('Clearing Data.');
+    debugPrint('[login] Clearing Data');
     await Core.datastore(context).clear();
-    debugPrint('Data Cleared, sending request');
+    await Core.api(context).clear();
+
+    debugPrint('[login] Sending request');
     try {
       final response = await _client.send(request);
       if (response.statusCode == 200) {
         _usedIds = 0;
         await storage.write(key: _keyUsedIds, value: '0');
         await Core.datastore(context)._parseResponse(response);
-        debugPrint("Login Successful");
+        debugPrint("[login] Success");
 
         return null;
       } else {
@@ -161,7 +163,7 @@ class _LoginState extends State<Login> {
 
     if (loginUser == null || gid == null || sessionId == null) {
       // TODO: #silentfail
-      debugPrint("Session not parsed");
+      debugPrint("[login] Session not parsed");
       return;
     }
 
@@ -225,7 +227,7 @@ class _LoginState extends State<Login> {
     await storage.deleteAll();
     await storage.write(key: _keyServerUrl, value: serverUrl);
     await Core.datastore(context).clear();
-    await Core.api(context).clearQueue();
+    await Core.api(context).clear();
     authHeaders.remove('Authorization');
     setState(() {
       _sessionId = null;
@@ -238,12 +240,12 @@ class _LoginState extends State<Login> {
   }
 
   void printSessionDetails() {
-    debugPrint('  sessionId: $_sessionId');
-    debugPrint('        gid: $_gid');
-    debugPrint('   gid base: ${_gid << _gidShift}');
-    debugPrint('   used ids: $_usedIds');
-    debugPrint('   next gid: ${_usedIds | (_gid << _gidShift)}');
-    debugPrint('permissions: $_permissions');
+    debugPrint('[login]   sessionId: $_sessionId');
+    debugPrint('[login]         gid: $_gid');
+    debugPrint('[login]    gid base: ${_gid << _gidShift}');
+    debugPrint('[login]    used ids: $_usedIds');
+    debugPrint('[login]    next gid: ${_usedIds | (_gid << _gidShift)}');
+    debugPrint('[login] permissions: $_permissions');
   }
 
   @override

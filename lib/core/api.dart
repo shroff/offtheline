@@ -1,6 +1,9 @@
 part of 'core.dart';
 
+const _boxNameApiMetadata = 'apiMetadata';
 const _boxNameRequestQueue = 'requestQueue';
+
+const _metadataKeyPaused = 'paused';
 
 class Api extends StatefulWidget {
   final Widget child;
@@ -23,11 +26,12 @@ class _InheritedApi extends InheritedWidget {
 }
 
 class _ApiState extends State<Api> {
-  final _completer = Completer<void>();
+  var _completer = Completer<void>();
   Future<void> get initialized => _completer.future;
   bool get isInitialized => _completer.isCompleted;
   bool _initializationStarted = false;
 
+  Box _metadata;
   Box<ApiRequest> requestQueue;
 
   ApiRequest _currentlySyncingRequest;
@@ -58,11 +62,27 @@ class _ApiState extends State<Api> {
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
     requestQueue = await Hive.openBox(_boxNameRequestQueue);
+    _metadata = await Hive.openBox(_boxNameApiMetadata);
 
     debugPrint('[api] Ready');
-    _updateStatus(ApiStatus.DONE);
     _completer.complete();
     sendNextRequest();
+    if (_metadata.get(_metadataKeyPaused, defaultValue: false)) {
+      pause();
+    } else {
+      resume();
+    }
+  }
+
+  Future<void> clear() async {
+    _completer = Completer<void>();
+    await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
+    await Hive.deleteBoxFromDisk(_boxNameApiMetadata);
+
+    requestQueue = await Hive.openBox(_boxNameRequestQueue);
+    _metadata = await Hive.openBox(_boxNameApiMetadata);
+
+    _completer.complete();
   }
 
   Future<void> enqueue(ApiRequest request) async {
@@ -70,8 +90,7 @@ class _ApiState extends State<Api> {
         '[api] Request enqueued: ${request.endpoint} | ${request.description}');
     await initialized;
     await requestQueue.add(request);
-    setState(() {
-    });
+    setState(() {});
     sendNextRequest();
   }
 
@@ -79,23 +98,22 @@ class _ApiState extends State<Api> {
     await initialized;
     if (requestQueue.isEmpty) return;
     await requestQueue.deleteAt(0);
-    setState(() {
-    });
+    setState(() {});
     sendNextRequest();
   }
 
-  Future<void> clearQueue() async {
-    await initialized;
-    await requestQueue.clear();
-  }
-
-  void pause() {
+  void pause({bool persistent = false}) {
+    debugPrint('[api] Pausing');
+    if (persistent) _metadata.put(_metadataKeyPaused, true);
     _updateStatus(ApiStatus.PAUSED);
   }
 
   void resume() {
+    debugPrint('[api] Resuming');
+    _metadata.put(_metadataKeyPaused, false);
     setState(() {
       _status = ApiStatus.DONE;
+      _statusDetails = null;
     });
     sendNextRequest();
   }
@@ -116,18 +134,15 @@ class _ApiState extends State<Api> {
     }
     final login = Core.login(context);
     if (!login.isSignedIn) {
-      debugPrint('[api] Not Signed In. Clearing Queue');
-      await clearQueue();
+      // debugPrint('[api] Not Signed In. Clearing Queue');
       return;
     }
     final request = requestQueue.getAt(0);
-    debugPrint(
-        '[api] Sending request: ${request.endpoint} | ${request.description}');
     _updateStatus(ApiStatus.SYNCING, details: request.description);
 
     final queryParams = Core.datastore(context).createLastSyncParams();
     final uriBuilder =
-        UriBuilder.fromUri(Uri.parse('${login._serverUrl}${request.endpoint}'));
+        UriBuilder.fromUri(Uri.parse('${login.serverUrl}${request.endpoint}'));
     uriBuilder.queryParameters.addAll(queryParams);
 
     try {
