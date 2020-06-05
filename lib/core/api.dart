@@ -33,11 +33,9 @@ class _ApiState extends State<Api> {
   ApiRequest _currentlySyncingRequest;
 
   ApiStatus _status = ApiStatus.INITIALIZING;
-
-  ApiStatus get status => _status;
-
   String _statusDetails;
 
+  ApiStatus get status => _status;
   String get statusDetails => _statusDetails;
 
   bool get isSyncing => _currentlySyncingRequest != null;
@@ -52,22 +50,24 @@ class _ApiState extends State<Api> {
     if (_initializationStarted) return;
     _initializationStarted = true;
 
-    debugPrint('API Waiting for initialization');
+    debugPrint('[api] Waiting for initialization');
     await Core.login(context).initialized;
     await Core.datastore(context).initialized;
 
-    debugPrint('API Initializing');
+    debugPrint('[api] Initializing');
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
     requestQueue = await Hive.openBox(_boxNameRequestQueue);
 
-    debugPrint('API Ready');
+    debugPrint('[api] Ready');
+    _updateStatus(ApiStatus.DONE);
     _completer.complete();
     sendNextRequest();
   }
 
   Future<void> enqueue(ApiRequest request) async {
-    debugPrint('Request enqueued');
+    debugPrint(
+        '[api] Request enqueued: ${request.endpoint} | ${request.description}');
     await initialized;
     await requestQueue.add(request);
     sendNextRequest();
@@ -85,26 +85,40 @@ class _ApiState extends State<Api> {
     await requestQueue.clear();
   }
 
+  void pause() {
+    _updateStatus(ApiStatus.PAUSED);
+  }
+
+  void resume() {
+    setState(() {
+      _status = ApiStatus.DONE;
+    });
+    sendNextRequest();
+  }
+
   void sendNextRequest() async {
-    debugPrint('Sync triggered');
     await initialized;
+    if (_status == ApiStatus.PAUSED) {
+      // debugPrint('[api] Request queue is paused');
+      return;
+    }
     if (requestQueue.isEmpty) {
-      _updateStatus(ApiStatus.DONE);
-      debugPrint('Nothing to sync');
+      // debugPrint('[api] Request queue is empty');
       return;
     }
     if (_status == ApiStatus.SYNCING) {
-      debugPrint('Syncing ongoing');
+      // debugPrint('[api] Request in flight');
       return;
     }
     final login = Core.login(context);
     if (!login.isSignedIn) {
-      debugPrint('API Not Signed In. Clearing');
+      debugPrint('[api] Not Signed In. Clearing Queue');
       await clearQueue();
-      _updateStatus(ApiStatus.DONE);
       return;
     }
     final request = requestQueue.getAt(0);
+    debugPrint(
+        '[api] Sending request: ${request.endpoint} | ${request.description}');
     _updateStatus(ApiStatus.SYNCING, details: request.description);
 
     final queryParams = Core.datastore(context).createLastSyncParams();
@@ -137,7 +151,8 @@ class _ApiState extends State<Api> {
   }
 
   void _updateStatus(ApiStatus status, {String details}) {
-    debugPrint('$status: $details');
+    if (_status == ApiStatus.PAUSED) return;
+    debugPrint('[api] Status: $status ($details)');
     setState(() {
       _status = status;
       _statusDetails = details;
@@ -155,8 +170,28 @@ class _ApiState extends State<Api> {
 enum ApiStatus {
   INITIALIZING,
   DONE,
+  PAUSED,
   SYNCING,
   ERROR,
-  WAITING_AUTH,
   SERVER_UNREACHABLE,
+}
+
+extension ApiStatusString on ApiStatus {
+  String get statusString {
+    switch (this) {
+      case ApiStatus.INITIALIZING:
+        return 'Initializing';
+      case ApiStatus.DONE:
+        return 'Done';
+      case ApiStatus.PAUSED:
+        return 'Paused';
+      case ApiStatus.SYNCING:
+        return 'Submitting';
+      case ApiStatus.ERROR:
+        return 'Error';
+      case ApiStatus.SERVER_UNREACHABLE:
+        return 'Server Unreachable';
+    }
+    return 'Unknown';
+  }
 }
