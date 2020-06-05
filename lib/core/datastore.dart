@@ -85,6 +85,7 @@ abstract class Datastore extends State<DatastoreWidget> {
     await _metadataBox.deleteFromDisk();
     _metadataBox = await Hive.openBox(_boxNameMetadata);
     await openBoxes(clear: true);
+    _completer.complete();
   }
 
   @override
@@ -150,17 +151,16 @@ abstract class Datastore extends State<DatastoreWidget> {
 
   Future<void> _parseResponseMap(Map<String, dynamic> response, {bool clearData = false}) async {
     debugPrint('Parsing response map');
-    response.keys.forEach((element) {
-      debugPrint(element);
-    });
     await initialized;
     if (clearData || response.containsKey('clearData') && response['clearData']) {
       await clear();
     }
     if (response.containsKey('data')) {
+      debugPrint('Parsing data');
       await parseData(response['data'] as Map<String, dynamic>);
     }
     if (response.containsKey('session')) {
+      debugPrint('Parsing session');
       await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
     }
     if (response.containsKey('debug')) {
