@@ -9,54 +9,6 @@ const _keyUserName = "userName";
 const _keyPermissions = "permissions";
 const _keyUsedIds = "usedIds";
 
-// Basic permissions
-const permissionViewBasic = 1 << 0; // Model - BasicVolunteer, BasicStay
-const permissionAddCheckin = 1 << 1; // Action - Add Checkin
-const permissionAddContribution = 1 << 2; // Action - Add Contribution
-const permissionBasicPH1 = 1 << 3;
-const permissionBasicPH2 = 1 << 4;
-const permissionBasicPH3 = 1 << 5;
-const permissionBasicPH4 = 1 << 6;
-
-// Admin
-const permissionViewVolunteerDetailed = 1 << 7; // Model - DetailedVolunteer
-const permissionEditVolunteerDetailed = 1 << 8;
-
-// Files
-const permissionViewFiles = 1 << 9; // Model - File
-const permissionEditFiles = 1 << 10;
-
-// Contacts
-const permissionViewContacts = 1 << 11;
-const permissionEditContacts = 1 << 12;
-
-// Checkout Manager
-const permissionViewAccounting = 1 << 13; // Model - (Full)Stay, Payment
-const permissionEditAccounting =
-    1 << 14; // Action - edit accounting - dates, amounts, rates, etc.
-
-// SuperAdmin
-const permissionSuperAdmin = 1 << 25; // Misc super-admin perissions
-const permissionViewEditVolunteerSensitive =
-    permissionSuperAdmin; // Model - (Full)Volunteer - Team, Notes
-
-// Client-side
-const permissionClientQuickCheckin =
-    permissionSuperAdmin; // Action - Checkin without photo or declaration
-const permissionClientSortFilter =
-    permissionSuperAdmin; // Action - Sort data on the client
-
-const permissionReceivePayments =
-    1 << 28; // Action - Mark Contribution as Received
-const permissionGrantPermissions = 1 << 29; // Action - Grant Permissions
-const permissionCheckedOut = 1 << 30; // Access the system while not checked in
-
-// Dev
-const permissionDev = 1 << 31;
-const permissionViewModelsByID = permissionDev;
-const permissionMasquerade = permissionDev;
-const permissionSwitchDatabase = permissionDev;
-
 class Login extends StatefulWidget {
   final Widget child;
 
