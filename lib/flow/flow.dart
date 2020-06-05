@@ -104,13 +104,13 @@ class _FlowManagerState<T> extends State<FlowManager> {
     if (await currentStep.onFinish(data, context)) {
       if (currentStep.generateNextStepName == null) {
         if ((await widget.finishFlow(context, data)) ?? false) {
-          print('Finish');
+          debugPrint('[flow] Finish');
           Navigator.of(context).pop(data);
         }
       } else {
         final stepName = currentStep.generateNextStepName(data, context);
         final step = widget.flowArgs(context).steps[stepName];
-        print('Next to $stepName');
+        debugPrint('[flow] Next to $stepName');
         if (step == null) throw "Unknown next state: $step";
 
         setState(() {
@@ -128,10 +128,10 @@ class _FlowManagerState<T> extends State<FlowManager> {
   Future<bool> _onBackPress() async {
     steps.removeLast();
     if (steps.isEmpty) {
-      print('Back Out');
+      debugPrint('[flow] Back Out');
       if (await widget.confirmDropFlow(context)) Navigator.of(context).pop();
     } else {
-      print('Back');
+      debugPrint('[flow] Back');
       setState(() {
         currentStep.setStateOnStart(data, context);
       });

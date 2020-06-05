@@ -7,7 +7,7 @@ import 'api_request.dart';
 
 part 'simple_api_request.g.dart';
 
-@HiveType(typeId: 10)
+@HiveType(typeId: 1)
 class SimpleApiRequest extends ApiRequest {
   @HiveField(0)
   final String method;
@@ -20,6 +20,9 @@ class SimpleApiRequest extends ApiRequest {
   final String contentType;
   @HiveField(4)
   final dynamic body;
+
+  @override
+  String get dataString => body?.toString();
 
   SimpleApiRequest(this.method, this.endpoint, this.description,
       {this.body, this.contentType});

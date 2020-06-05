@@ -6,7 +6,7 @@ import 'api_request.dart';
 
 part 'upload_api_request.g.dart';
 
-@HiveType(typeId: 11)
+@HiveType(typeId: 2)
 class UploadApiRequest extends ApiRequest {
   @HiveField(0)
   final String method;
@@ -23,6 +23,16 @@ class UploadApiRequest extends ApiRequest {
   final String fileName;
   @HiveField(6)
   final Map<String, String> formFields;
+
+  @override
+  String get dataString => {
+    'fields': formFields,
+    'file': {
+      'fieldName': fileFieldName,
+      'name': fileName,
+      'size': contents.lengthInBytes,
+    }
+  }.toString();
 
   UploadApiRequest(
     this.endpoint,
