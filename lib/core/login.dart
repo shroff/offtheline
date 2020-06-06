@@ -127,8 +127,10 @@ class _LoginState extends State<Login> {
 
   Future<String> sendLoginRequest(BuildContext context, Request request) async {
     debugPrint('[login] Clearing Data');
-    await Core.datastore(context).clear();
-    await Core.api(context).clear();
+    if (!kIsWeb) {
+      await Core.datastore(context).clear();
+      await Core.api(context).clear();
+    }
 
     debugPrint('[login] Sending request');
     try {

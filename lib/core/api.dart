@@ -104,9 +104,17 @@ class _ApiState extends State<Api> {
 
   Future<void> deleteRequest(ApiRequest request) async {
     await initialized;
+    bool isFirstRequest = request == requestQueue.getAt(0);
+    if (isFirstRequest && _status == ApiStatus.SYNCING) {
+      return;
+    }
     request.delete();
-    setState(() {});
-    sendNextRequest();
+    if (requestQueue.isEmpty) {
+      _updateStatus(ApiStatus.DONE);
+    } else {
+      setState(() {});
+      sendNextRequest();
+    }
   }
 
   void pause({bool persistent = false}) {
@@ -159,9 +167,9 @@ class _ApiState extends State<Api> {
 
       // Show request result
       if (response.statusCode == 200) {
+        await Core.datastore(context)._parseResponse(response);
         _updateStatus(ApiStatus.DONE);
-        deleteRequestAt(0);
-        Core.datastore(context)._parseResponse(response);
+        deleteRequest(request);
       } else {
         final details = await response.stream.bytesToString();
         _updateStatus(ApiStatus.ERROR, details: details);
