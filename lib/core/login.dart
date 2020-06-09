@@ -42,8 +42,8 @@ class _LoginState extends State<Login> {
 
   final BaseClient _client = createHttpClient();
   String _serverUrl = "";
-  int _gid = 0;
-  int _usedIds = 0;
+  int _gid;
+  int _usedIds;
   String _sessionId;
   int _userId;
   String _userName;
@@ -68,10 +68,10 @@ class _LoginState extends State<Login> {
     if (_initializationStarted) return;
     _initializationStarted = true;
     await storage.initialize();
-    _serverUrl = await storage.read(key: _keyServerUrl) ?? "";
+    _serverUrl = await storage.read(key: _keyServerUrl) ?? '';
     final sessionId = await storage.read(key: _keySessionId);
-    final gidString = await storage.read(key: _keyGid);
-    final usedIdsString = await storage.read(key: _keyUsedIds);
+    final gidString = await storage.read(key: _keyGid) ?? '0';
+    final usedIdsString = await storage.read(key: _keyUsedIds) ?? '0';
     final userIdString = await storage.read(key: _keyUserId);
     final userName = await storage.read(key: _keyUserName);
     final permissionsString = await storage.read(key: _keyPermissions);
@@ -86,8 +86,7 @@ class _LoginState extends State<Login> {
     }
     if (serverUrl != null &&
         sessionId != null &&
-        gidString != null &&
-        usedIdsString != null &&
+        _gid != 0 && 
         permissionsString != null &&
         userIdString != null) {
       final userId = int.tryParse(userIdString);
@@ -102,6 +101,7 @@ class _LoginState extends State<Login> {
         });
       }
     }
+    printSessionDetails();
     _completer.complete();
   }
 
