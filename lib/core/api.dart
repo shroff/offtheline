@@ -66,12 +66,13 @@ class _ApiState extends State<Api> {
 
     debugPrint('[api] Ready');
     _completer.complete();
-    sendNextRequest();
-    if (_metadata.get(_metadataKeyPaused, defaultValue: false)) {
-      pause();
-    } else {
-      resume();
-    }
+    Future.microtask(() {
+      if (_metadata.get(_metadataKeyPaused, defaultValue: false)) {
+        pause();
+      } else {
+        resume();
+      }
+    });
   }
 
   Future<void> clear() async {
@@ -126,10 +127,15 @@ class _ApiState extends State<Api> {
   void resume() {
     debugPrint('[api] Resuming');
     _metadata.put(_metadataKeyPaused, false);
-    setState(() {
+    if (mounted) {
+      setState(() {
+        _status = ApiStatus.DONE;
+        _statusDetails = null;
+      });
+    } else {
       _status = ApiStatus.DONE;
       _statusDetails = null;
-    });
+    }
     sendNextRequest();
   }
 

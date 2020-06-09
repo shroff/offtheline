@@ -146,6 +146,7 @@ Future<String> showInputDialog(
   String labelText,
   String hintText,
   String preset,
+  TextCapitalization capitalization,
   bool numeric = false,
 }) {
   TextEditingController controller = new TextEditingController()..text = preset;
@@ -161,6 +162,7 @@ Future<String> showInputDialog(
         ),
         autofocus: true,
         controller: controller,
+        textCapitalization: capitalization,
         inputFormatters: numeric ? [WhitelistingTextInputFormatter(RegExp('\\d'))] : null,
         keyboardType: numeric ? TextInputType.number : TextInputType.text,
       ),

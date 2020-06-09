@@ -42,15 +42,16 @@ class _LoginState extends State<Login> {
 
   final BaseClient _client = createHttpClient();
   String _serverUrl = "";
-  int _gid;
+  int _gid = 0;
+  int _usedIds = 0;
   String _sessionId;
   int _userId;
   String _userName;
   int _permissions;
-  int _usedIds;
 
   String get serverUrl => _serverUrl;
-  bool get isSignedIn => _sessionId != null;
+  // bool get isSignedIn => _sessionId != null;
+  bool get isSignedIn => true;
   Map<String, String> authHeaders = {};
 
   int get permissions => _permissions;
@@ -67,31 +68,33 @@ class _LoginState extends State<Login> {
     if (_initializationStarted) return;
     _initializationStarted = true;
     await storage.initialize();
-    _serverUrl = await storage.read(key: _keyServerUrl);
+    _serverUrl = await storage.read(key: _keyServerUrl) ?? "";
     final sessionId = await storage.read(key: _keySessionId);
     final gidString = await storage.read(key: _keyGid);
     final usedIdsString = await storage.read(key: _keyUsedIds);
     final userIdString = await storage.read(key: _keyUserId);
     final userName = await storage.read(key: _keyUserName);
     final permissionsString = await storage.read(key: _keyPermissions);
+
+    if (gidString != null && usedIdsString != null) {
+      final gid = int.tryParse(gidString);
+      final usedIds = int.tryParse(usedIdsString);
+      if (gid != null && usedIds != null) {
+        _gid = gid;
+        _usedIds = usedIds;
+      }
+    }
     if (serverUrl != null &&
         sessionId != null &&
         gidString != null &&
         usedIdsString != null &&
         permissionsString != null &&
         userIdString != null) {
-      final gid = int.tryParse(gidString);
-      final usedIds = int.tryParse(usedIdsString);
       final userId = int.tryParse(userIdString);
       final permissions = int.tryParse(permissionsString);
-      if (gid != null &&
-          usedIds != null &&
-          permissions != null &&
-          userId != null) {
+      if (permissions != null && userId != null) {
         setState(() {
           _sessionId = sessionId;
-          _gid = gid;
-          _usedIds = usedIds;
           _userId = userId;
           _userName = userName;
           _permissions = permissions;
@@ -106,6 +109,14 @@ class _LoginState extends State<Login> {
     _serverUrl = serverUri.toString();
     await storage.write(key: _keyServerUrl, value: _serverUrl);
     setState(() {});
+  }
+
+  bool hasPermission(int permission) {
+    return (permission & _permissions) != 0;
+  }
+
+  String createUrl(String path) {
+    return '$serverUrl$path';
   }
 
   Future<String> loginWithGoogle(
@@ -152,10 +163,6 @@ class _LoginState extends State<Login> {
         return e.toString();
       }
     }
-  }
-
-  bool hasPermission(int permission) {
-    return (permission & _permissions) != 0;
   }
 
   Future<void> _parseSession(Map<String, dynamic> session) async {
