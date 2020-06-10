@@ -150,6 +150,8 @@ abstract class Datastore extends State<_DatastoreWidget> {
       setState(() {
         // Notify any listening widgets
       });
+      Core.login(context).setState(() {
+      });
     }
   }
 

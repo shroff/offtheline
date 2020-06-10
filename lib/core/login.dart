@@ -54,7 +54,6 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
   Map<String, String> authHeaders = {};
   T get user => _user;
 
-
   @override
   void initState() {
     super.initState();
@@ -167,30 +166,21 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
       return false;
     }
 
-    bool changed = false;
     if (this._sessionId != sessionId) {
       authHeaders['Authorization'] = 'SessionId $sessionId';
       await storage.write(key: _keySessionId, value: sessionId);
-      changed = true;
     }
     if (this._gid != gid) {
       await storage.write(key: _keyGid, value: gid.toString());
-      changed = true;
     }
 
     if (this._user != user) {
-      await storage.write(
-          key: _keyUser, value: jsonEncode(userJson));
-      changed = true;
+      await storage.write(key: _keyUser, value: jsonEncode(userJson));
     }
 
-    if (changed) {
-      setState(() {
-        _gid = gid;
-        _sessionId = sessionId;
-        _user = user;
-      });
-    }
+    _gid = gid;
+    _sessionId = sessionId;
+    _user = user;
     return true;
   }
 
