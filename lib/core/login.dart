@@ -86,22 +86,23 @@ class _LoginState extends State<Login> {
     }
     if (serverUrl != null &&
         sessionId != null &&
-        _gid != 0 && 
+        _gid != 0 &&
         permissionsString != null &&
         userIdString != null) {
       final userId = int.tryParse(userIdString);
       final permissions = int.tryParse(permissionsString);
       if (permissions != null && userId != null) {
-        setState(() {
-          _sessionId = sessionId;
-          _userId = userId;
-          _userName = userName;
-          _permissions = permissions;
-          authHeaders['Authorization'] = 'SessionId $_sessionId';
-        });
+        _sessionId = sessionId;
+        _userId = userId;
+        _userName = userName;
+        _permissions = permissions;
+        authHeaders['Authorization'] = 'SessionId $_sessionId';
       }
     }
-    printSessionDetails();
+    setState(() {});
+    if (kDebugMode) {
+      printSessionDetails();
+    }
     _completer.complete();
   }
 
@@ -121,6 +122,9 @@ class _LoginState extends State<Login> {
 
   Future<String> loginWithGoogle(
       BuildContext context, String email, String idToken) async {
+    if (idToken?.isEmpty ?? true) {
+      return "No ID Token given for Google login";
+    }
     debugPrint('[login] Google');
     final request =
         Request('post', Uri.parse('$serverUrl/v1/login/google-id-token'));

@@ -162,7 +162,7 @@ Future<String> showInputDialog(
         ),
         autofocus: true,
         controller: controller,
-        textCapitalization: capitalization,
+        textCapitalization: capitalization ?? TextCapitalization.none,
         inputFormatters: numeric ? [WhitelistingTextInputFormatter(RegExp('\\d'))] : null,
         keyboardType: numeric ? TextInputType.number : TextInputType.text,
       ),
