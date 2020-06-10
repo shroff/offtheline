@@ -5,27 +5,27 @@ const _boxNameRequestQueue = 'requestQueue';
 
 const _metadataKeyPaused = 'paused';
 
-class Api extends StatefulWidget {
+class _ApiWidget extends StatefulWidget {
   final Widget child;
 
-  const Api({Key key, @required this.child}) : super(key: key);
+  const _ApiWidget({Key key, @required this.child}) : super(key: key);
 
   @override
-  State<Api> createState() => _ApiState();
+  State<_ApiWidget> createState() => Api();
 }
 
-class _InheritedApi extends InheritedWidget {
-  final _ApiState data;
+class _InheritedApiWidget extends InheritedWidget {
+  final Api data;
   final Widget child;
 
-  _InheritedApi({Key key, this.data, this.child})
+  _InheritedApiWidget({Key key, this.data, this.child})
       : super(key: key, child: child);
 
   @override
   bool updateShouldNotify(InheritedWidget oldWidget) => oldWidget != this;
 }
 
-class _ApiState extends State<Api> {
+class Api extends State<_ApiWidget> {
   var _completer = Completer<void>();
   Future<void> get initialized => _completer.future;
   bool get isInitialized => _completer.isCompleted;
@@ -200,7 +200,7 @@ class _ApiState extends State<Api> {
   }
 
   @override
-  Widget build(BuildContext context) => _InheritedApi(
+  Widget build(BuildContext context) => _InheritedApiWidget(
         key: widget.key,
         data: this,
         child: widget.child,

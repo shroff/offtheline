@@ -3,26 +3,28 @@ part of 'core.dart';
 const _gidShift = 10; // Must match up with the server
 const _keyServerUrl = "serverUrl";
 const _keyGid = "gid";
-const _keySessionId = "sessionId";
-const _keyUserId = "userId";
-const _keyUserName = "userName";
-const _keyPermissions = "permissions";
 const _keyUsedIds = "usedIds";
+const _keySessionId = "sessionId";
+const _keyUser = "user";
 
-class Login extends StatefulWidget {
+typedef UserParser<T extends LoginUser> = T Function(Map<String, dynamic>);
+
+class _LoginWidget<T extends LoginUser> extends StatefulWidget {
   final Widget child;
+  final UserParser<T> parseUser;
 
-  const Login({Key key, @required this.child}) : super(key: key);
+  const _LoginWidget({Key key, @required this.child, @required this.parseUser})
+      : super(key: key);
 
   @override
-  State<Login> createState() => _LoginState();
+  State<_LoginWidget> createState() => Login<T>();
 }
 
-class _InheritedLogin extends InheritedWidget {
-  final _LoginState data;
+class _InheritedLoginWidget extends InheritedWidget {
+  final Login data;
   final Widget child;
 
-  _InheritedLogin({
+  _InheritedLoginWidget({
     Key key,
     @required this.data,
     @required this.child,
@@ -32,7 +34,7 @@ class _InheritedLogin extends InheritedWidget {
   bool updateShouldNotify(InheritedWidget oldWidget) => oldWidget != this;
 }
 
-class _LoginState extends State<Login> {
+class Login<T extends LoginUser> extends State<_LoginWidget> {
   final _completer = Completer<void>();
   Future<void> get initialized => _completer.future;
   bool get isInitialized => _completer.isCompleted;
@@ -42,21 +44,16 @@ class _LoginState extends State<Login> {
 
   final BaseClient _client = createHttpClient();
   String _serverUrl = "";
+  String _sessionId;
   int _gid;
   int _usedIds;
-  String _sessionId;
-  int _userId;
-  String _userName;
-  int _permissions;
+  T _user;
 
   String get serverUrl => _serverUrl;
-  // bool get isSignedIn => _sessionId != null;
-  bool get isSignedIn => true;
+  bool get isSignedIn => _sessionId != null;
   Map<String, String> authHeaders = {};
+  T get user => _user;
 
-  int get permissions => _permissions;
-  int get userId => _userId;
-  String get userName => _userName;
 
   @override
   void initState() {
@@ -72,9 +69,8 @@ class _LoginState extends State<Login> {
     final sessionId = await storage.read(key: _keySessionId);
     final gidString = await storage.read(key: _keyGid) ?? '0';
     final usedIdsString = await storage.read(key: _keyUsedIds) ?? '0';
-    final userIdString = await storage.read(key: _keyUserId);
-    final userName = await storage.read(key: _keyUserName);
-    final permissionsString = await storage.read(key: _keyPermissions);
+    final userJson = await storage.read(key: _keyUser) ?? '{}';
+    final user = widget.parseUser(jsonDecode(userJson));
 
     if (gidString != null && usedIdsString != null) {
       final gid = int.tryParse(gidString);
@@ -84,20 +80,10 @@ class _LoginState extends State<Login> {
         _usedIds = usedIds;
       }
     }
-    if (serverUrl != null &&
-        sessionId != null &&
-        _gid != 0 &&
-        permissionsString != null &&
-        userIdString != null) {
-      final userId = int.tryParse(userIdString);
-      final permissions = int.tryParse(permissionsString);
-      if (permissions != null && userId != null) {
-        _sessionId = sessionId;
-        _userId = userId;
-        _userName = userName;
-        _permissions = permissions;
-        authHeaders['Authorization'] = 'SessionId $_sessionId';
-      }
+    if (sessionId != null && _gid != 0 && user != null) {
+      _sessionId = sessionId;
+      _user = user;
+      authHeaders['Authorization'] = 'SessionId $_sessionId';
     }
     setState(() {});
     if (kDebugMode) {
@@ -113,7 +99,7 @@ class _LoginState extends State<Login> {
   }
 
   bool hasPermission(int permission) {
-    return (permission & _permissions) != 0;
+    return _user.hasPermission(permission);
   }
 
   String createUrl(String path) {
@@ -169,15 +155,16 @@ class _LoginState extends State<Login> {
     }
   }
 
-  Future<void> _parseSession(Map<String, dynamic> session) async {
+  Future<bool> _parseSession(Map<String, dynamic> session) async {
     final int gid = session['gid'];
     final String sessionId = session['sessionId'];
-    final loginUser = _parseUser(session['user']);
+    final userJson = session['user'];
+    final user = widget.parseUser(session['user']);
 
-    if (loginUser == null || gid == null || sessionId == null) {
+    if (user == null || gid == null || sessionId == null) {
       // TODO: #silentfail
       debugPrint("[login] Session not parsed");
-      return;
+      return false;
     }
 
     bool changed = false;
@@ -191,17 +178,9 @@ class _LoginState extends State<Login> {
       changed = true;
     }
 
-    if (this._permissions != loginUser.permissions) {
+    if (this._user != user) {
       await storage.write(
-          key: _keyPermissions, value: loginUser.permissions.toString());
-      changed = true;
-    }
-    if (this._userId != loginUser.id) {
-      await storage.write(key: _keyUserId, value: loginUser.id.toString());
-      changed = true;
-    }
-    if (this._userName != loginUser.name) {
-      await storage.write(key: _keyUserName, value: loginUser.name);
+          key: _keyUser, value: jsonEncode(userJson));
       changed = true;
     }
 
@@ -209,25 +188,10 @@ class _LoginState extends State<Login> {
       setState(() {
         _gid = gid;
         _sessionId = sessionId;
-        _permissions = loginUser.permissions;
-        _userId = loginUser.id;
-        _userName = loginUser.name;
+        _user = user;
       });
     }
-  }
-
-  _LoginUser _parseUser(Map<String, dynamic> user) {
-    final loginUser = _LoginUser();
-
-    loginUser.id = user['id'];
-    loginUser.name = '${user['first_name']} ${user['last_name']}';
-    loginUser.permissions = user['permissions'];
-
-    if (loginUser.id == null ||
-        loginUser.permissions == null ||
-        loginUser.name == null) return null;
-
-    return loginUser;
+    return true;
   }
 
   Future<int> getNextGid() async {
@@ -244,11 +208,9 @@ class _LoginState extends State<Login> {
     authHeaders.remove('Authorization');
     setState(() {
       _sessionId = null;
-      _gid = null;
-      _usedIds = null;
-      _permissions = null;
-      _userId = null;
-      _userName = null;
+      _gid = 0;
+      _usedIds = 0;
+      _user = null;
     });
   }
 
@@ -258,19 +220,23 @@ class _LoginState extends State<Login> {
     debugPrint('[login]    gid base: ${_gid << _gidShift}');
     debugPrint('[login]    used ids: $_usedIds');
     debugPrint('[login]    next gid: ${_usedIds | (_gid << _gidShift)}');
-    debugPrint('[login] permissions: $_permissions');
+    debugPrint('[login]        user: $_user');
   }
 
   @override
-  Widget build(BuildContext context) => _InheritedLogin(
+  Widget build(BuildContext context) => _InheritedLoginWidget(
         key: widget.key,
         data: this,
         child: widget.child,
       );
 }
 
-class _LoginUser {
-  String name;
-  int id;
-  int permissions;
+mixin LoginUser {
+  int get id;
+  int get permissions;
+  String get name;
+
+  bool hasPermission(int permission) {
+    return (permission & permissions) != 0;
+  }
 }

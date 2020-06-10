@@ -28,22 +28,28 @@ part 'login.dart';
 
 BaseClient createCoreHttpClient() => createHttpClient();
 
-class Core<T extends Datastore> extends StatelessWidget {
+class Core<T extends Datastore, U extends LoginUser> extends StatelessWidget {
   final Widget child;
+  final UserParser<U> parseUser;
   final T Function() createDatastore;
 
   const Core({
     Key key,
     @required this.child,
+    @required this.parseUser,
     @required this.createDatastore,
   }) : super(key: key);
 
-  static _LoginState login(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_InheritedLogin>().data;
+  static Login<U> login<U extends LoginUser>(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_InheritedLoginWidget>()
+        .data;
   }
 
-  static _ApiState api(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_InheritedApi>().data;
+  static Api api(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_InheritedApiWidget>()
+        .data;
   }
 
   static T datastore<T extends Datastore>(BuildContext context) {
@@ -53,10 +59,11 @@ class Core<T extends Datastore> extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Login(
-        child: DatastoreWidget<T>(
+  Widget build(BuildContext context) => _LoginWidget(
+        parseUser: parseUser,
+        child: _DatastoreWidget(
           createDatastore: createDatastore,
-          child: Api(
+          child: _ApiWidget(
             child: child,
           ),
         ),

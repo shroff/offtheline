@@ -2,18 +2,20 @@ part of 'core.dart';
 
 const _boxNameDatastoreMetadata = 'datastoreMetadata';
 
-class DatastoreWidget<T extends Datastore> extends StatefulWidget {
-  final Widget child;
-  final T Function() createDatastore;
+typedef DatastoreCreator<T extends Datastore> = T Function();
 
-  const DatastoreWidget({
+class _DatastoreWidget<T extends Datastore> extends StatefulWidget {
+  final Widget child;
+  final DatastoreCreator createDatastore;
+
+  const _DatastoreWidget({
     Key key,
     @required this.child,
     @required this.createDatastore,
   }) : super(key: key);
 
   @override
-  State<DatastoreWidget> createState() => createDatastore();
+  State<_DatastoreWidget> createState() => createDatastore();
 }
 
 class _InheritedDatastore extends InheritedWidget {
@@ -30,7 +32,7 @@ class _InheritedDatastore extends InheritedWidget {
   bool updateShouldNotify(InheritedWidget oldWidget) => oldWidget != this;
 }
 
-abstract class Datastore extends State<DatastoreWidget> {
+abstract class Datastore extends State<_DatastoreWidget> {
   var _completer = Completer<void>();
   Future<void> get initialized => _completer.future;
   bool get isInitialized => _completer.isCompleted;
@@ -151,24 +153,28 @@ abstract class Datastore extends State<DatastoreWidget> {
     }
   }
 
-  Future<void> _parseResponseMap(Map<String, dynamic> response, {bool clearData = false}) async {
+  Future<bool> _parseResponseMap(Map<String, dynamic> response, {bool clearData = false}) async {
     debugPrint('[datastore] Parsing response map');
     await initialized;
     if (clearData || response.containsKey('clearData') && response['clearData']) {
       await clear();
     }
+    if (response.containsKey('session')) {
+      debugPrint('[datastore] Parsing session');
+      final success = await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
+      if (!success) {
+        return false;
+      }
+    }
     if (response.containsKey('data')) {
       debugPrint('[datastore] Parsing data');
       await parseData(response['data'] as Map<String, dynamic>);
-    }
-    if (response.containsKey('session')) {
-      debugPrint('[datastore] Parsing session');
-      await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
     }
     if (response.containsKey('debug')) {
       debugPrint(response['debug'].toString());
     }
     debugPrint('[datastore] Response parsed');
+    return true;
   }
 
   Future<void> parseData(Map<String, dynamic> data);
