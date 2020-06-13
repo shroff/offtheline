@@ -184,7 +184,7 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
     return true;
   }
 
-  Future<int> getNextGid() async {
+  Future<int> getNextAvailableId() async {
     int nextId = _usedIds++;
     await storage.write(key: _keyUsedIds, value: _usedIds.toString());
     return nextId | (_gid << _gidShift);
