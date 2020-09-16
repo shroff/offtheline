@@ -36,7 +36,8 @@ Future<Uri> showUriDialog(
               keyboardType: TextInputType.url,
               onChanged: (value) {
                 setState(() {
-                  preset = Uri.tryParse((https ? "https://" : "http://") + controller.text);
+                  preset = Uri.tryParse(
+                      (https ? "https://" : "http://") + controller.text);
                 });
               },
             ),
@@ -48,7 +49,8 @@ Future<Uri> showUriDialog(
                     onChanged: (checked) {
                       setState(() {
                         https = checked;
-                        preset = Uri.tryParse((https ? "https://" : "http://") + controller.text);
+                        preset = Uri.tryParse(
+                            (https ? "https://" : "http://") + controller.text);
                       });
                     },
                   ),
@@ -78,7 +80,8 @@ Future<Uri> showUriDialog(
   );
 }
 
-Future<T> showProgressDialog<T>(BuildContext context, {String title, String message}) {
+Future<T> showProgressDialog<T>(BuildContext context,
+    {String title, String message}) {
   return showDialog(
     context: context,
     barrierDismissible: false,
@@ -148,6 +151,7 @@ Future<String> showInputDialog(
   String preset,
   TextCapitalization capitalization,
   bool numeric = false,
+  bool decimal = false,
 }) {
   TextEditingController controller = new TextEditingController()..text = preset;
   return showDialog(
@@ -163,8 +167,9 @@ Future<String> showInputDialog(
         autofocus: true,
         controller: controller,
         textCapitalization: capitalization ?? TextCapitalization.none,
-        inputFormatters: numeric ? [WhitelistingTextInputFormatter(RegExp('\\d'))] : null,
-        keyboardType: numeric ? TextInputType.number : TextInputType.text,
+        keyboardType: numeric
+            ? TextInputType.numberWithOptions(decimal: decimal)
+            : TextInputType.text,
       ),
       actions: <Widget>[
         FlatButton(

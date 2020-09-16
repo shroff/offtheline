@@ -16,13 +16,15 @@ class LoginWrapperPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Core.login(context).isSignedIn ? child : _LoginPage(googleClientId);
+    return Core.login(context).isSignedIn
+        ? child
+        : LoginPage(googleClientId: googleClientId);
   }
 }
 
-class _LoginPage extends StatelessWidget {
+class LoginPage extends StatelessWidget {
   final googleClientId;
-  const _LoginPage(this.googleClientId, {Key key}) : super(key: key);
+  const LoginPage({Key key, @required this.googleClientId}) : super(key: key);
 
   void _logInWithSessionId(BuildContext context) async {
     final login = Core.login(context);
@@ -55,29 +57,7 @@ class _LoginPage extends StatelessWidget {
       ),
     );
     String response = await login.loginWithSessionId(context, sessionId);
-    Navigator.of(context).pop();
-
-    if (response != null) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: Text('Login Error'),
-          content: Text(
-            response,
-            softWrap: true,
-          ),
-          actions: <Widget>[
-            FlatButton(
-              child: Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            )
-          ],
-        ),
-      );
-    }
+    _handleLoginResponse(response, context);
   }
 
   void _logInWithGoogle(BuildContext context) async {
@@ -118,8 +98,15 @@ class _LoginPage extends StatelessWidget {
       ),
     );
     String response = await login.loginWithGoogle(context, user.email, idToken);
+    _handleLoginResponse(response, context);
+  }
+
+  void _handleLoginResponse(String response, BuildContext context) async {
     Navigator.of(context).pop();
 
+    if (response == null) {
+      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    }
     if (response != null) {
       showDialog(
         context: context,
