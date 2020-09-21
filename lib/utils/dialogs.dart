@@ -200,6 +200,7 @@ Future<T> showOptionsDialog<T>(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
+        scrollable: true,
         title: TextField(
           decoration: InputDecoration(hintText: 'Type to filter...'),
           onChanged: (value) {
@@ -213,9 +214,12 @@ Future<T> showOptionsDialog<T>(
         ),
         content: results.length == 0
             ? Center(child: Text('No results'))
-            : Column(children: [
-                for (final option in results) buildItem(option),
-              ]),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final option in results) buildItem(option),
+                ],
+              ),
       ),
     ),
   );

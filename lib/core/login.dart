@@ -94,6 +94,7 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
   void setServerUrl(Uri serverUri) async {
     _serverUrl = serverUri.toString();
     await storage.write(key: _keyServerUrl, value: _serverUrl);
+    debugPrint('[login] Server set to ${_serverUrl}');
     setState(() {});
   }
 
