@@ -32,12 +32,10 @@ Future<PickedFileData> pickOrCapture(BuildContext context) =>
     );
 
 Future<PickedFileData> _pickFile(BuildContext context) async {
-  File file = await FilePicker.getFile();
-  return file == null
+  final result = await FilePicker.platform.pickFiles(withData: true);
+  return result == null || !result.isSinglePick
       ? null
-      : file
-          .readAsBytes()
-          .then((value) => new PickedFileData(value, path.extension(file.path)));
+      : new PickedFileData(result.files[0].bytes, path.extension(result.files[0].path));
 }
 
 Future<PickedFileData> _capturePhoto(BuildContext context) {
