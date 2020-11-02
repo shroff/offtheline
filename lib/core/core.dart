@@ -32,12 +32,14 @@ class Core<T extends Datastore, U extends LoginUser> extends StatelessWidget {
   final Widget child;
   final UserParser<U> parseUser;
   final T Function() createDatastore;
+  final String fixedServerUrl;
 
   const Core({
     Key key,
     @required this.child,
     @required this.parseUser,
     @required this.createDatastore,
+    this.fixedServerUrl,
   }) : super(key: key);
 
   static Login<U> login<U extends LoginUser>(BuildContext context) {
@@ -61,6 +63,7 @@ class Core<T extends Datastore, U extends LoginUser> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _LoginWidget(
         parseUser: parseUser,
+        fixedServerUrl: fixedServerUrl,
         child: _DatastoreWidget(
           createDatastore: createDatastore,
           child: _ApiWidget(

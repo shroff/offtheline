@@ -12,9 +12,14 @@ typedef UserParser<T extends LoginUser> = T Function(Map<String, dynamic>);
 class _LoginWidget<T extends LoginUser> extends StatefulWidget {
   final Widget child;
   final UserParser<T> parseUser;
+  final String fixedServerUrl;
 
-  const _LoginWidget({Key key, @required this.child, @required this.parseUser})
-      : super(key: key);
+  const _LoginWidget({
+    Key key,
+    @required this.child,
+    @required this.parseUser,
+    this.fixedServerUrl,
+  }) : super(key: key);
 
   @override
   State<_LoginWidget> createState() => Login<T>();
@@ -50,9 +55,11 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
   T _user;
 
   String get serverUrl => _serverUrl;
+  bool get canChangeServerUrl => widget.fixedServerUrl == null;
   bool get isSignedIn => _sessionId != null;
   Map<String, String> authHeaders = {};
   T get user => _user;
+
 
   @override
   void initState() {
@@ -65,6 +72,11 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
     _initializationStarted = true;
     await storage.initialize();
     _serverUrl = await storage.read(key: _keyServerUrl) ?? '';
+    if (widget.fixedServerUrl != null && _serverUrl != widget.fixedServerUrl) {
+      _serverUrl = widget.fixedServerUrl;
+      await storage.write(key: _keyServerUrl, value: _serverUrl);
+    }
+
     final sessionId = await storage.read(key: _keySessionId);
     final gidString = await storage.read(key: _keyGid) ?? '0';
     final usedIdsString = await storage.read(key: _keyUsedIds) ?? '0';
@@ -92,9 +104,9 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
   }
 
   void setServerUrl(Uri serverUri) async {
-    _serverUrl = serverUri.toString();
+    _serverUrl = serverUri?.toString() ?? '';
     await storage.write(key: _keyServerUrl, value: _serverUrl);
-    debugPrint('[login] Server set to ${_serverUrl}');
+    debugPrint('[login] Server set to $_serverUrl');
     setState(() {});
   }
 
@@ -206,6 +218,7 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
   }
 
   void printSessionDetails() {
+    debugPrint('[login]  server url: $_serverUrl');
     debugPrint('[login]   sessionId: $_sessionId');
     debugPrint('[login]         gid: $_gid');
     debugPrint('[login]    gid base: ${_gid << _gidShift}');

@@ -131,21 +131,23 @@ class LoginPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: Text('Login'),
-        ),
-        body: FixedPageBody(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
+  Widget build(BuildContext context) {
+    final login = Core.login(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Login'),
+      ),
+      body: FixedPageBody(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (login.canChangeServerUrl)
                 RaisedButton(
-                  child: Core.login(context).serverUrl?.isEmpty ?? true
+                  child: login.serverUrl?.isEmpty ?? true
                       ? Text('Set Server Address')
                       : Text("Change Server Address"),
                   onPressed: () async {
-                    final login = Core.login(context);
                     final uri = await showUriDialog(
                       context,
                       "API Server Address",
@@ -156,27 +158,32 @@ class LoginPage extends StatelessWidget {
                     );
                     debugPrint(uri.toString());
                     if (uri != null) {
-                      login.setServerUrl(uri);
+                      if (uri.authority.isEmpty) {
+                        login.setServerUrl(null);
+                      } else {
+                        login.setServerUrl(uri);
+                      }
                     }
                   },
                 ),
-                if (!kReleaseMode)
-                  RaisedButton(
-                    child: Text("Log in with Session ID"),
-                    onPressed: () {
-                      _logInWithSessionId(context);
-                    },
-                  ),
-                GoogleSignInButton(
-                  onPressed: Core.login(context).serverUrl?.isEmpty ?? true
-                      ? null
-                      : () {
-                          _logInWithGoogle(context);
-                        },
+              if (!kReleaseMode)
+                RaisedButton(
+                  child: Text("Log in with Session ID"),
+                  onPressed: () {
+                    _logInWithSessionId(context);
+                  },
                 ),
-              ],
-            ),
+              GoogleSignInButton(
+                onPressed: Core.login(context).serverUrl?.isEmpty ?? true
+                    ? null
+                    : () {
+                        _logInWithGoogle(context);
+                      },
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }
