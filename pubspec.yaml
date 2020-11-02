@@ -17,7 +17,6 @@ dependencies:
   flutter_secure_storage:
   localstorage:
   rxdart: ^0.23.1
-  camera:
   uri:
   image:
   exif:
