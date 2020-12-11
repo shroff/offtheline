@@ -23,6 +23,7 @@ dependencies:
   intl:
   google_sign_in: ^4.1.1
   flutter_auth_buttons:
+  image_picker:
 
 dev_dependencies:
 #   flutter_test:

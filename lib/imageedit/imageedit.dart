@@ -1,5 +1,6 @@
 library imageedit;
 
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -22,14 +23,6 @@ class ImageEditPage extends StatefulWidget {
 
   @override
   State<ImageEditPage> createState() => _ImageEditState();
-}
-
-class ImageConstraints {
-  final int maxSize;
-  final bool imageSquare;
-  final int imageTargetSize;
-
-  ImageConstraints(this.maxSize, this.imageSquare, this.imageTargetSize);
 }
 
 class _ImageEditArgs {
@@ -161,7 +154,9 @@ class _ImageViewportTransformerState extends State<ImageViewportTransformer> {
             final newWidth = viewport.width / details.scale;
             final scale = (newWidth) > imageWidth
                 ? viewport.width / imageWidth
-                : (newWidth < 200) ? viewport.width / 200 : details.scale;
+                : (newWidth < 200)
+                    ? viewport.width / 200
+                    : details.scale;
             final width = viewport.width / scale;
             final height = viewport.height / scale;
             final effectiveScale = viewportCanvasRatio / scale;
