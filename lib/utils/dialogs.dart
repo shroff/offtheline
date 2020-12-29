@@ -192,26 +192,29 @@ Future<String> showInputDialog(
 Future<T> showOptionsDialog<T>(
   BuildContext context,
   List<T> options,
+  Widget Function(T) buildItem, {
   bool Function(T, String) filter,
-  Widget Function(T) buildItem,
-) async {
+}) async {
   var results = options;
   return showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
         scrollable: true,
-        title: TextField(
-          decoration: InputDecoration(hintText: 'Type to filter...'),
-          onChanged: (value) {
-            final query = value.toLowerCase();
-            final filtered =
-                options.where((element) => filter(element, query)).toList();
-            setState(() {
-              results = filtered;
-            });
-          },
-        ),
+        title: (filter == null)
+            ? null
+            : TextField(
+                decoration: InputDecoration(hintText: 'Type to filter...'),
+                onChanged: (value) {
+                  final query = value.toLowerCase();
+                  final filtered = options
+                      .where((element) => filter(element, query))
+                      .toList();
+                  setState(() {
+                    results = filtered;
+                  });
+                },
+              ),
         content: results.length == 0
             ? Center(child: Text('No results'))
             : Column(

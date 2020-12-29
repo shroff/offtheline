@@ -44,7 +44,7 @@ Future<UploadFileData> pickFile(
           title: Text('Capture Image'),
           onTap: () async {
             Navigator.of(ctx).pop();
-            _pickAndEditImage(context, picker, ImageSource.camera, constraints);
+            result.complete(_pickAndEditImage(context, picker, ImageSource.camera, constraints));
           },
         ),
         ListTile(
@@ -52,8 +52,8 @@ Future<UploadFileData> pickFile(
           title: Text('Pick from Gallery'),
           onTap: () async {
             Navigator.of(ctx).pop();
-            _pickAndEditImage(
-                context, picker, ImageSource.gallery, constraints);
+            result.complete(_pickAndEditImage(
+                context, picker, ImageSource.gallery, constraints));
           },
         ),
       ],
