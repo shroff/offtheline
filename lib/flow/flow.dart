@@ -19,7 +19,6 @@ abstract class FlowManager<T> extends StatefulWidget {
         .data;
   }
 
-
   FutureOr<bool> confirmDropFlow(BuildContext context) {
     return true;
   }
@@ -101,7 +100,8 @@ class _FlowManagerState<T> extends State<FlowManager> {
   }
 
   void nextStep() async {
-    if (await currentStep.onFinish(data, context)) {
+    if ((currentStep.nextEnabled?.call(data, context) ?? true) &&
+        (await currentStep.onFinish(data, context))) {
       if (currentStep.generateNextStepName == null) {
         if ((await widget.finishFlow(context, data)) ?? false) {
           debugPrint('[flow] Finish');

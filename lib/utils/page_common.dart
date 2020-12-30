@@ -23,10 +23,8 @@ class ScrollingPageBody extends StatelessWidget {
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: FixedPageBody(child: child),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FixedPageBody(child: child),
         ),
       );
 }
