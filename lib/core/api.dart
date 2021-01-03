@@ -171,6 +171,7 @@ class Api extends State<_ApiWidget> {
       httpRequest.headers.addAll(login.authHeaders);
       final response = await login._client.send(httpRequest);
 
+      Core.datastore(context)._establishTickerSocket();
       // Show request result
       if (response.statusCode == 200) {
         await Core.datastore(context)._parseResponse(response);

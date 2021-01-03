@@ -32,7 +32,8 @@ class _InheritedDatastore extends InheritedWidget {
   bool updateShouldNotify(InheritedWidget oldWidget) => oldWidget != this;
 }
 
-abstract class Datastore extends State<_DatastoreWidget> {
+abstract class Datastore extends State<_DatastoreWidget>
+    with WidgetsBindingObserver {
   var _completer = Completer<void>();
   Future<void> get initialized => _completer.future;
   bool get isInitialized => _completer.isCompleted;
@@ -41,6 +42,7 @@ abstract class Datastore extends State<_DatastoreWidget> {
   final BehaviorSubject<bool> _loadingSubject = BehaviorSubject.seeded(false);
   ValueStream<bool> get loadingStream => _loadingSubject.stream;
 
+  Future<WebSocket> socketFuture;
   Box _metadataBox;
 
   E getMetadata<E>(String key, {E defaultValue}) {
@@ -57,6 +59,7 @@ abstract class Datastore extends State<_DatastoreWidget> {
   void initState() {
     super.initState();
     initializeAsync();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   Future<void> initializeAsync() async {
@@ -71,8 +74,13 @@ abstract class Datastore extends State<_DatastoreWidget> {
     await openBoxes();
 
     debugPrint('[datastore] Ready');
+    _establishTickerSocket();
     _completer.complete();
-    fetchUpdates();
+    // fetchUpdates();
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void registerTypeAdapters();
@@ -94,8 +102,56 @@ abstract class Datastore extends State<_DatastoreWidget> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _loadingSubject.close();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('Lifecycle State: $state');
+    if (state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive) {
+      _establishTickerSocket();
+    } else if (socketFuture != null) {
+      // closeCode 1001: "going away"
+      socketFuture.timeout(Duration.zero, onTimeout: () => null).then((socket) => socket?.close(1001, "backgrounded"));
+      socketFuture = null;
+    }
+  }
+
+  void _establishTickerSocket() async {
+    final login = Core.login(context);
+    if (!login.isSignedIn || socketFuture != null) {
+      return;
+    }
+    final baseUri = Uri.parse('${login._serverUrl}/v1/ticker');
+    final uriBuilder = UriBuilder.fromUri(baseUri)
+      ..scheme = baseUri.scheme == "https" ? "wss" : "ws";
+    uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: true));
+
+    // ignore: close_sinks
+    socketFuture = WebSocket.connect(
+      uriBuilder.toString(),
+      headers: login.authHeaders,
+    );
+    socketFuture.then((socket) {
+      debugPrint('[datastore] Ticker channel created');
+      return socket.listen((message) {
+        debugPrint("[datastore] Ticker message");
+        _parseResponseString(message);
+      }, onError: (err) {
+        debugPrint("[datastore] Ticker error: $err");
+        socketFuture = null;
+      }, onDone: () {
+        debugPrint(
+            '[datastore] Ticker closed: ${socket.closeCode}, ${socket.closeReason}');
+        socketFuture = null;
+      });
+    }, onError: (err) {
+      debugPrint("[datastore] Ticker socket error: $err");
+      socketFuture = null;
+    });
   }
 
   void fetchUpdates({bool incremental = true}) async {
@@ -108,8 +164,10 @@ abstract class Datastore extends State<_DatastoreWidget> {
     _setLoading(true);
     debugPrint('[datastore] Fetching Updates');
 
-    final uriBuilder = UriBuilder.fromUri(Uri.parse('${login._serverUrl}/v1/sync'));
-    uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: incremental));
+    final uriBuilder =
+        UriBuilder.fromUri(Uri.parse('${login._serverUrl}/v1/sync'));
+    uriBuilder.queryParameters
+        .addAll(createLastSyncParams(incremental: incremental));
     debugPrint(uriBuilder.toString());
 
     try {
@@ -142,28 +200,35 @@ abstract class Datastore extends State<_DatastoreWidget> {
     _loadingSubject.add(loading);
   }
 
-  Future<void> _parseResponse(StreamedResponse response) async {
-    final responseString = await response.stream.bytesToString();
+  Future<void> _parseResponse(StreamedResponse response) async =>
+      _parseResponseString(await response.stream.bytesToString());
+
+  Future<void> _parseResponseString(String responseString) async {
     if (responseString.isNotEmpty) {
       final responseMap = jsonDecode(responseString) as Map<String, dynamic>;
+      debugPrint('Parsing Response Map: $responseMap');
       await _parseResponseMap(responseMap);
       setState(() {
         // Notify any listening widgets
       });
-      Core.login(context).setState(() {
-      });
+      Core.login(context).setState(() {});
     }
   }
 
-  Future<bool> _parseResponseMap(Map<String, dynamic> response, {bool clearData = false}) async {
+  Future<bool> _parseResponseMap(
+    Map<String, dynamic> response, {
+    bool clearData = false,
+  }) async {
     debugPrint('[datastore] Parsing response map');
     await initialized;
-    if (clearData || response.containsKey('clearData') && response['clearData']) {
+    if (clearData ||
+        response.containsKey('clearData') && response['clearData']) {
       await clear();
     }
     if (response.containsKey('session')) {
       debugPrint('[datastore] Parsing session');
-      final success = await Core.login(context)._parseSession(response['session'] as Map<String, dynamic>);
+      final success = await Core.login(context)
+          ._parseSession(response['session'] as Map<String, dynamic>);
       if (!success) {
         return false;
       }

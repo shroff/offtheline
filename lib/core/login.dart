@@ -145,13 +145,14 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
       await Core.api(context).clear();
     }
 
-    debugPrint('[login] Sending request');
+    debugPrint('[login] Sending request to ${request.url}');
     try {
       final response = await _client.send(request);
       if (response.statusCode == 200) {
         _usedIds = 0;
         await storage.write(key: _keyUsedIds, value: '0');
         await Core.datastore(context)._parseResponse(response);
+        Core.datastore(context)._establishTickerSocket();
         debugPrint("[login] Success");
 
         return null;
@@ -160,6 +161,7 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
       }
     } on Exception catch (e) {
       if (e is SocketException) {
+        debugPrint(e.toString());
         return "Server Unreachable";
       } else {
         return e.toString();
