@@ -35,9 +35,11 @@ class _InheritedDatastore extends InheritedWidget {
 abstract class Datastore extends State<_DatastoreWidget>
     with WidgetsBindingObserver {
   var _completer = Completer<void>();
+
   Future<void> get initialized => _completer.future;
   bool get isInitialized => _completer.isCompleted;
   bool _initializationStarted = false;
+  StreamSubscription<ConnectivityResult> _connectivitySub;
 
   final BehaviorSubject<bool> _loadingSubject = BehaviorSubject.seeded(false);
   ValueStream<bool> get loadingStream => _loadingSubject.stream;
@@ -59,7 +61,35 @@ abstract class Datastore extends State<_DatastoreWidget>
   void initState() {
     super.initState();
     initializeAsync();
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((result) {
+      if (result != ConnectivityResult.none) {
+        _establishTickerSocket();
+      }
+    });
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _connectivitySub.cancel();
+    _loadingSubject.close();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('Lifecycle State: $state');
+    if (state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive) {
+      _establishTickerSocket();
+    } else if (socketFuture != null) {
+      // closeCode 1001: "going away"
+      socketFuture
+          .timeout(Duration.zero, onTimeout: () => null)
+          .then((socket) => socket?.close(1001, "backgrounded"));
+      socketFuture = null;
+    }
   }
 
   Future<void> initializeAsync() async {
@@ -98,26 +128,6 @@ abstract class Datastore extends State<_DatastoreWidget>
 
     debugPrint('[datastore] Clearing Done');
     _completer.complete();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _loadingSubject.close();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    debugPrint('Lifecycle State: $state');
-    if (state == AppLifecycleState.resumed ||
-        state == AppLifecycleState.inactive) {
-      _establishTickerSocket();
-    } else if (socketFuture != null) {
-      // closeCode 1001: "going away"
-      socketFuture.timeout(Duration.zero, onTimeout: () => null).then((socket) => socket?.close(1001, "backgrounded"));
-      socketFuture = null;
-    }
   }
 
   void _establishTickerSocket() async {
