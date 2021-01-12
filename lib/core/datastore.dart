@@ -168,7 +168,6 @@ abstract class Datastore extends State<_DatastoreWidget>
         UriBuilder.fromUri(Uri.parse('${login._serverUrl}/v1/sync'));
     uriBuilder.queryParameters
         .addAll(createLastSyncParams(incremental: incremental));
-    debugPrint(uriBuilder.toString());
 
     try {
       final httpRequest = Request('get', uriBuilder.build());
@@ -180,7 +179,7 @@ abstract class Datastore extends State<_DatastoreWidget>
         _setLoading(false);
       } else {
         String responseString = await response.stream.bytesToString();
-        debugPrint(responseString);
+        debugPrint('Loading Error: $responseString');
         _setLoadingError(responseString);
       }
     } on Exception catch (e) {
@@ -206,7 +205,6 @@ abstract class Datastore extends State<_DatastoreWidget>
   Future<void> _parseResponseString(String responseString) async {
     if (responseString.isNotEmpty) {
       final responseMap = jsonDecode(responseString) as Map<String, dynamic>;
-      debugPrint('Parsing Response Map: $responseMap');
       await _parseResponseMap(responseMap);
       setState(() {
         // Notify any listening widgets
