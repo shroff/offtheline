@@ -161,7 +161,7 @@ class Api extends State<_ApiWidget> {
     final request = requestQueue.getAt(0);
     _updateStatus(ApiStatus.SYNCING);
 
-    final queryParams = Core.datastore(context).createLastSyncParams();
+    final queryParams = Core.datastore(context)._createLastSyncParams();
     final uriBuilder =
         UriBuilder.fromUri(Uri.parse('${login.serverUrl}${request.endpoint}'));
     uriBuilder.queryParameters.addAll(queryParams);

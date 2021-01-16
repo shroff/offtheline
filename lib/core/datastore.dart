@@ -288,7 +288,7 @@ abstract class Datastore extends State<_DatastoreWidget>
       debugPrint('[datastore] Parsing data');
       final data = response['data'] as Map<String, dynamic>;
       if (data.containsKey(_dataKeyClearData) && data[_dataKeyClearData]) {
-        await openBoxes(clear: true);
+        await _openBoxes(clear: true);
         print("Clearing Data");
       }
       await parseData(data);
