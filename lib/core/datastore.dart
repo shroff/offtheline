@@ -1,6 +1,15 @@
 part of 'core.dart';
 
 const _boxNameDatastoreMetadata = 'datastoreMetadata';
+const _metadataKeySchemaVersion = 'schemaVersion';
+const _metadataKeyLastSyncTime = "lastSyncTime";
+const _metadataKeyLastSyncPermissions = "lastSyncPermissions";
+
+const _paramKeyLastSyncTime = "lastSyncTime";
+const _paramKeyLastSyncPermissions = "lastSyncPermissions";
+
+const _dataKeyTime = "__time";
+const _dataKeyClearData = "__clearData";
 
 typedef DatastoreCreator<T extends Datastore> = T Function();
 
@@ -47,6 +56,24 @@ abstract class Datastore extends State<_DatastoreWidget>
   Future<WebSocket> socketFuture;
   Box _metadataBox;
 
+  int get schemaVersion;
+
+  int get _lastSyncTime =>
+      getMetadata(_metadataKeyLastSyncTime, defaultValue: 0);
+  int get _lastSyncPermissions =>
+      getMetadata(_metadataKeyLastSyncPermissions, defaultValue: 0);
+
+  Future<void> _updateLastSync(int time, int permissions) async {
+    await putMetadata(_metadataKeyLastSyncTime, time);
+    await putMetadata(_metadataKeyLastSyncPermissions, permissions);
+  }
+
+  Map<String, String> _createLastSyncParams({bool incremental = true}) =>
+      <String, String>{
+        _paramKeyLastSyncTime: incremental ? _lastSyncTime.toString() : '-1',
+        _paramKeyLastSyncPermissions: _lastSyncPermissions.toString(),
+      };
+
   E getMetadata<E>(String key, {E defaultValue}) {
     return _metadataBox.get(key, defaultValue: defaultValue);
   }
@@ -54,8 +81,6 @@ abstract class Datastore extends State<_DatastoreWidget>
   Future<void> putMetadata<E>(String key, E value) {
     return _metadataBox.put(key, value);
   }
-
-  Map<String, String> createLastSyncParams({bool incremental = true});
 
   @override
   void initState() {
@@ -101,7 +126,7 @@ abstract class Datastore extends State<_DatastoreWidget>
     _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);
 
     registerTypeAdapters();
-    await openBoxes();
+    await _openBoxes();
 
     debugPrint('[datastore] Ready');
     _establishTickerSocket();
@@ -115,7 +140,25 @@ abstract class Datastore extends State<_DatastoreWidget>
 
   void registerTypeAdapters();
 
-  Future<void> openBoxes({bool clear = false});
+  Future<void> openBoxes();
+
+  Future<void> clearBoxes();
+
+  Future<void> _openBoxes({bool clear = false}) async {
+    try {
+      if (clear ||
+          getMetadata(_metadataKeySchemaVersion, defaultValue: 0) !=
+              schemaVersion) {
+        await clearBoxes();
+        await putMetadata(_metadataKeySchemaVersion, schemaVersion);
+        _updateLastSync(0, 0);
+      }
+      openBoxes();
+    } catch (e) {
+      // TODO #silentfail
+      debugPrint(e.toString());
+    }
+  }
 
   Future<void> clear() async {
     await initialized;
@@ -124,7 +167,7 @@ abstract class Datastore extends State<_DatastoreWidget>
     _completer = Completer<void>();
     await _metadataBox.deleteFromDisk();
     _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);
-    await openBoxes(clear: true);
+    await _openBoxes(clear: true);
 
     debugPrint('[datastore] Clearing Done');
     _completer.complete();
@@ -138,7 +181,7 @@ abstract class Datastore extends State<_DatastoreWidget>
     final baseUri = Uri.parse('${login._serverUrl}/v1/ticker');
     final uriBuilder = UriBuilder.fromUri(baseUri)
       ..scheme = baseUri.scheme == "https" ? "wss" : "ws";
-    uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: true));
+    uriBuilder.queryParameters.addAll(_createLastSyncParams(incremental: true));
 
     // ignore: close_sinks
     socketFuture = WebSocket.connect(
@@ -177,7 +220,7 @@ abstract class Datastore extends State<_DatastoreWidget>
     final uriBuilder =
         UriBuilder.fromUri(Uri.parse('${login._serverUrl}/v1/sync'));
     uriBuilder.queryParameters
-        .addAll(createLastSyncParams(incremental: incremental));
+        .addAll(_createLastSyncParams(incremental: incremental));
 
     try {
       final httpRequest = Request('get', uriBuilder.build());
@@ -243,7 +286,18 @@ abstract class Datastore extends State<_DatastoreWidget>
     }
     if (response.containsKey('data')) {
       debugPrint('[datastore] Parsing data');
-      await parseData(response['data'] as Map<String, dynamic>);
+      final data = response['data'] as Map<String, dynamic>;
+      if (data.containsKey(_dataKeyClearData) && data[_dataKeyClearData]) {
+        await openBoxes(clear: true);
+        print("Clearing Data");
+      }
+      await parseData(data);
+
+      debugPrint('[datastore] Data Parsed');
+      if (data.containsKey(_dataKeyTime)) {
+        _updateLastSync(
+            data[_dataKeyTime] as int, Core.login(context).user.permissions);
+      }
     }
     if (response.containsKey('debug')) {
       debugPrint(response['debug'].toString());
