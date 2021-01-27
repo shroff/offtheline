@@ -151,9 +151,9 @@ abstract class Datastore extends State<_DatastoreWidget>
               schemaVersion) {
         await clearBoxes();
         await putMetadata(_metadataKeySchemaVersion, schemaVersion);
-        _updateLastSync(0, 0);
+        await _updateLastSync(0, 0);
       }
-      openBoxes();
+      await openBoxes();
     } catch (e) {
       // TODO #silentfail
       debugPrint(e.toString());
