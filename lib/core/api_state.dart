@@ -1,7 +1,6 @@
+import 'package:appcore/core/api_user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
-
-import 'api_cubit.dart';
 
 @immutable
 class ApiState<U extends ApiUser> {

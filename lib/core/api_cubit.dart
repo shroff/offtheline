@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:appcore/core/api_user.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:uri/uri.dart';
 
 import 'datastore.dart';
 import 'core_stub.dart'
@@ -52,6 +54,12 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
 
   String createUrl(String path) {
     return '${state.baseApiUrl}$path';
+  }
+
+  UriBuilder createUriBuilder(String path) {
+    final builder = UriBuilder.fromUri(state.baseApiUrl);
+    builder.path += path;
+    return builder;
   }
 
   Future<int> generateNextId() async {
@@ -195,29 +203,5 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     debugPrint(
         '[login]    next gid: ${state.usedIds | (state.gid << _gidShift)}');
     debugPrint('[login]        user: ${state.user}');
-  }
-}
-
-typedef ApiUserParser<U extends ApiUser> = U Function(Map<String, dynamic>);
-
-mixin ApiUser {
-  int get id;
-  int get permissions;
-  String get name;
-
-  bool hasPermission(int permission) {
-    return (permission & permissions) != 0;
-  }
-
-  Map<String, dynamic> toMap();
-
-  @override
-  bool operator ==(Object o) {
-    if (identical(this, o)) return true;
-
-    return o is ApiUser &&
-        o.id == id &&
-        o.permissions == permissions &&
-        o.name == name;
   }
 }

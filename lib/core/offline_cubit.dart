@@ -6,85 +6,103 @@ import 'package:appcore/requests/requests.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
-import 'package:uri/uri.dart';
+import 'package:http/http.dart';
 
 const _boxNameApiMetadata = 'apiMetadata';
 const _boxNameRequestQueue = 'requestQueue';
 
-const _metadataKeyPaused = 'paused';
+const _metadataKeyActionsPaused = 'actionsPaused';
 
 class OfflineCubitState {
   final bool ready;
-  final bool paused;
-  final bool submitting;
+  final bool fetchingUpdates;
+  final bool socketConnected;
+  final bool actionsPaused;
+  final bool actionSubmitting;
   final bool serverUnreachable;
-  final Iterable<ApiRequest> requests;
-  final String lastRequestError;
+  final Iterable<ApiRequest> actions;
+  final String fetchError;
+  final String actionError;
 
   OfflineCubitState({
     this.ready = false,
-    this.paused = false,
-    this.submitting = false,
+    this.fetchingUpdates = false,
+    this.socketConnected = false,
+    this.actionsPaused = false,
+    this.actionSubmitting = false,
     this.serverUnreachable = false,
-    this.requests,
-    this.lastRequestError,
+    this.actions,
+    this.fetchError,
+    this.actionError,
   });
 
   OfflineCubitState copyWith({
     bool ready,
-    bool paused,
-    bool submitting,
+    bool fetchingUpdates,
+    bool socketConnected,
+    bool actionsPaused,
+    bool actionSubmitting,
     bool serverUnreachable,
-    Iterable<ApiRequest> requests,
-    String lastRequestError,
+    Iterable<ApiRequest> actions,
+    String fetchError,
+    String actionError,
   }) {
     return OfflineCubitState(
       ready: ready ?? this.ready,
-      paused: paused ?? this.paused,
-      submitting: submitting ?? this.submitting,
+      fetchingUpdates: fetchingUpdates ?? this.fetchingUpdates,
+      socketConnected: socketConnected ?? this.socketConnected,
+      actionsPaused: actionsPaused ?? this.actionsPaused,
+      actionSubmitting: actionSubmitting ?? this.actionSubmitting,
       serverUnreachable: serverUnreachable ?? this.serverUnreachable,
-      requests: requests ?? this.requests,
-      lastRequestError: lastRequestError ?? this.lastRequestError,
+      actions: actions ?? this.actions,
+      fetchError: fetchError ?? this.fetchError,
+      actionError: actionError ?? this.actionError,
     );
   }
 
   @override
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
-
+  
     return o is OfflineCubitState &&
-        o.ready == ready &&
-        o.paused == paused &&
-        o.submitting == submitting &&
-        o.serverUnreachable == serverUnreachable &&
-        o.requests == requests &&
-        o.lastRequestError == lastRequestError;
+      o.ready == ready &&
+      o.fetchingUpdates == fetchingUpdates &&
+      o.socketConnected == socketConnected &&
+      o.actionsPaused == actionsPaused &&
+      o.actionSubmitting == actionSubmitting &&
+      o.serverUnreachable == serverUnreachable &&
+      o.actions == actions &&
+      o.fetchError == fetchError &&
+      o.actionError == actionError;
   }
 
   @override
   int get hashCode {
     return ready.hashCode ^
-        paused.hashCode ^
-        submitting.hashCode ^
-        serverUnreachable.hashCode ^
-        requests.hashCode ^
-        lastRequestError.hashCode;
+      fetchingUpdates.hashCode ^
+      socketConnected.hashCode ^
+      actionsPaused.hashCode ^
+      actionSubmitting.hashCode ^
+      serverUnreachable.hashCode ^
+      actions.hashCode ^
+      fetchError.hashCode ^
+      actionError.hashCode;
   }
 
   String get status {
     if (!ready) {
       return "Initializing";
     }
-    if (submitting) {
+    if (actionSubmitting) {
       return "Submitting";
     }
-    if (paused) {
+    if (actionsPaused) {
       return "Paused";
     }
     if (serverUnreachable) {
       return "Server Unreachable";
     }
-    if (lastRequestError != null) {
+    if (actionError != null) {
       return "Error";
     }
     return "Ready";
@@ -93,136 +111,235 @@ class OfflineCubitState {
 
 class OfflineCubit extends Cubit<OfflineCubitState> {
   final ApiCubit apiCubit;
+  Future<WebSocket> socketFuture;
   Box _metadata;
   Box<ApiRequest> _requests;
 
   OfflineCubit(this.apiCubit) : super(OfflineCubitState()) {
-    initialize();
-  }
-
-  Future<void> initialize() async {
     debugPrint('[api] Initializing');
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
 
-    bool paused = _metadata.get(_metadataKeyPaused, defaultValue: false);
-    await _openBoxesAndStart(paused: paused);
+    _initialize();
   }
 
-  Future<void> clear() async {
-    debugPrint('[api] Clearing');
-    // * Wait for any syncing request to finish
-    if (state.submitting) {
-      await firstWhere((state) => !state.submitting);
-    }
-
-    emit(OfflineCubitState());
-    await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
-    await Hive.deleteBoxFromDisk(_boxNameApiMetadata);
-    await _openBoxesAndStart();
-  }
-
-  Future<void> _openBoxesAndStart({bool paused = false}) async {
+  Future<void> _initialize() async {
     _requests = await Hive.openBox(_boxNameRequestQueue);
     _metadata = await Hive.openBox(_boxNameApiMetadata);
 
     emit(OfflineCubitState(
       ready: true,
-      paused: paused,
-      requests: _requests.values,
+      actionsPaused:
+          _metadata.get(_metadataKeyActionsPaused, defaultValue: false),
+      actions: _requests.values,
     ));
     debugPrint('[api] Ready');
     sendNextRequest();
   }
 
+  Future<void> clear() async {
+    debugPrint('[api] Clearing');
+
+    emit(state.copyWith(ready: false));
+
+    // * Wait for any ongoing connections to finish
+    while (state.actionSubmitting ||
+        state.fetchingUpdates ||
+        state.socketConnected) {
+      await firstWhere((state) =>
+          !state.actionSubmitting &&
+          !state.fetchingUpdates &&
+          !state.socketConnected);
+    }
+
+    await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
+    await Hive.deleteBoxFromDisk(_boxNameApiMetadata);
+    await _initialize();
+  }
+
   Future<void> enqueue(ApiRequest request) async {
+    if (!state.ready) return;
     debugPrint(
         '[api] Request enqueued: ${request.endpoint} | ${request.description}');
     await _requests.add(request);
-    emit(state.copyWith(requests: _requests.values));
+    emit(state.copyWith(actions: _requests.values));
     sendNextRequest();
   }
 
   Future<void> deleteRequestAt(int index) async {
+    if (!state.ready) return;
     if (index >= _requests.length) return;
+
+    if (index == 0 && state.actionSubmitting) return;
+
     if (kDebugMode) {
       final request = _requests.getAt(index);
       debugPrint(
           '[api] Deleting request: ${request.endpoint} | ${request.description}');
     }
+
     await _requests.deleteAt(index);
-    emit(state.copyWith(requests: _requests.values));
+    emit(state.copyWith(
+      actions: _requests.values,
+      actionError: index == 0 ? '' : null,
+    ));
     sendNextRequest();
   }
 
   Future<void> deleteRequest(ApiRequest request) async {
+    if (!state.ready) return;
+
     bool isFirstRequest = request == _requests.getAt(0);
-    if (isFirstRequest && state.submitting) {
-      return;
+    if (isFirstRequest && state.actionSubmitting) return;
+
+    if (kDebugMode) {
+      debugPrint(
+          '[api] Deleting request: ${request.endpoint} | ${request.description}');
     }
+
     await request.delete();
-    var nextState = state.copyWith(
-      requests: _requests.values,
-      lastRequestError: isFirstRequest ? '' : null,
-    );
-    emit(nextState);
+    emit(state.copyWith(
+      actions: _requests.values,
+      actionError: isFirstRequest ? '' : null,
+    ));
     sendNextRequest();
   }
 
   void pause({bool persistent = false}) {
     debugPrint('[api] Pausing');
-    if (persistent) _metadata.put(_metadataKeyPaused, true);
-    emit(state.copyWith(paused: true));
+    if (persistent) _metadata.put(_metadataKeyActionsPaused, true);
+    emit(state.copyWith(actionsPaused: true));
   }
 
   void resume() {
     debugPrint('[api] Resuming');
-    _metadata.put(_metadataKeyPaused, false);
-    emit(state.copyWith(paused: false));
+    _metadata.put(_metadataKeyActionsPaused, false);
+    emit(state.copyWith(actionsPaused: false));
     sendNextRequest();
   }
 
   void sendNextRequest() async {
     // * Make sure we are ready
-    if (!state.ready) {
+    while (!state.ready) {
       await firstWhere((state) => state.ready);
     }
 
     if (!apiCubit.isSignedIn ||
         _requests.isEmpty ||
-        state.paused ||
-        state.submitting) {
-      emit(state.copyWith(submitting: false));
+        state.actionsPaused ||
+        state.actionSubmitting) {
       return;
     }
-    emit(state.copyWith(submitting: true));
+
+    emit(state.copyWith(actionSubmitting: true));
     final request = _requests.getAt(0);
 
-    final queryParams = apiCubit.createLastSyncParams();
-    final uriBuilder =
-        UriBuilder.fromUri(Uri.parse(apiCubit.createUrl(request.endpoint)));
-    uriBuilder.queryParameters.addAll(queryParams);
+    final uriBuilder = apiCubit.createUriBuilder(request.endpoint);
+    uriBuilder.queryParameters.addAll(apiCubit.createLastSyncParams());
+    final httpRequest = await request.createRequest(uriBuilder.build());
 
     try {
-      final httpRequest = await request.createRequest(uriBuilder.build());
       final response = await apiCubit.sendAuthenticatedRequest(httpRequest);
+      String responseString = await response.stream.bytesToString();
 
       // Show request result
       if (response.statusCode == 200) {
-        await apiCubit
-            .parseResponseString(await response.stream.bytesToString());
-        emit(state.copyWith(submitting: false, lastRequestError: ''));
+        await apiCubit.parseResponseString(responseString);
+        emit(state.copyWith(actionSubmitting: false, actionError: ''));
         deleteRequest(request);
       } else {
-        final details = await response.stream.bytesToString();
-        emit(state.copyWith(submitting: false, lastRequestError: details));
+        emit(state.copyWith(
+            actionSubmitting: false, actionError: responseString));
       }
     } catch (e) {
       if (e is SocketException) {
-        emit(state.copyWith(submitting: false, serverUnreachable: true));
+        emit(state.copyWith(actionSubmitting: false, serverUnreachable: true));
       } else {
-        emit(state.copyWith(submitting: false, lastRequestError: e.toString()));
+        emit(
+            state.copyWith(actionSubmitting: false, actionError: e.toString()));
       }
     }
+  }
+
+  void fetchUpdates({bool incremental = true}) async {
+    // * Make sure we are ready
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+    if (!apiCubit.isSignedIn ||
+        state.fetchingUpdates ||
+        state.socketConnected) {
+      return;
+    }
+
+    emit(state.copyWith(fetchingUpdates: true));
+    debugPrint('[api-sync] Fetching Updates');
+
+    final uriBuilder = apiCubit.createUriBuilder('/v1/sync');
+    uriBuilder.queryParameters
+        .addAll(apiCubit.createLastSyncParams(incremental: incremental));
+    final httpRequest = Request('get', uriBuilder.build());
+
+    try {
+      final response = await apiCubit.sendAuthenticatedRequest(httpRequest);
+      String responseString = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        await apiCubit.parseResponseString(responseString);
+        emit(state.copyWith(fetchingUpdates: false, fetchError: ''));
+      } else {
+        emit(
+            state.copyWith(fetchingUpdates: false, fetchError: responseString));
+      }
+    } on Exception catch (e) {
+      if (e is SocketException) {
+        emit(state.copyWith(fetchingUpdates: false, serverUnreachable: true));
+      } else {
+        emit(state.copyWith(fetchingUpdates: false, fetchError: e.toString()));
+      }
+    }
+  }
+
+  void establishTickerSocket() async {
+    // * Make sure we are ready
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+    if (!apiCubit.isSignedIn ||
+        state.socketConnected) {
+      return;
+    }
+
+    final uriBuilder = apiCubit.createUriBuilder('/v1/ticker');
+    uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
+    uriBuilder.queryParameters
+        .addAll(apiCubit.createLastSyncParams(incremental: true));
+
+    // ignore: close_sinks
+    socketFuture = WebSocket.connect(
+      uriBuilder.toString(),
+      headers: {"Authorization": 'SessionId ${apiCubit.state.sessionId}'},
+    );
+    emit(state.copyWith(socketConnected: true));
+    socketFuture.then((socket) {
+      debugPrint('[api-sync] Ticker channel created');
+      return socket.listen((message) {
+        debugPrint("[api-sync] Ticker message");
+        apiCubit.parseResponseString(message);
+      }, onError: (err) {
+        debugPrint("[api-sync] Ticker error: $err");
+        socketFuture = null;
+        emit(state.copyWith(socketConnected: false));
+      }, onDone: () {
+        debugPrint(
+            '[api-sync] Ticker closed: ${socket.closeCode}, ${socket.closeReason}');
+        socketFuture = null;
+        emit(state.copyWith(socketConnected: false));
+      });
+    }, onError: (err) {
+      debugPrint("[api-sync] Ticker socket error: $err");
+      socketFuture = null;
+      emit(state.copyWith(socketConnected: false));
+    });
   }
 }
