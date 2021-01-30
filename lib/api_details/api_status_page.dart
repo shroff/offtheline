@@ -15,7 +15,7 @@ class ApiStatusPage extends StatelessWidget {
         title: Text('API'),
       ),
       body: FixedPageBody(
-        child: (!api.isInitialized || api.requestQueue == null)
+        child: (!api.isInitialized || api._requests == null)
             ? CircularProgressIndicator()
             : CustomScrollView(
                 slivers: [
@@ -24,8 +24,8 @@ class ApiStatusPage extends StatelessWidget {
                       [
                         ListTile(
                             title: Text("Status: ${api.status.statusString}"),
-                            subtitle: api.statusDetails != null
-                                ? Text(api.statusDetails)
+                            subtitle: api.lastRequestStatusDetails != null
+                                ? Text(api.lastRequestStatusDetails)
                                 : null,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -54,7 +54,7 @@ class ApiStatusPage extends StatelessWidget {
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, i) {
-                        final request = api.requestQueue.getAt(i);
+                        final request = api._requests.getAt(i);
                         return ListTile(
                           title: Text(request.description),
                           trailing: Row(
@@ -114,7 +114,7 @@ class ApiStatusPage extends StatelessWidget {
                           ),
                         );
                       },
-                      childCount: api.requestQueue.length,
+                      childCount: api._requests.length,
                     ),
                   ),
                 ],

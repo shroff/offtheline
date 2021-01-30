@@ -4,10 +4,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:appcore/core/api_cubit.dart';
 import 'package:appcore/requests/requests.dart';
 import 'package:connectivity/connectivity.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart';
@@ -19,11 +21,8 @@ import 'core_stub.dart'
     if (dart.library.html) 'core_browser.dart'
 // ignore: uri_does_not_exist
     if (dart.library.io) 'core_mobile.dart';
-import 'storage.dart';
 
 part 'api.dart';
-
-part 'datastore.dart';
 
 part 'login.dart';
 
@@ -62,14 +61,21 @@ class Core<T extends Datastore, U extends LoginUser> extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => _LoginWidget(
-        parseUser: parseUser,
-        fixedServerUrl: fixedServerUrl,
-        child: _DatastoreWidget(
-          createDatastore: createDatastore,
-          child: _ApiWidget(
-            child: child,
-          ),
-        ),
-      );
+  Widget build(BuildContext context) =>
+      MultiBlocProvider(providers: [
+        BlocProvider(create: create)
+
+      ], child: child);
+
+  // @override
+  // Widget build(BuildContext context) => _LoginWidget(
+  //       parseUser: parseUser,
+  //       fixedServerUrl: fixedServerUrl,
+  //       child: _DatastoreWidget(
+  //         createDatastore: createDatastore,
+  //         child: _ApiWidget(
+  //           child: child,
+  //         ),
+  //       ),
+  //     );
 }

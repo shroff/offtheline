@@ -25,6 +25,9 @@ dependencies:
   flutter_auth_buttons:
   image_picker:
   connectivity:
+  bloc:
+  flutter_bloc:
+  hydrated_bloc:
 
 dev_dependencies:
 #   flutter_test:

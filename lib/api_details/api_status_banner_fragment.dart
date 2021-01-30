@@ -5,12 +5,12 @@ class ApiStatusBannerFragment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final api = Core.api(context);
-    if (api.status == ApiStatus.DONE && (api.requestQueue?.isEmpty ?? true)) return Container();
-    final pendingRequests = api.requestQueue == null
+    if (api.status == ApiStatus.DONE && (api._requests?.isEmpty ?? true)) return Container();
+    final pendingRequests = api._requests == null
         ? ''
-        : api.requestQueue.length == 1
+        : api._requests.length == 1
             ? '1 entry pending'
-            : '${api.requestQueue.length} entries pending';
+            : '${api._requests.length} entries pending';
 
     IconData icon;
     switch (api.status) {
