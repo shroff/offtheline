@@ -74,11 +74,23 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
         debugPrint('usedIds: 0');
         changes[_keyUsedIds] = 0;
       }
+      sendNextRequest();
+      if (change.nextState.loginSession == null) {
+        _socketFuture
+            .timeout(Duration.zero, onTimeout: () => null)
+            .then((socket) => socket?.close(1001, "backgrounded"));
+        _socketFuture = null;
+      }
     }
 
-    if (change.currentState.actionsPaused != change.nextState.actionsPaused) {
-      debugPrint('actionsPaused: ${change.nextState.actionsPaused}');
-      changes[_keyActionsPaused] = change.nextState.actionsPaused;
+    if (change.currentState.actionQueueState.paused !=
+        change.nextState.actionQueueState.paused) {
+      debugPrint('actionsPaused: ${change.nextState.actionQueueState.paused}');
+      changes[_keyActionsPaused] = change.nextState.actionQueueState.paused;
+      sendNextRequest();
+    } else if (change.currentState.actionQueueState.actions !=
+        change.nextState.actionQueueState.actions) {
+      sendNextRequest();
     }
 
     if (changes.isNotEmpty) {
@@ -91,16 +103,17 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     _requests = await Hive.openBox(_boxNameRequestQueue);
     _persist = await Hive.openBox(_boxNamePersist);
 
-    emit(state.copyWith(
+    emit(ApiState(
       ready: true,
       baseApiUrl: baseApiUrl ?? Uri.tryParse(_persist.get(_keyBaseApiUrl)),
       loginSession:
           LoginSession.fromJson(_persist.get(_keyLoginSession), _parseUser),
-      actionsPaused: _persist.get(_keyActionsPaused, defaultValue: false),
-      actions: _requests.values.toList(growable: false),
+      actionQueueState: ActionQueueState(
+        actions: _requests.values.toList(growable: false),
+        paused: _persist.get(_keyActionsPaused, defaultValue: false),
+      ),
     ));
     debugPrint('[api] Ready');
-    sendNextRequest();
   }
 
   Future<void> signOut() async {
@@ -109,13 +122,13 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     emit(state.copyWith(ready: false));
 
     // * Wait for any ongoing connections to finish
-    while (state.actionSubmitting ||
-        state.fetchingUpdates ||
-        state.socketConnected) {
+    while (state.actionQueueState.submitting ||
+        state.fetchState.fetching ||
+        state.fetchState.connected) {
       await firstWhere((state) =>
-          !state.actionSubmitting &&
-          !state.fetchingUpdates &&
-          !state.socketConnected);
+          !state.actionQueueState.submitting &&
+          !state.fetchState.fetching &&
+          !state.fetchState.connected);
     }
     await datastore.clear();
 
@@ -150,11 +163,6 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     return nextId;
   }
 
-  Future<StreamedResponse> sendAuthenticatedRequest(BaseRequest request) {
-    request.headers['Authorization'] = 'SessionId $state.sessionId';
-    return _client.send(request);
-  }
-
   Map<String, String> createLastSyncParams({bool incremental = true}) =>
       incremental
           ? <String, String>{
@@ -167,51 +175,25 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
             }
           : <String, String>{};
 
-  Future<String> loginWithGoogle(
-    String email,
-    String idToken,
-  ) async {
-    debugPrint('[api] Google Login');
-    if (state.loginSession != null) {
-      return "Already Logged In";
+  Future<String> sendRequest(BaseRequest request, bool auth) async {
+    debugPrint('[api] Sending request to ${request.url}');
+    if (auth) {
+      request.headers['Authorization'] = 'SessionId $state.sessionId';
     }
-    if (idToken?.isEmpty ?? true) {
-      return "No ID Token given for Google login";
-    }
-    final request =
-        Request('post', Uri.parse(createUrl('/v1/login/google-id-token')));
-    request.headers['Authorization'] = 'Bearer $idToken';
-    return sendLoginRequest(request);
-  }
-
-  Future<String> loginWithSessionId(String sessionId) async {
-    debugPrint('[api] SessionID Login');
-    if (state.loginSession != null) {
-      return "Already Logged In";
-    }
-    final request = Request('get', Uri.parse(createUrl('/v1/sync')));
-    request.headers['Authorization'] = 'SessionId $sessionId';
-    return sendLoginRequest(request);
-  }
-
-  Future<String> sendLoginRequest(Request request) async {
-    debugPrint('[api] Sending login request to ${request.url}');
-    await datastore.clear();
-
     try {
       final response = await _client.send(request);
-      if (response.statusCode == 200) {
-        await parseResponseString(await response.stream.bytesToString());
-        debugPrint("[api] Login Success");
+      String responseString = await response.stream.bytesToString();
 
+      // Show request result
+      if (response.statusCode == 200) {
+        await parseResponseString(responseString);
         return null;
       } else {
-        return response.stream.bytesToString();
+        return responseString;
       }
-    } on Exception catch (e) {
+    } catch (e) {
       if (e is SocketException) {
-        debugPrint(e.toString());
-        return "Server Unreachable";
+        return 'Server Unreachable';
       } else {
         return e.toString();
       }
@@ -264,15 +246,18 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     debugPrint(
         '[api] Request enqueued: ${request.endpoint} | ${request.description}');
     await _requests.add(request);
-    emit(state.copyWith(actions: _requests.values));
-    sendNextRequest();
+    emit(state.copyWith(
+      actionQueueState: state.actionQueueState.copyWithActions(
+        _requests.values,
+      ),
+    ));
   }
 
   Future<void> deleteRequestAt(int index) async {
     if (!state.ready) return;
     if (index >= _requests.length) return;
 
-    if (index == 0 && state.actionSubmitting) return;
+    if (index == 0 && state.actionQueueState.submitting) return;
 
     if (kDebugMode) {
       final request = _requests.getAt(index);
@@ -282,17 +267,18 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
 
     await _requests.deleteAt(index);
     emit(state.copyWith(
-      actions: _requests.values,
-      actionError: index == 0 ? '' : null,
+      actionQueueState: state.actionQueueState.copyWithActions(
+        _requests.values,
+        resetError: index == 0,
+      ),
     ));
-    sendNextRequest();
   }
 
   Future<void> deleteRequest(ApiRequest request) async {
     if (!state.ready) return;
 
     bool isFirstRequest = request == _requests.getAt(0);
-    if (isFirstRequest && state.actionSubmitting) return;
+    if (isFirstRequest && state.actionQueueState.submitting) return;
 
     if (kDebugMode) {
       debugPrint(
@@ -301,21 +287,25 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
 
     await request.delete();
     emit(state.copyWith(
-      actions: _requests.values,
-      actionError: isFirstRequest ? '' : null,
+      actionQueueState: state.actionQueueState.copyWithActions(
+        _requests.values,
+        resetError: isFirstRequest,
+      ),
     ));
-    sendNextRequest();
   }
 
   void pause() {
     debugPrint('[api] Pausing');
-    emit(state.copyWith(actionsPaused: true));
+    emit(state.copyWith(
+      actionQueueState: state.actionQueueState.copyWithPaused(true),
+    ));
   }
 
   void resume() {
     debugPrint('[api] Resuming');
-    emit(state.copyWith(actionsPaused: false));
-    sendNextRequest();
+    emit(state.copyWith(
+      actionQueueState: state.actionQueueState.copyWithPaused(false),
+    ));
   }
 
   void sendNextRequest() async {
@@ -326,78 +316,95 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
 
     if (!isSignedIn ||
         _requests.isEmpty ||
-        state.actionsPaused ||
-        state.actionSubmitting) {
+        state.actionQueueState.paused ||
+        state.actionQueueState.submitting) {
       return;
     }
 
-    emit(state.copyWith(actionSubmitting: true));
-    final request = _requests.getAt(0);
+    emit(state.copyWith(
+      actionQueueState: state.actionQueueState.copyWithSubmitting(true, null),
+    ));
 
+    final request = _requests.getAt(0);
     final uriBuilder = createUriBuilder(request.endpoint);
     uriBuilder.queryParameters.addAll(createLastSyncParams());
     final httpRequest = await request.createRequest(uriBuilder.build());
 
-    try {
-      final response = await sendAuthenticatedRequest(httpRequest);
-      String responseString = await response.stream.bytesToString();
-
-      // Show request result
-      if (response.statusCode == 200) {
-        await parseResponseString(responseString);
-        emit(state.copyWith(actionSubmitting: false, actionError: ''));
-        deleteRequest(request);
-      } else {
-        emit(state.copyWith(
-            actionSubmitting: false, actionError: responseString));
-      }
-    } catch (e) {
-      if (e is SocketException) {
-        emit(state.copyWith(
-            actionSubmitting: false, actionError: 'Server Unreachable'));
-      } else {
-        emit(
-            state.copyWith(actionSubmitting: false, actionError: e.toString()));
-      }
+    final error = await sendRequest(httpRequest, true);
+    emit(state.copyWith(
+      actionQueueState: state.actionQueueState.copyWithSubmitting(
+        false,
+        error,
+      ),
+    ));
+    if (error == null) {
+      deleteRequestAt(0);
     }
   }
 
-  void fetchUpdates({bool incremental = true}) async {
+  Future<String> loginWithGoogle(
+    String email,
+    String idToken,
+  ) async {
+    debugPrint('[api] Google Login');
+
     // * Make sure we are ready
     while (!state.ready) {
       await firstWhere((state) => state.ready);
     }
-    if (!isSignedIn || state.fetchingUpdates || state.socketConnected) {
+    if (isSignedIn) {
+      return "Already Logged In";
+    }
+    final request =
+        Request('post', Uri.parse(createUrl('/v1/login/google-id-token')));
+    request.headers['Authorization'] = 'Bearer $idToken';
+    return sendRequest(request, false);
+  }
+
+  Future<String> loginWithSessionId(String sessionId) async {
+    debugPrint('[api] SessionID Login');
+
+    // * Make sure we are ready
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+    if (isSignedIn) {
+      return "Already Logged In";
+    }
+    final request = Request('get', Uri.parse(createUrl('/v1/sync')));
+    request.headers['Authorization'] = 'SessionId $sessionId';
+    return sendRequest(request, false);
+  }
+
+  void fetchUpdates({bool incremental = true}) async {
+    debugPrint('[api] Fetching Updates');
+
+    // * Make sure we are ready
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+    if (!isSignedIn ||
+        state.fetchState.fetching ||
+        state.fetchState.connected) {
       return;
     }
 
-    emit(state.copyWith(fetchingUpdates: true));
-    debugPrint('[api] Fetching Updates');
+    emit(state.copyWith(
+      fetchState: state.fetchState.copyWith(fetching: true),
+    ));
 
     final uriBuilder = createUriBuilder('/v1/sync');
     uriBuilder.queryParameters
         .addAll(createLastSyncParams(incremental: incremental));
     final httpRequest = Request('get', uriBuilder.build());
 
-    try {
-      final response = await sendAuthenticatedRequest(httpRequest);
-      String responseString = await response.stream.bytesToString();
-
-      if (response.statusCode == 200) {
-        await parseResponseString(responseString);
-        emit(state.copyWith(fetchingUpdates: false, fetchError: ''));
-      } else {
-        emit(
-            state.copyWith(fetchingUpdates: false, fetchError: responseString));
-      }
-    } on Exception catch (e) {
-      if (e is SocketException) {
-        emit(state.copyWith(
-            fetchingUpdates: false, fetchError: 'Server Unreachable'));
-      } else {
-        emit(state.copyWith(fetchingUpdates: false, fetchError: e.toString()));
-      }
-    }
+    final error = await sendRequest(httpRequest, true);
+    emit(state.copyWith(
+      fetchState: state.fetchState.copyWith(
+        fetching: false,
+        error: error,
+      ),
+    ));
   }
 
   void establishTickerSocket() async {
@@ -405,7 +412,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     while (!state.ready) {
       await firstWhere((state) => state.ready);
     }
-    if (!isSignedIn || state.socketConnected) {
+    if (!isSignedIn || state.fetchState.connected) {
       return;
     }
 
@@ -418,26 +425,33 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
       uriBuilder.toString(),
       headers: {"Authorization": 'SessionId ${state.loginSession.sessionId}'},
     );
-    emit(state.copyWith(socketConnected: true));
+    emit(state.copyWith(
+      fetchState: state.fetchState.copyWith(connected: true),
+    ));
     _socketFuture.then((socket) {
-      debugPrint('[api] Ticker channel created');
+      debugPrint('[api] Update socket created');
       return socket.listen((message) {
-        debugPrint("[api] Ticker message");
         parseResponseString(message);
       }, onError: (err) {
-        debugPrint("[api] Ticker error: $err");
+        debugPrint("[api] Update socket error: $err");
         _socketFuture = null;
-        emit(state.copyWith(socketConnected: false));
+        emit(state.copyWith(
+          fetchState: state.fetchState.copyWith(connected: false),
+        ));
       }, onDone: () {
         debugPrint(
-            '[api] Ticker closed: ${socket.closeCode}, ${socket.closeReason}');
+            '[api] Update socket closed: ${socket.closeCode}, ${socket.closeReason}');
         _socketFuture = null;
-        emit(state.copyWith(socketConnected: false));
+        emit(state.copyWith(
+          fetchState: state.fetchState.copyWith(connected: false),
+        ));
       });
     }, onError: (err) {
-      debugPrint("[api] Ticker socket error: $err");
+      debugPrint("[api] Update socket error: $err");
       _socketFuture = null;
-      emit(state.copyWith(socketConnected: false));
+      emit(state.copyWith(
+        fetchState: state.fetchState.copyWith(connected: false),
+      ));
     });
   }
 }
