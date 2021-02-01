@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:appcore/core/api_user.dart';
+import 'package:appcore/requests/requests.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
@@ -25,26 +26,105 @@ const _paramKeyLastSyncPermissions = "lastSyncPermissions";
 
 const _gidShift = 10; // Must match up with the server
 
+const _boxNamePersist = 'apiMetadata';
+const _boxNameRequestQueue = 'apiRequestQueue';
+
+const _keyBaseApiUrl = 'baseApiUrl';
+const _keyLoginSession = 'loginSession';
+const _keyUsedIds = 'usedIds';
+const _keyActionsPaused = 'actionsPaused';
+
 class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
-  final Box persist;
   final D datastore;
-  final BaseClient client = createHttpClient();
+
+  Future<WebSocket> _socketFuture;
+  Box _persist;
+  Box<ApiRequest> _requests;
+  final BaseClient _client = createHttpClient();
   final ApiUserParser<U> _parseUser;
-  final String _fixedBaseApiUrl;
+  final Uri _fixedBaseApiUrl;
 
   ApiCubit(
-    this.persist,
     this.datastore,
     this._parseUser, {
-    String fixedBaseApiUrl,
+    Uri fixedBaseApiUrl,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
-        super(ApiState.fromBox(persist, _parseUser)) {
-          if (!datastore.isInitialized) {
-            throw Exception('Datastore not initialized');
-          }
-        }
+        super(const ApiState(ready: false)) {
+    debugPrint('[api] Initializing');
+    Hive.registerAdapter(UploadApiRequestAdapter());
+    Hive.registerAdapter(SimpleApiRequestAdapter());
 
-  bool get isSignedIn => state.sessionId != null;
+    _initialize(_fixedBaseApiUrl);
+  }
+
+  @override
+  void onChange(Change<ApiState> change) {
+    super.onChange(change);
+    Map<String, dynamic> changes = {};
+    if (change.currentState.baseApiUrl != change.nextState.baseApiUrl) {
+      debugPrint('baseApiUrl: ${change.nextState.baseApiUrl}');
+      changes[_keyBaseApiUrl] = change.nextState.baseApiUrl.toString();
+    }
+
+    if (change.currentState.loginSession != change.nextState.loginSession) {
+      changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
+      debugPrint('Login Session: ${change.nextState.loginSession?.toString()}');
+      if (change.currentState.loginSession?.gid !=
+          change.nextState.loginSession?.gid) {
+        debugPrint('usedIds: 0');
+        changes[_keyUsedIds] = 0;
+      }
+    }
+
+    if (change.currentState.actionsPaused != change.nextState.actionsPaused) {
+      debugPrint('actionsPaused: ${change.nextState.actionsPaused}');
+      changes[_keyActionsPaused] = change.nextState.actionsPaused;
+    }
+
+    if (changes.isNotEmpty) {
+      _persist.putAll(changes);
+    }
+  }
+
+  Future<void> _initialize(Uri baseApiUrl) async {
+    await datastore.ready;
+    _requests = await Hive.openBox(_boxNameRequestQueue);
+    _persist = await Hive.openBox(_boxNamePersist);
+
+    emit(state.copyWith(
+      ready: true,
+      baseApiUrl: baseApiUrl ?? Uri.tryParse(_persist.get(_keyBaseApiUrl)),
+      loginSession:
+          LoginSession.fromJson(_persist.get(_keyLoginSession), _parseUser),
+      actionsPaused: _persist.get(_keyActionsPaused, defaultValue: false),
+      actions: _requests.values.toList(growable: false),
+    ));
+    debugPrint('[api] Ready');
+    sendNextRequest();
+  }
+
+  Future<void> signOut() async {
+    debugPrint('[api] Clearing');
+
+    emit(state.copyWith(ready: false));
+
+    // * Wait for any ongoing connections to finish
+    while (state.actionSubmitting ||
+        state.fetchingUpdates ||
+        state.socketConnected) {
+      await firstWhere((state) =>
+          !state.actionSubmitting &&
+          !state.fetchingUpdates &&
+          !state.socketConnected);
+    }
+    await datastore.clear();
+
+    await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
+    await Hive.deleteBoxFromDisk(_boxNamePersist);
+    await _initialize(state.baseApiUrl);
+  }
+
+  bool get isSignedIn => state.loginSession != null;
 
   bool get canChangeApiBaseUrl => _fixedBaseApiUrl == null;
 
@@ -63,20 +143,16 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
   }
 
   Future<int> generateNextId() async {
-    if (state.gid == null) return null;
-    int nextId = state.usedIds | (state.gid << _gidShift);
-    emit(state.copyWith(usedIds: this.state.usedIds + 1));
+    if (state.loginSession == null) return null;
+    final usedIds = _persist.get(_keyUsedIds, defaultValue: 0);
+    final nextId = usedIds | (state.loginSession.gid << _gidShift);
+    await _persist.put(_keyUsedIds, usedIds + 1);
     return nextId;
   }
 
   Future<StreamedResponse> sendAuthenticatedRequest(BaseRequest request) {
     request.headers['Authorization'] = 'SessionId $state.sessionId';
-    return client.send(request);
-  }
-
-  Future<void> signOut() async {
-    await datastore.clear();
-    emit(ApiState(baseApiUrl: state.baseApiUrl));
+    return _client.send(request);
   }
 
   Map<String, String> createLastSyncParams({bool incremental = true}) =>
@@ -95,8 +171,8 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     String email,
     String idToken,
   ) async {
-    debugPrint('[login] Google');
-    if (state.sessionId != null) {
+    debugPrint('[api] Google Login');
+    if (state.loginSession != null) {
       return "Already Logged In";
     }
     if (idToken?.isEmpty ?? true) {
@@ -109,8 +185,8 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
   }
 
   Future<String> loginWithSessionId(String sessionId) async {
-    debugPrint('[login] SessionID');
-    if (state.sessionId != null) {
+    debugPrint('[api] SessionID Login');
+    if (state.loginSession != null) {
       return "Already Logged In";
     }
     final request = Request('get', Uri.parse(createUrl('/v1/sync')));
@@ -119,14 +195,14 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
   }
 
   Future<String> sendLoginRequest(Request request) async {
-    debugPrint('[login] Sending request to ${request.url}');
+    debugPrint('[api] Sending login request to ${request.url}');
     await datastore.clear();
 
     try {
-      final response = await client.send(request);
+      final response = await _client.send(request);
       if (response.statusCode == 200) {
         await parseResponseString(await response.stream.bytesToString());
-        debugPrint("[login] Success");
+        debugPrint("[api] Login Success");
 
         return null;
       } else {
@@ -153,18 +229,14 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     debugPrint('[api] Parsing response');
     if (response.containsKey('session')) {
       debugPrint('[api] Parsing session');
-      final session =
-          _parseSession(response['session'] as Map<String, dynamic>);
+      final sessionMap = response['session'] as Map<String, dynamic>;
+      final session = LoginSession.fromMap(sessionMap, _parseUser);
       if (session == null) return false;
-      emit(state.copyWith(
-        sessionId: session.sessionId,
-        gid: session.gid,
-        user: session.user,
-      ));
+      emit(state.copyWith(loginSession: session));
     }
 
     if (response.containsKey('data')) {
-      debugPrint('[datastore] Parsing data');
+      debugPrint('[api] Parsing data');
       final data = response['data'] as Map<String, dynamic>;
       if (data.containsKey(_dataKeyClearData) && data[_dataKeyClearData]) {
         await datastore.clear();
@@ -172,12 +244,12 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
       }
       await datastore.parseData(data);
 
-      debugPrint('[datastore] Data Parsed');
+      debugPrint('[api] Data Parsed');
       if (data.containsKey(_dataKeyTime)) {
         datastore.putMetadata(
             _metadataKeyLastSyncTime, data[_dataKeyTime] as int);
-        datastore.putMetadata(
-            _metadataKeyLastSyncPermissions, state.user.permissions);
+        datastore.putMetadata(_metadataKeyLastSyncPermissions,
+            state.loginSession.user.permissions);
       }
     }
     if (response.containsKey('debug')) {
@@ -187,21 +259,185 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     return true;
   }
 
-  ApiState _parseSession(Map<String, dynamic> session) {
-    final state = ApiState.fromMap(session, _parseUser);
-    if (state.gid == null || state.sessionId == null || state.user == null)
-      return null;
-    return state;
+  Future<void> enqueue(ApiRequest request) async {
+    if (!state.ready) return;
+    debugPrint(
+        '[api] Request enqueued: ${request.endpoint} | ${request.description}');
+    await _requests.add(request);
+    emit(state.copyWith(actions: _requests.values));
+    sendNextRequest();
   }
 
-  void debugPrintSessionDetails() {
-    debugPrint('[login]  server url: ${state.baseApiUrl}');
-    debugPrint('[login]   sessionId: ${state.sessionId}');
-    debugPrint('[login]         gid: ${state.gid}');
-    debugPrint('[login]    gid base: ${state.gid << _gidShift}');
-    debugPrint('[login]    used ids: ${state.usedIds}');
-    debugPrint(
-        '[login]    next gid: ${state.usedIds | (state.gid << _gidShift)}');
-    debugPrint('[login]        user: ${state.user}');
+  Future<void> deleteRequestAt(int index) async {
+    if (!state.ready) return;
+    if (index >= _requests.length) return;
+
+    if (index == 0 && state.actionSubmitting) return;
+
+    if (kDebugMode) {
+      final request = _requests.getAt(index);
+      debugPrint(
+          '[api] Deleting request: ${request.endpoint} | ${request.description}');
+    }
+
+    await _requests.deleteAt(index);
+    emit(state.copyWith(
+      actions: _requests.values,
+      actionError: index == 0 ? '' : null,
+    ));
+    sendNextRequest();
+  }
+
+  Future<void> deleteRequest(ApiRequest request) async {
+    if (!state.ready) return;
+
+    bool isFirstRequest = request == _requests.getAt(0);
+    if (isFirstRequest && state.actionSubmitting) return;
+
+    if (kDebugMode) {
+      debugPrint(
+          '[api] Deleting request: ${request.endpoint} | ${request.description}');
+    }
+
+    await request.delete();
+    emit(state.copyWith(
+      actions: _requests.values,
+      actionError: isFirstRequest ? '' : null,
+    ));
+    sendNextRequest();
+  }
+
+  void pause() {
+    debugPrint('[api] Pausing');
+    emit(state.copyWith(actionsPaused: true));
+  }
+
+  void resume() {
+    debugPrint('[api] Resuming');
+    emit(state.copyWith(actionsPaused: false));
+    sendNextRequest();
+  }
+
+  void sendNextRequest() async {
+    // * Make sure we are ready
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+
+    if (!isSignedIn ||
+        _requests.isEmpty ||
+        state.actionsPaused ||
+        state.actionSubmitting) {
+      return;
+    }
+
+    emit(state.copyWith(actionSubmitting: true));
+    final request = _requests.getAt(0);
+
+    final uriBuilder = createUriBuilder(request.endpoint);
+    uriBuilder.queryParameters.addAll(createLastSyncParams());
+    final httpRequest = await request.createRequest(uriBuilder.build());
+
+    try {
+      final response = await sendAuthenticatedRequest(httpRequest);
+      String responseString = await response.stream.bytesToString();
+
+      // Show request result
+      if (response.statusCode == 200) {
+        await parseResponseString(responseString);
+        emit(state.copyWith(actionSubmitting: false, actionError: ''));
+        deleteRequest(request);
+      } else {
+        emit(state.copyWith(
+            actionSubmitting: false, actionError: responseString));
+      }
+    } catch (e) {
+      if (e is SocketException) {
+        emit(state.copyWith(
+            actionSubmitting: false, actionError: 'Server Unreachable'));
+      } else {
+        emit(
+            state.copyWith(actionSubmitting: false, actionError: e.toString()));
+      }
+    }
+  }
+
+  void fetchUpdates({bool incremental = true}) async {
+    // * Make sure we are ready
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+    if (!isSignedIn || state.fetchingUpdates || state.socketConnected) {
+      return;
+    }
+
+    emit(state.copyWith(fetchingUpdates: true));
+    debugPrint('[api] Fetching Updates');
+
+    final uriBuilder = createUriBuilder('/v1/sync');
+    uriBuilder.queryParameters
+        .addAll(createLastSyncParams(incremental: incremental));
+    final httpRequest = Request('get', uriBuilder.build());
+
+    try {
+      final response = await sendAuthenticatedRequest(httpRequest);
+      String responseString = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        await parseResponseString(responseString);
+        emit(state.copyWith(fetchingUpdates: false, fetchError: ''));
+      } else {
+        emit(
+            state.copyWith(fetchingUpdates: false, fetchError: responseString));
+      }
+    } on Exception catch (e) {
+      if (e is SocketException) {
+        emit(state.copyWith(
+            fetchingUpdates: false, fetchError: 'Server Unreachable'));
+      } else {
+        emit(state.copyWith(fetchingUpdates: false, fetchError: e.toString()));
+      }
+    }
+  }
+
+  void establishTickerSocket() async {
+    // * Make sure we are ready
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+    if (!isSignedIn || state.socketConnected) {
+      return;
+    }
+
+    final uriBuilder = createUriBuilder('/v1/ticker');
+    uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
+    uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: true));
+
+    // ignore: close_sinks
+    _socketFuture = WebSocket.connect(
+      uriBuilder.toString(),
+      headers: {"Authorization": 'SessionId ${state.loginSession.sessionId}'},
+    );
+    emit(state.copyWith(socketConnected: true));
+    _socketFuture.then((socket) {
+      debugPrint('[api] Ticker channel created');
+      return socket.listen((message) {
+        debugPrint("[api] Ticker message");
+        parseResponseString(message);
+      }, onError: (err) {
+        debugPrint("[api] Ticker error: $err");
+        _socketFuture = null;
+        emit(state.copyWith(socketConnected: false));
+      }, onDone: () {
+        debugPrint(
+            '[api] Ticker closed: ${socket.closeCode}, ${socket.closeReason}');
+        _socketFuture = null;
+        emit(state.copyWith(socketConnected: false));
+      });
+    }, onError: (err) {
+      debugPrint("[api] Ticker socket error: $err");
+      _socketFuture = null;
+      emit(state.copyWith(socketConnected: false));
+    });
   }
 }

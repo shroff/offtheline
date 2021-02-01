@@ -7,14 +7,17 @@ const _boxNameDatastoreMetadata = 'datastoreMetadata';
 const _metadataKeySchemaVersion = 'schemaVersion';
 
 abstract class Datastore {
-  var _completer = Completer<void>();
+  var _readyCompleter = Completer<void>();
 
-  Future<void> get initialized => _completer.future;
-  bool get isInitialized => _completer.isCompleted;
+  Future<void> get ready => _readyCompleter.future;
 
   Box _metadataBox;
 
   int get schemaVersion;
+
+  Datastore() {
+    registerTypeAdapters();
+  }
 
   E getMetadata<E>(String key, {E defaultValue}) {
     return _metadataBox.get(key, defaultValue: defaultValue);
@@ -26,12 +29,11 @@ abstract class Datastore {
 
   Future<void> initialize() async {
     debugPrint('[datastore] Initializing');
-    registerTypeAdapters();
 
     await _openBoxes();
 
     debugPrint('[datastore] Ready');
-    _completer.complete();
+    _readyCompleter.complete();
   }
 
   void registerTypeAdapters();
@@ -57,16 +59,16 @@ abstract class Datastore {
   }
 
   Future<void> clear() async {
-    await initialized;
+    await ready;
     debugPrint('[datastore] Clearing');
 
-    _completer = Completer<void>();
+    _readyCompleter = Completer<void>();
     await _metadataBox.deleteFromDisk();
     _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);
     await _openBoxes(clear: true);
 
     debugPrint('[datastore] Clearing Done');
-    _completer.complete();
+    _readyCompleter.complete();
   }
 
   Future<void> parseData(Map<String, dynamic> data);
