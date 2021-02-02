@@ -1,6 +1,7 @@
-import 'package:appcore/core/core.dart';
+import 'package:appcore/core/api_cubit.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ApiStatusPage extends StatelessWidget {
   final bool allowPause;
@@ -8,14 +9,29 @@ class ApiStatusPage extends StatelessWidget {
   const ApiStatusPage({Key key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final api = Core.api(context);
+    final qState = context.select((ApiCubit api) => api.state.actionQueueState);
+
+    String statusText;
+    if (qState.actions == null) {
+      statusText = 'Initializing';
+    } else if (qState.submitting) {
+      statusText = 'Submitting';
+    } else if (qState.error != null) {
+      statusText = qState.error;
+    } else if (qState.paused) {
+      statusText = 'Paused';
+    } else {
+      statusText = 'Ready';
+    }
+
+    final actions = qState.actions?.toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
         title: Text('API'),
       ),
       body: FixedPageBody(
-        child: (!api.isInitialized || api._requests == null)
+        child: (actions == null)
             ? CircularProgressIndicator()
             : CustomScrollView(
                 slivers: [
@@ -23,27 +39,24 @@ class ApiStatusPage extends StatelessWidget {
                     delegate: SliverChildListDelegate.fixed(
                       [
                         ListTile(
-                            title: Text("Status: ${api.status.statusString}"),
-                            subtitle: api.lastRequestStatusDetails != null
-                                ? Text(api.lastRequestStatusDetails)
+                            title: Text("Status: $statusText"),
+                            subtitle: qState.error != null
+                                ? Text(qState.error)
                                 : null,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (api.status == ApiStatus.PAUSED ||
-                                    api.status == ApiStatus.ERROR ||
-                                    api.status == ApiStatus.SERVER_UNREACHABLE)
+                                if (qState.paused || qState.error != null)
                                   IconButton(
                                       icon: Icon(Icons.play_arrow),
                                       onPressed: () {
-                                        api.resume();
+                                        context.read<ApiCubit>().resume();
                                       }),
-                                if (allowPause &&
-                                    api.status != ApiStatus.PAUSED)
+                                if (allowPause && !qState.paused)
                                   IconButton(
                                       icon: Icon(Icons.pause),
                                       onPressed: () {
-                                        api.pause(persistent: true);
+                                        context.read<ApiCubit>().pause();
                                       }),
                               ],
                             )),
@@ -54,7 +67,7 @@ class ApiStatusPage extends StatelessWidget {
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, i) {
-                        final request = api._requests.getAt(i);
+                        final request = actions[i];
                         return ListTile(
                           title: Text(request.description),
                           trailing: Row(
@@ -72,49 +85,50 @@ class ApiStatusPage extends StatelessWidget {
                               ),
                               IconButton(
                                 icon: Icon(Icons.delete_outline),
-                                onPressed:
-                                    (i == 0 && api.status == ApiStatus.SYNCING)
-                                        ? null
-                                        : () async {
-                                            final confirm = await showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: Text('Delete Record'),
-                                                content: Text(
-                                                    'You are about to delete the following record:\n\n'
-                                                    '${request.description}\n\n'
-                                                    'It will not be submitted to the server, and you will not be able to recover it.\n\n'
-                                                    'Are you sure you want to do this?'),
-                                                actions: <Widget>[
-                                                  FlatButton(
-                                                    child: Text('YES'),
-                                                    onPressed: () {
-                                                      Navigator.of(context)
-                                                          .pop(true);
-                                                    },
-                                                  ),
-                                                  FlatButton(
-                                                    child: Text('NO'),
-                                                    textTheme:
-                                                        ButtonTextTheme.primary,
-                                                    onPressed: () {
-                                                      Navigator.of(context)
-                                                          .pop(false);
-                                                    },
-                                                  ),
-                                                ],
+                                onPressed: (i == 0 && qState.submitting)
+                                    ? null
+                                    : () async {
+                                        final confirm = await showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text('Delete Record'),
+                                            content: Text(
+                                                'You are about to delete the following record:\n\n'
+                                                '${request.description}\n\n'
+                                                'It will not be submitted to the server, and you will not be able to recover it.\n\n'
+                                                'Are you sure you want to do this?'),
+                                            actions: <Widget>[
+                                              FlatButton(
+                                                child: Text('YES'),
+                                                onPressed: () {
+                                                  Navigator.of(context)
+                                                      .pop(true);
+                                                },
                                               ),
-                                            );
-                                            if (confirm ?? false) {
-                                              api.deleteRequest(request);
-                                            }
-                                          },
+                                              FlatButton(
+                                                child: Text('NO'),
+                                                textTheme:
+                                                    ButtonTextTheme.primary,
+                                                onPressed: () {
+                                                  Navigator.of(context)
+                                                      .pop(false);
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirm ?? false) {
+                                          context
+                                              .read<ApiCubit>()
+                                              .deleteRequest(request);
+                                        }
+                                      },
                               ),
                             ],
                           ),
                         );
                       },
-                      childCount: api._requests.length,
+                      childCount: actions.length,
                     ),
                   ),
                 ],

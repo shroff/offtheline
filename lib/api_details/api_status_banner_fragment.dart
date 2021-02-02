@@ -1,40 +1,35 @@
-import 'package:appcore/core/core.dart';
+import 'package:appcore/core/api_cubit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ApiStatusBannerFragment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final api = Core.api(context);
-    if (api.status == ApiStatus.DONE && (api._requests?.isEmpty ?? true)) return Container();
-    final pendingRequests = api._requests == null
+    final qState = context.select((ApiCubit api) => api.state.actionQueueState);
+    if (qState.actions?.isEmpty ?? true) return Container();
+    final pendingRequests = qState.actions == null
         ? ''
-        : api._requests.length == 1
+        : qState.actions.length == 1
             ? '1 entry pending'
-            : '${api._requests.length} entries pending';
+            : '${qState.actions.length} entries pending';
 
     IconData icon;
-    switch (api.status) {
-      case ApiStatus.INITIALIZING:
-        icon = Icons.power_settings_new;
-        break;
-      case ApiStatus.DONE:
-        icon = Icons.check_circle_outline;
-        break;
-      case ApiStatus.PAUSED:
-        icon = Icons.pause_circle_outline;
-        break;
-      case ApiStatus.SYNCING:
-        icon = Icons.sync;
-        break;
-      case ApiStatus.ERROR:
-        icon = Icons.error_outline;
-        break;
-      case ApiStatus.SERVER_UNREACHABLE:
-        icon = Icons.cloud_off;
-        break;
-      default:
-        icon = null;
-        break;
+    String statusText;
+    if (qState.actions == null) {
+      icon = Icons.power_settings_new;
+      statusText = 'Initializing';
+    } else if (qState.submitting) {
+      icon = Icons.sync;
+      statusText = 'Submitting';
+    } else if (qState.error != null) {
+      icon = Icons.error_outline;
+      statusText = qState.error;
+    } else if (qState.paused) {
+      icon = Icons.pause_circle_outline;
+      statusText = 'Paused';
+    } else {
+      icon = Icons.check_circle_outline;
+      statusText = 'Ready';
     }
 
     return Container(
@@ -58,7 +53,7 @@ class ApiStatusBannerFragment extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  api.status.statusString,
+                  statusText,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
