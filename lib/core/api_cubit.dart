@@ -54,6 +54,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
 
+    datastore.initialize();
     _initialize(_fixedBaseApiUrl);
   }
 
@@ -116,10 +117,14 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     debugPrint('[api] Ready');
   }
 
-  Future<void> signOut() async {
-    debugPrint('[api] Clearing');
+  Future<void> logout() async {
+    debugPrint('[api] Logging Out');
 
-    emit(state.copyWith(ready: false));
+    emit(state.copyWith(ready: false, loginSession: null));
+
+    datastore.wipe();
+    await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
+    await Hive.deleteBoxFromDisk(_boxNamePersist);
 
     // * Wait for any ongoing connections to finish
     while (state.actionQueueState.submitting ||
@@ -130,10 +135,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
           !state.fetchState.fetching &&
           !state.fetchState.connected);
     }
-    await datastore.clear();
 
-    await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
-    await Hive.deleteBoxFromDisk(_boxNamePersist);
     await _initialize(state.baseApiUrl);
   }
 
@@ -175,9 +177,9 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
             }
           : <String, String>{};
 
-  Future<String> sendRequest(BaseRequest request, bool auth) async {
+  Future<String> sendRequest(BaseRequest request, {bool authRequired = true}) async {
     debugPrint('[api] Sending request to ${request.url}');
-    if (auth) {
+    if (authRequired) {
       request.headers['Authorization'] = 'SessionId $state.sessionId';
     }
     try {
@@ -186,7 +188,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
 
       // Show request result
       if (response.statusCode == 200) {
-        await parseResponseString(responseString);
+        await parseResponseString(responseString, authRequired: authRequired);
         return null;
       } else {
         return responseString;
@@ -200,14 +202,15 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     }
   }
 
-  Future<void> parseResponseString(String responseString) async {
+  Future<void> parseResponseString(String responseString, {bool authRequired = true}) async {
     if (responseString.isNotEmpty) {
       final responseMap = json.decode(responseString) as Map<String, dynamic>;
-      await parseResponseMap(responseMap);
+      await parseResponseMap(responseMap, authRequired: authRequired);
     }
   }
 
-  Future<bool> parseResponseMap(Map<String, dynamic> response) async {
+  Future<bool> parseResponseMap(Map<String, dynamic> response, {bool authRequired = true}) async {
+    if (authRequired && !isSignedIn) return false;
     debugPrint('[api] Parsing response');
     if (response.containsKey('session')) {
       debugPrint('[api] Parsing session');
@@ -221,8 +224,8 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
       debugPrint('[api] Parsing data');
       final data = response['data'] as Map<String, dynamic>;
       if (data.containsKey(_dataKeyClearData) && data[_dataKeyClearData]) {
-        await datastore.clear();
-        print("Clearing Data");
+        await datastore.wipe();
+        print("[api] Clearing Data");
       }
       await datastore.parseData(data);
 
@@ -330,7 +333,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     uriBuilder.queryParameters.addAll(createLastSyncParams());
     final httpRequest = await request.createRequest(uriBuilder.build());
 
-    final error = await sendRequest(httpRequest, true);
+    final error = await sendRequest(httpRequest);
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithSubmitting(
         false,
@@ -358,7 +361,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     final request =
         Request('post', Uri.parse(createUrl('/v1/login/google-id-token')));
     request.headers['Authorization'] = 'Bearer $idToken';
-    return sendRequest(request, false);
+    return sendRequest(request, authRequired: false);
   }
 
   Future<String> loginWithSessionId(String sessionId) async {
@@ -373,7 +376,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     }
     final request = Request('get', Uri.parse(createUrl('/v1/sync')));
     request.headers['Authorization'] = 'SessionId $sessionId';
-    return sendRequest(request, false);
+    return sendRequest(request, authRequired: false);
   }
 
   void fetchUpdates({bool incremental = true}) async {
@@ -398,7 +401,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
         .addAll(createLastSyncParams(incremental: incremental));
     final httpRequest = Request('get', uriBuilder.build());
 
-    final error = await sendRequest(httpRequest, true);
+    final error = await sendRequest(httpRequest, authRequired: true);
     emit(state.copyWith(
       fetchState: state.fetchState.copyWith(
         fetching: false,

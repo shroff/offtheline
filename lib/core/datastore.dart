@@ -7,11 +7,9 @@ const _boxNameDatastoreMetadata = 'datastoreMetadata';
 const _metadataKeySchemaVersion = 'schemaVersion';
 
 abstract class Datastore {
-  var _readyCompleter = Completer<void>();
-
-  Future<void> get ready => _readyCompleter.future;
-
   Box _metadataBox;
+  Completer<void> _readyCompleter = Completer();
+  Future<void> get ready => _readyCompleter.future;
 
   int get schemaVersion;
 
@@ -28,6 +26,7 @@ abstract class Datastore {
   }
 
   Future<void> initialize() async {
+    if (_readyCompleter.isCompleted) return;
     debugPrint('[datastore] Initializing');
 
     await _openBoxes();
@@ -58,7 +57,7 @@ abstract class Datastore {
     }
   }
 
-  Future<void> clear() async {
+  Future<void> wipe() async {
     await ready;
     debugPrint('[datastore] Clearing');
 

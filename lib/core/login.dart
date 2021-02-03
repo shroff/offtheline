@@ -141,8 +141,8 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
   Future<String> sendLoginRequest(BuildContext context, Request request) async {
     debugPrint('[login] Clearing Data');
     if (!kIsWeb) {
-      await Core.datastore(context).signOut();
-      await Core.api(context).signOut();
+      await Core.datastore(context).logout();
+      await Core.api(context).logout();
     }
 
     debugPrint('[login] Sending request to ${request.url}');
@@ -208,8 +208,8 @@ class Login<T extends LoginUser> extends State<_LoginWidget> {
   Future<void> signOut(BuildContext context) async {
     await storage.deleteAll();
     await storage.write(key: _keyServerUrl, value: serverUrl);
-    await Core.datastore(context).signOut();
-    await Core.api(context).signOut();
+    await Core.datastore(context).logout();
+    await Core.api(context).logout();
     authHeaders.remove('Authorization');
     setState(() {
       _sessionId = null;

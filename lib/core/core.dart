@@ -63,19 +63,7 @@ class Core<T extends Datastore, U extends LoginUser> extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       MultiBlocProvider(providers: [
-        BlocProvider(create: create)
+        BlocProvider(create: (_) => ApiCubit())
 
       ], child: child);
-
-  // @override
-  // Widget build(BuildContext context) => _LoginWidget(
-  //       parseUser: parseUser,
-  //       fixedServerUrl: fixedServerUrl,
-  //       child: _DatastoreWidget(
-  //         createDatastore: createDatastore,
-  //         child: _ApiWidget(
-  //           child: child,
-  //         ),
-  //       ),
-  //     );
 }
