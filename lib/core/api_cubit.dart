@@ -113,6 +113,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
         actions: _requests.values.toList(growable: false),
         paused: _persist.get(_keyActionsPaused, defaultValue: false),
       ),
+      fetchState: FetchState(),
     ));
     debugPrint('[api] Ready');
   }
@@ -120,7 +121,7 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
   Future<void> logout() async {
     debugPrint('[api] Logging Out');
 
-    emit(state.copyWith(ready: false, loginSession: null));
+    emit(state.copyWith(ready: false, loginSession: null, allowNullLoginSession: true));
 
     datastore.wipe();
     await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
@@ -141,9 +142,10 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
 
   bool get isSignedIn => state.loginSession != null;
 
-  bool get canChangeApiBaseUrl => _fixedBaseApiUrl == null;
+  bool get canChangeBaseApiUrl => _fixedBaseApiUrl == null;
+  bool get canLogIn => state.ready && !isSignedIn && state.baseApiUrl != null;
 
-  set serverUri(Uri value) {
+  set baseApiUrl(Uri value) {
     emit(state.copyWith(baseApiUrl: value));
   }
 

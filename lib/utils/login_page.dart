@@ -1,34 +1,20 @@
-import 'package:appcore/core/core.dart';
+import 'package:appcore/core/api_cubit.dart';
+import 'package:appcore/core/api_state.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_auth_buttons/flutter_auth_buttons.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
-class LoginWrapperPage extends StatelessWidget {
-  final Widget child;
-  final String googleClientId;
-
-  const LoginWrapperPage(
-      {Key key, @required this.child, @required this.googleClientId})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Core.login(context).isSignedIn
-        ? child
-        : LoginPage(googleClientId: googleClientId);
-  }
-}
 
 class LoginPage extends StatelessWidget {
   final googleClientId;
   const LoginPage({Key key, @required this.googleClientId}) : super(key: key);
 
   void _logInWithSessionId(BuildContext context) async {
-    final login = Core.login(context);
-    if (login.serverUrl.isEmpty) {
+    final apiCubit = context.read<ApiCubit>();
+    if (!apiCubit.canLogIn) {
       return;
     }
 
@@ -56,13 +42,13 @@ class LoginPage extends StatelessWidget {
         ),
       ),
     );
-    String response = await login.loginWithSessionId(context, sessionId);
+    String response = await apiCubit.loginWithSessionId(sessionId);
     _handleLoginResponse(response, context);
   }
 
   void _logInWithGoogle(BuildContext context) async {
-    final login = Core.login(context);
-    if (login.serverUrl.isEmpty) {
+    final apiCubit = context.read<ApiCubit>();
+    if (!apiCubit.canLogIn) {
       return;
     }
 
@@ -97,7 +83,7 @@ class LoginPage extends StatelessWidget {
         ),
       ),
     );
-    String response = await login.loginWithGoogle(context, user.email, idToken);
+    String response = await apiCubit.loginWithGoogle(user.email, idToken);
     _handleLoginResponse(response, context);
   }
 
@@ -118,7 +104,7 @@ class LoginPage extends StatelessWidget {
             softWrap: true,
           ),
           actions: <Widget>[
-            FlatButton(
+            TextButton(
               child: Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
@@ -132,55 +118,58 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final login = Core.login(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('Login'),
       ),
       body: FixedPageBody(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              if (login.canChangeServerUrl)
-                RaisedButton(
-                  child: login.serverUrl?.isEmpty ?? true
-                      ? Text('Set Server Address')
-                      : Text("Change Server Address"),
-                  onPressed: () async {
-                    final uri = await showUriDialog(
-                      context,
-                      "API Server Address",
-                      login.serverUrl == null
-                          ? null
-                          : Uri.tryParse(login.serverUrl),
-                      !kReleaseMode,
-                    );
-                    debugPrint(uri.toString());
-                    if (uri != null) {
-                      if (uri.authority.isEmpty) {
-                        login.setServerUrl(null);
-                      } else {
-                        login.setServerUrl(uri);
-                      }
-                    }
-                  },
-                ),
-              if (!kReleaseMode)
-                RaisedButton(
-                  child: Text("Log in with Session ID"),
-                  onPressed: () {
-                    _logInWithSessionId(context);
-                  },
-                ),
-              GoogleSignInButton(
-                onPressed: Core.login(context).serverUrl?.isEmpty ?? true
-                    ? null
-                    : () {
-                        _logInWithGoogle(context);
+          child: BlocBuilder<ApiCubit, ApiState>(
+            buildWhen: (oldState, newState) {
+              return oldState.baseApiUrl != newState.baseApiUrl;
+            },
+            builder: (context, state) {
+              final apiCubit = context.read<ApiCubit>();
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  if (apiCubit.canChangeBaseApiUrl)
+                    ElevatedButton(
+                      child: state.baseApiUrl == null
+                          ? Text('Set Server Address')
+                          : Text("Change Server Address"),
+                      onPressed: () async {
+                        final uri = await showUriDialog(
+                          context,
+                          title: "API Server Address",
+                          preset: state.baseApiUrl,
+                          allowHttp: !kReleaseMode,
+                        );
+                        debugPrint(uri.toString());
+                        if (uri != null) {
+                          apiCubit.baseApiUrl = uri;
+                        }
                       },
-              ),
-            ],
+                    ),
+                  if (!kReleaseMode)
+                    ElevatedButton(
+                      child: Text("Log in with Session ID"),
+                      onPressed: apiCubit.canLogIn
+                          ? () {
+                              _logInWithSessionId(context);
+                            }
+                          : null,
+                    ),
+                  GoogleSignInButton(
+                    onPressed: apiCubit.canLogIn
+                        ? () {
+                            _logInWithGoogle(context);
+                          }
+                        : null,
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

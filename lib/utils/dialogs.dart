@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 Future<Uri> showUriDialog(
-  BuildContext context,
+  BuildContext context, {
   String title,
   Uri preset,
-  bool allowHttp,
-) {
+  bool allowHttp = false,
+}) {
   final controller = TextEditingController();
   var https = true;
   if (preset != null) {

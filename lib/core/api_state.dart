@@ -26,11 +26,12 @@ class ApiState<U extends ApiUser> {
     LoginSession loginSession,
     ActionQueueState actionQueueState,
     FetchState fetchState,
+    bool allowNullLoginSession,
   }) {
     return ApiState<U>(
       ready: ready ?? this.ready,
       baseApiUrl: baseApiUrl ?? this.baseApiUrl,
-      loginSession: loginSession ?? this.loginSession,
+      loginSession: loginSession ?? (allowNullLoginSession ? null : this.loginSession),
       actionQueueState: actionQueueState ?? this.actionQueueState,
       fetchState: fetchState ?? this.fetchState,
     );
