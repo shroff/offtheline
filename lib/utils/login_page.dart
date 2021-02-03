@@ -90,9 +90,6 @@ class LoginPage extends StatelessWidget {
   void _handleLoginResponse(String response, BuildContext context) async {
     Navigator.of(context).pop();
 
-    if (response == null) {
-      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-    }
     if (response != null) {
       showDialog(
         context: context,

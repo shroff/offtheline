@@ -15,7 +15,7 @@ import 'core_stub.dart'
 // ignore: uri_does_not_exist
     if (dart.library.io) 'core_mobile.dart';
 
-import 'api_state.dart';
+part 'api_state.dart';
 
 const _dataKeyTime = "__time";
 const _dataKeyClearData = "__clearData";
@@ -34,7 +34,8 @@ const _keyLoginSession = 'loginSession';
 const _keyUsedIds = 'usedIds';
 const _keyActionsPaused = 'actionsPaused';
 
-class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
+abstract class ApiCubit<D extends Datastore, U extends ApiUser>
+    extends Cubit<ApiState> {
   final D datastore;
 
   Future<WebSocket> _socketFuture;
@@ -121,7 +122,8 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
   Future<void> logout() async {
     debugPrint('[api] Logging Out');
 
-    emit(state.copyWith(ready: false, loginSession: null, allowNullLoginSession: true));
+    emit(state.copyWith(
+        ready: false, loginSession: null, allowNullLoginSession: true));
 
     datastore.wipe();
     await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
@@ -147,6 +149,12 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
 
   set baseApiUrl(Uri value) {
     emit(state.copyWith(baseApiUrl: value));
+  }
+
+  Map<String, String> generateAuthHeaders() {
+    return {
+      'Authorization': 'SessionId ${state.loginSession.sessionId}',
+    };
   }
 
   String createUrl(String path) {
@@ -179,10 +187,11 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
             }
           : <String, String>{};
 
-  Future<String> sendRequest(BaseRequest request, {bool authRequired = true}) async {
+  Future<String> sendRequest(BaseRequest request,
+      {bool authRequired = true}) async {
     debugPrint('[api] Sending request to ${request.url}');
     if (authRequired) {
-      request.headers['Authorization'] = 'SessionId $state.sessionId';
+      request.headers['Authorization'] = 'SessionId ${state.loginSession.sessionId}';
     }
     try {
       final response = await _client.send(request);
@@ -204,14 +213,16 @@ class ApiCubit<D extends Datastore, U extends ApiUser> extends Cubit<ApiState> {
     }
   }
 
-  Future<void> parseResponseString(String responseString, {bool authRequired = true}) async {
+  Future<void> parseResponseString(String responseString,
+      {bool authRequired = true}) async {
     if (responseString.isNotEmpty) {
       final responseMap = json.decode(responseString) as Map<String, dynamic>;
       await parseResponseMap(responseMap, authRequired: authRequired);
     }
   }
 
-  Future<bool> parseResponseMap(Map<String, dynamic> response, {bool authRequired = true}) async {
+  Future<bool> parseResponseMap(Map<String, dynamic> response,
+      {bool authRequired = true}) async {
     if (authRequired && !isSignedIn) return false;
     debugPrint('[api] Parsing response');
     if (response.containsKey('session')) {

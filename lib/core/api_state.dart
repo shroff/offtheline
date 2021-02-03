@@ -1,8 +1,4 @@
-import 'dart:convert';
-
-import 'package:appcore/core/api_user.dart';
-import 'package:appcore/requests/requests.dart';
-import 'package:flutter/foundation.dart';
+part of 'api_cubit.dart';
 
 @immutable
 class ApiState<U extends ApiUser> {
