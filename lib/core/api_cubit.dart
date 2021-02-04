@@ -6,6 +6,7 @@ import 'package:appcore/requests/requests.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:http/http.dart';
 import 'package:uri/uri.dart';
 
 import 'datastore.dart';
@@ -70,17 +71,15 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
 
     if (change.currentState.loginSession != change.nextState.loginSession) {
       changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
-      debugPrint('Login Session: ${change.nextState.loginSession?.toString()}');
       if (change.currentState.loginSession?.gid !=
           change.nextState.loginSession?.gid) {
-        debugPrint('usedIds: 0');
         changes[_keyUsedIds] = 0;
       }
       sendNextRequest();
       if (change.nextState.loginSession == null) {
         _socketFuture
-            .timeout(Duration.zero, onTimeout: () => null)
-            .then((socket) => socket?.close(1001, "backgrounded"));
+            ?.timeout(Duration.zero, onTimeout: () => null)
+            ?.then((socket) => socket?.close(1000, "logout"));
         _socketFuture = null;
       }
     }
@@ -107,14 +106,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
 
     emit(ApiState(
       ready: true,
-      baseApiUrl: baseApiUrl ?? Uri.tryParse(_persist.get(_keyBaseApiUrl)),
+      baseApiUrl: baseApiUrl ??
+          Uri.tryParse(_persist.get(_keyBaseApiUrl, defaultValue: '')),
       loginSession:
           LoginSession.fromJson(_persist.get(_keyLoginSession), _parseUser),
       actionQueueState: ActionQueueState(
         actions: _requests.values.toList(growable: false),
         paused: _persist.get(_keyActionsPaused, defaultValue: false),
       ),
-      fetchState: FetchState(),
     ));
     debugPrint('[api] Ready');
   }
@@ -145,7 +144,11 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
   bool get isSignedIn => state.loginSession != null;
 
   bool get canChangeBaseApiUrl => _fixedBaseApiUrl == null;
-  bool get canLogIn => state.ready && !isSignedIn && state.baseApiUrl != null;
+  bool get canLogIn =>
+      state.ready &&
+      !isSignedIn &&
+      state.baseApiUrl != null &&
+      (!kIsWeb || state.baseApiUrl.hasAuthority);
 
   set baseApiUrl(Uri value) {
     emit(state.copyWith(baseApiUrl: value));
@@ -191,7 +194,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       {bool authRequired = true}) async {
     debugPrint('[api] Sending request to ${request.url}');
     if (authRequired) {
-      request.headers['Authorization'] = 'SessionId ${state.loginSession.sessionId}';
+      request.headers['Authorization'] =
+          'SessionId ${state.loginSession.sessionId}';
     }
     try {
       final response = await _client.send(request);

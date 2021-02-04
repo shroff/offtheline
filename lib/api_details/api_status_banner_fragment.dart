@@ -2,10 +2,10 @@ import 'package:appcore/core/api_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusBannerFragment extends StatelessWidget {
+class ApiStatusBannerFragment<T extends ApiCubit> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final qState = context.select((ApiCubit api) => api.state.actionQueueState);
+    final qState = context.select((T api) => api.state.actionQueueState);
     if (qState.actions?.isEmpty ?? true) return Container();
     final pendingRequests = qState.actions == null
         ? ''

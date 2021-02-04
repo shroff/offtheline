@@ -1,5 +1,4 @@
 import 'package:appcore/core/api_cubit.dart';
-import 'package:appcore/core/api_state.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -8,12 +7,12 @@ import 'package:flutter_auth_buttons/flutter_auth_buttons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage<T extends ApiCubit> extends StatelessWidget {
   final googleClientId;
   const LoginPage({Key key, @required this.googleClientId}) : super(key: key);
 
   void _logInWithSessionId(BuildContext context) async {
-    final apiCubit = context.read<ApiCubit>();
+    final apiCubit = context.read<T>();
     if (!apiCubit.canLogIn) {
       return;
     }
@@ -47,7 +46,7 @@ class LoginPage extends StatelessWidget {
   }
 
   void _logInWithGoogle(BuildContext context) async {
-    final apiCubit = context.read<ApiCubit>();
+    final apiCubit = context.read<T>();
     if (!apiCubit.canLogIn) {
       return;
     }
@@ -88,8 +87,6 @@ class LoginPage extends StatelessWidget {
   }
 
   void _handleLoginResponse(String response, BuildContext context) async {
-    Navigator.of(context).pop();
-
     if (response != null) {
       showDialog(
         context: context,
@@ -121,17 +118,17 @@ class LoginPage extends StatelessWidget {
       ),
       body: FixedPageBody(
         child: Center(
-          child: BlocBuilder<ApiCubit, ApiState>(
+          child: BlocBuilder<T, ApiState>(
             buildWhen: (oldState, newState) {
               return oldState.baseApiUrl != newState.baseApiUrl;
             },
             builder: (context, state) {
-              final apiCubit = context.read<ApiCubit>();
+              final apiCubit = context.read<T>();
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   if (apiCubit.canChangeBaseApiUrl)
-                    ElevatedButton(
+                    TextButton(
                       child: state.baseApiUrl == null
                           ? Text('Set Server Address')
                           : Text("Change Server Address"),

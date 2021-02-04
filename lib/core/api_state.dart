@@ -12,8 +12,8 @@ class ApiState<U extends ApiUser> {
     this.ready = false,
     this.baseApiUrl,
     this.loginSession,
-    this.actionQueueState,
-    this.fetchState,
+    this.actionQueueState = const ActionQueueState(),
+    this.fetchState = const FetchState(),
   });
 
   ApiState<U> copyWith({
@@ -22,7 +22,7 @@ class ApiState<U extends ApiUser> {
     LoginSession loginSession,
     ActionQueueState actionQueueState,
     FetchState fetchState,
-    bool allowNullLoginSession,
+    bool allowNullLoginSession = false,
   }) {
     return ApiState<U>(
       ready: ready ?? this.ready,
@@ -149,7 +149,7 @@ class ActionQueueState {
   final bool submitting;
   final String error;
 
-  ActionQueueState({
+  const ActionQueueState({
     this.actions,
     this.paused = false,
     this.submitting = false,
@@ -213,7 +213,7 @@ class FetchState {
   final bool connected;
   final String error;
 
-  FetchState({
+  const FetchState({
     this.fetching = false,
     this.connected = false,
     this.error = '',
