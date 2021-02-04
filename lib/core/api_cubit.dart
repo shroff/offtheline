@@ -229,12 +229,12 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       {bool authRequired = true}) async {
     if (authRequired && !isSignedIn) return false;
     debugPrint('[api] Parsing response');
+    LoginSession parsedSession;
     if (response.containsKey('session')) {
       debugPrint('[api] Parsing session');
       final sessionMap = response['session'] as Map<String, dynamic>;
-      final session = LoginSession.fromMap(sessionMap, _parseUser);
-      if (session == null) return false;
-      emit(state.copyWith(loginSession: session));
+      parsedSession = LoginSession.fromMap(sessionMap, _parseUser);
+      if (parsedSession == null) return false;
     }
 
     if (response.containsKey('data')) {
@@ -250,12 +250,19 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       if (data.containsKey(_dataKeyTime)) {
         datastore.putMetadata(
             _metadataKeyLastSyncTime, data[_dataKeyTime] as int);
-        datastore.putMetadata(_metadataKeyLastSyncPermissions,
-            state.loginSession.user.permissions);
+        final session = parsedSession ?? state.loginSession;
+        if (session != null) {
+          datastore.putMetadata(
+              _metadataKeyLastSyncPermissions, session.user.permissions);
+        }
       }
     }
     if (response.containsKey('debug')) {
       debugPrint(response['debug'].toString());
+    }
+
+    if (parsedSession != null) {
+      emit(state.copyWith(loginSession: parsedSession));
     }
     debugPrint('[api] Response parsed');
     return true;
