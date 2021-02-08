@@ -22,8 +22,6 @@ const _dataKeyTime = "__time";
 const _dataKeyClearData = "__clearData";
 const _metadataKeyLastSyncTime = "lastSyncTime";
 const _paramKeyLastSyncTime = "lastSyncTime";
-const _metadataKeyLastSyncPermissions = "lastSyncPermissions";
-const _paramKeyLastSyncPermissions = "lastSyncPermissions";
 
 const _gidShift = 10; // Must match up with the server
 
@@ -75,7 +73,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
           change.nextState.loginSession?.gid) {
         changes[_keyUsedIds] = 0;
       }
-      sendNextRequest();
+      datastore.putMetadata(_metadataKeyLastSyncTime, 0);
+      _sendNextRequest();
       if (change.nextState.loginSession == null) {
         _socketFuture
             ?.timeout(Duration.zero, onTimeout: () => null)
@@ -88,10 +87,10 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
         change.nextState.actionQueueState.paused) {
       debugPrint('actionsPaused: ${change.nextState.actionQueueState.paused}');
       changes[_keyActionsPaused] = change.nextState.actionQueueState.paused;
-      sendNextRequest();
+      _sendNextRequest();
     } else if (change.currentState.actionQueueState.actions !=
         change.nextState.actionQueueState.actions) {
-      sendNextRequest();
+      _sendNextRequest();
     }
 
     if (changes.isNotEmpty) {
@@ -184,9 +183,6 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
               _paramKeyLastSyncTime: datastore
                   .getMetadata(_metadataKeyLastSyncTime, defaultValue: 0)
                   .toString(),
-              _paramKeyLastSyncPermissions: datastore
-                  .getMetadata(_metadataKeyLastSyncPermissions, defaultValue: 0)
-                  .toString(),
             }
           : <String, String>{};
 
@@ -250,11 +246,6 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       if (data.containsKey(_dataKeyTime)) {
         datastore.putMetadata(
             _metadataKeyLastSyncTime, data[_dataKeyTime] as int);
-        final session = parsedSession ?? state.loginSession;
-        if (session != null) {
-          datastore.putMetadata(
-              _metadataKeyLastSyncPermissions, session.user.permissions);
-        }
       }
     }
     if (response.containsKey('debug')) {
@@ -335,7 +326,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     ));
   }
 
-  void sendNextRequest() async {
+  void _sendNextRequest() async {
     // * Make sure we are ready
     while (!state.ready) {
       await firstWhere((state) => state.ready);
@@ -367,40 +358,6 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     if (error == null) {
       deleteRequestAt(0);
     }
-  }
-
-  Future<String> loginWithGoogle(
-    String email,
-    String idToken,
-  ) async {
-    debugPrint('[api] Google Login');
-
-    // * Make sure we are ready
-    while (!state.ready) {
-      await firstWhere((state) => state.ready);
-    }
-    if (isSignedIn) {
-      return "Already Logged In";
-    }
-    final request =
-        Request('post', Uri.parse(createUrl('/v1/login/google-id-token')));
-    request.headers['Authorization'] = 'Bearer $idToken';
-    return sendRequest(request, authRequired: false);
-  }
-
-  Future<String> loginWithSessionId(String sessionId) async {
-    debugPrint('[api] SessionID Login');
-
-    // * Make sure we are ready
-    while (!state.ready) {
-      await firstWhere((state) => state.ready);
-    }
-    if (isSignedIn) {
-      return "Already Logged In";
-    }
-    final request = Request('get', Uri.parse(createUrl('/v1/sync')));
-    request.headers['Authorization'] = 'SessionId $sessionId';
-    return sendRequest(request, authRequired: false);
   }
 
   void fetchUpdates({bool incremental = true}) async {

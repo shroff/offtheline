@@ -88,6 +88,7 @@ class LoginPage<T extends ApiCubit> extends StatelessWidget {
 
   void _handleLoginResponse(String response, BuildContext context) async {
     if (response != null) {
+      Navigator.of(context).pop();
       showDialog(
         context: context,
         barrierDismissible: false,
