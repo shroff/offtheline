@@ -3,13 +3,13 @@ import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage extends StatelessWidget {
+class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final qState = context.select((ApiCubit api) => api.state.actionQueueState);
+    final qState = context.select((T api) => api.state.actionQueueState);
 
     String statusText;
     if (qState.actions == null) {
@@ -50,13 +50,13 @@ class ApiStatusPage extends StatelessWidget {
                                   IconButton(
                                       icon: Icon(Icons.play_arrow),
                                       onPressed: () {
-                                        context.read<ApiCubit>().resume();
+                                        context.read<T>().resume();
                                       }),
                                 if (allowPause && !qState.paused)
                                   IconButton(
                                       icon: Icon(Icons.pause),
                                       onPressed: () {
-                                        context.read<ApiCubit>().pause();
+                                        context.read<T>().pause();
                                       }),
                               ],
                             )),
@@ -119,7 +119,7 @@ class ApiStatusPage extends StatelessWidget {
                                         );
                                         if (confirm ?? false) {
                                           context
-                                              .read<ApiCubit>()
+                                              .read<T>()
                                               .deleteRequest(request);
                                         }
                                       },
