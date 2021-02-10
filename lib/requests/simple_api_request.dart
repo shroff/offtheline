@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 
@@ -25,12 +24,20 @@ class SimpleApiRequest extends ApiRequest {
   @override
   String get dataString => body?.toString();
 
-  SimpleApiRequest(this.method, this.endpoint, this.description,
-      {this.body, this.contentType});
+  SimpleApiRequest(
+    this.method,
+    this.endpoint,
+    this.description, {
+    this.body,
+    this.contentType,
+  });
 
   SimpleApiRequest.json(
-      String method, String endpoint, String description, dynamic body)
-      : this(method, endpoint, description,
+    String method,
+    String endpoint,
+    String description,
+    dynamic body,
+  ) : this(method, endpoint, description,
             body: body, contentType: 'application/json');
 
   String toString() =>

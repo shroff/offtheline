@@ -4,7 +4,7 @@ part of 'api_cubit.dart';
 class ApiState<U extends ApiUser> {
   final bool ready;
   final Uri baseApiUrl;
-  final LoginSession loginSession;
+  final LoginSession<U> loginSession;
   final ActionQueueState actionQueueState;
   final FetchState fetchState;
 
@@ -19,7 +19,7 @@ class ApiState<U extends ApiUser> {
   ApiState<U> copyWith({
     bool ready,
     Uri baseApiUrl,
-    LoginSession loginSession,
+    LoginSession<U> loginSession,
     ActionQueueState actionQueueState,
     FetchState fetchState,
     bool allowNullLoginSession = false,
@@ -109,10 +109,6 @@ class LoginSession<U extends ApiUser> {
     }
 
     return session;
-  }
-
-  bool userHasPermission(int permission) {
-    return user.hasPermission(permission);
   }
 
   String toJson() => json.encode(toMap());

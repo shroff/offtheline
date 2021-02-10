@@ -34,7 +34,7 @@ const _keyUsedIds = 'usedIds';
 const _keyActionsPaused = 'actionsPaused';
 
 abstract class ApiCubit<D extends Datastore, U extends ApiUser>
-    extends Cubit<ApiState> {
+    extends Cubit<ApiState<U>> {
   final D datastore;
 
   Future<WebSocket> _socketFuture;
@@ -73,7 +73,10 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
           change.nextState.loginSession?.gid) {
         changes[_keyUsedIds] = 0;
       }
-      datastore.putMetadata(_metadataKeyLastSyncTime, 0);
+      if (change.nextState.loginSession?.user
+          ?.reloadFullData(change.currentState.loginSession?.user) ?? true) {
+        datastore.putMetadata(_metadataKeyLastSyncTime, 0);
+      }
       _sendNextRequest();
       if (change.nextState.loginSession == null) {
         _socketFuture
