@@ -163,7 +163,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
   }
 
   String createUrl(String path) {
-    return '${state.baseApiUrl}$path';
+    return createUriBuilder(path).toString();
   }
 
   UriBuilder createUriBuilder(String path) {
@@ -260,6 +260,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     }
     debugPrint('[api] Response parsed');
     return true;
+  }
+
+  Future<void> enqueueOfflineAction(ApiAction action) async {
+    if (!state.ready) return;
+    debugPrint(
+        '[api] Action enqueued: ${action.runtimeType} | ${action.generateDescription(this)}');
+    action.applyOptimisticUpdate(this);
+    // await _actions.add(action);
   }
 
   Future<void> enqueue(ApiRequest request) async {

@@ -1,25 +1,39 @@
 import 'package:appcore/core/api_cubit.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_auth_buttons/flutter_auth_buttons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart';
+import 'package:uri/uri.dart';
+
+typedef AuthRequestBuilder = Future<Request> Function(BuildContext, UriBuilder);
 
 class LoginPage<T extends ApiCubit> extends StatelessWidget {
-  final googleClientId;
-  const LoginPage({Key key, @required this.googleClientId}) : super(key: key);
+  final AuthRequestBuilder buildGoogleAuthRequest;
+  final AuthRequestBuilder buildSessionIdAuthRequest;
 
-  void _logInWithSessionId(BuildContext context) async {
-    final apiCubit = context.read<T>();
-    if (!apiCubit.canLogIn) {
+  const LoginPage({
+    Key key,
+    this.buildGoogleAuthRequest,
+    this.buildSessionIdAuthRequest,
+  }) : super(key: key);
+
+  void _performLogin(
+    BuildContext context,
+    AuthRequestBuilder buildAuthRequest,
+  ) async {
+    final api = context.read<T>();
+    if (!api.canLogIn) {
       return;
     }
-
-    final sessionId = await showInputDialog(context,
-        title: 'Session ID', labelText: 'Session ID');
-    if (sessionId == null) return;
+    // * Make sure we are ready
+    while (!api.state.ready) {
+      await api.firstWhere((state) => state.ready);
+    }
+    if (api.isSignedIn) {
+      return;
+    }
 
     showDialog(
       context: context,
@@ -41,52 +55,9 @@ class LoginPage<T extends ApiCubit> extends StatelessWidget {
         ),
       ),
     );
-    String response = await apiCubit.loginWithSessionId(sessionId);
-    _handleLoginResponse(response, context);
-  }
-
-  void _logInWithGoogle(BuildContext context) async {
-    final apiCubit = context.read<T>();
-    if (!apiCubit.canLogIn) {
-      return;
-    }
-
-    final googleSignIn = GoogleSignIn(
-      scopes: [
-        'email',
-      ],
-      clientId: googleClientId,
-    );
-    final user = await googleSignIn.signIn().catchError((error) => null,
-        test: (error) =>
-            error is PlatformException && error.message == 'sign_in_failed');
-    final idToken = await user.authentication.then((auth) => auth.idToken);
-    googleSignIn.disconnect();
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Row(
-          children: <Widget>[
-            Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: CircularProgressIndicator(),
-            ),
-            Expanded(
-              child: Text(
-                'Logging In',
-                softWrap: true,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    String response = await apiCubit.loginWithGoogle(user.email, idToken);
-    _handleLoginResponse(response, context);
-  }
-
-  void _handleLoginResponse(String response, BuildContext context) async {
+    final request =
+        await buildAuthRequest(context, api.createUriBuilder(''));
+    String response = await api.sendRequest(request, authRequired: false);
     if (response != null) {
       Navigator.of(context).pop();
       showDialog(
@@ -124,11 +95,11 @@ class LoginPage<T extends ApiCubit> extends StatelessWidget {
               return oldState.baseApiUrl != newState.baseApiUrl;
             },
             builder: (context, state) {
-              final apiCubit = context.read<T>();
+              final api = context.read<T>();
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  if (apiCubit.canChangeBaseApiUrl)
+                  if (api.canChangeBaseApiUrl)
                     TextButton(
                       child: state.baseApiUrl == null
                           ? Text('Set Server Address')
@@ -142,26 +113,27 @@ class LoginPage<T extends ApiCubit> extends StatelessWidget {
                         );
                         debugPrint(uri.toString());
                         if (uri != null) {
-                          apiCubit.baseApiUrl = uri;
+                          api.baseApiUrl = uri;
                         }
                       },
                     ),
-                  if (!kReleaseMode)
+                  if (buildSessionIdAuthRequest != null)
                     ElevatedButton(
                       child: Text("Log in with Session ID"),
-                      onPressed: apiCubit.canLogIn
+                      onPressed: api.canLogIn
                           ? () {
-                              _logInWithSessionId(context);
+                              _performLogin(context, buildSessionIdAuthRequest);
                             }
                           : null,
                     ),
-                  GoogleSignInButton(
-                    onPressed: apiCubit.canLogIn
-                        ? () {
-                            _logInWithGoogle(context);
-                          }
-                        : null,
-                  ),
+                  if (buildGoogleAuthRequest != null)
+                    GoogleSignInButton(
+                      onPressed: api.canLogIn
+                          ? () {
+                              _performLogin(context, buildGoogleAuthRequest);
+                            }
+                          : null,
+                    ),
                 ],
               );
             },
