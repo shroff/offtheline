@@ -228,7 +228,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       {bool authRequired = true}) async {
     if (authRequired && !isSignedIn) return false;
     debugPrint('[api] Parsing response');
-    LoginSession parsedSession;
+    LoginSession<U> parsedSession;
     if (response.containsKey('session')) {
       debugPrint('[api] Parsing session');
       final sessionMap = response['session'] as Map<String, dynamic>;
