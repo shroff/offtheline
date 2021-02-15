@@ -2,6 +2,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 
 abstract class ApiRequest extends HiveObject {
+  String get name => runtimeType.toString();
   String get endpoint;
   String get description;
   String get method;

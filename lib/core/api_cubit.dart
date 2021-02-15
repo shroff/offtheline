@@ -26,8 +26,9 @@ const _paramKeyLastSyncTime = "lastSyncTime";
 const _gidShift = 10; // Must match up with the server
 
 const _boxNamePersist = 'apiMetadata';
-const _boxNameRequestQueue = 'apiRequestQueue';
+const _boxNameActionQueue = 'apiActionQueue';
 
+const _keyActionName = 'name';
 const _keyBaseApiUrl = 'baseApiUrl';
 const _keyLoginSession = 'loginSession';
 const _keyUsedIds = 'usedIds';
@@ -39,7 +40,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
 
   Future<WebSocket> _socketFuture;
   Box _persist;
-  Box<ApiRequest> _requests;
+  Box<Map<String, dynamic>> _actions;
   final BaseClient _client = createHttpClient();
   final ApiUserParser<U> _parseUser;
   final Uri _fixedBaseApiUrl;
@@ -110,8 +111,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
 
   Future<void> _initialize(Uri baseApiUrl) async {
     await datastore.ready;
-    _requests = await Hive.openBox(_boxNameRequestQueue);
     _persist = await Hive.openBox(_boxNamePersist);
+    _actions = await Hive.openBox(_boxNameActionQueue);
 
     emit(ApiState(
       ready: true,
@@ -134,7 +135,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
         ready: false, loginSession: null, allowNullLoginSession: true));
 
     datastore.wipe();
-    await Hive.deleteBoxFromDisk(_boxNameRequestQueue);
+    await Hive.deleteBoxFromDisk(_boxNameActionQueue);
     await Hive.deleteBoxFromDisk(_boxNamePersist);
 
     // * Wait for any ongoing connections to finish
@@ -277,14 +278,18 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     // await _actions.add(action);
   }
 
-  Future<void> enqueue(ApiRequest request) async {
+  Future<void> enqueue(ApiAction action) async {
     if (!state.ready) return;
     debugPrint(
-        '[api] Request enqueued: ${request.endpoint} | ${request.description}');
-    await _requests.add(request);
+        '[api] Request enqueued: ${action.generateDescription(this)}');
+    final actions = []..addAll(state.actionQueueState.actions);
+    actions.add(action);
+    await _actions.add({
+      _keyActionName: action.n
+    });
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
-        _requests.values,
+        actions,
       ),
     ));
   }
