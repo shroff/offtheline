@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:appcore/imageedit/imageedit.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
@@ -49,11 +50,24 @@ Future<UploadFileData> pickFile(
         ),
         ListTile(
           leading: Icon(Icons.image),
-          title: Text('Pick from Gallery'),
+          title: Text('Pick Image from Gallery'),
           onTap: () async {
             Navigator.of(ctx).pop();
             result.complete(_pickAndEditImage(
                 context, picker, ImageSource.gallery, constraints));
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.attach_file),
+          title: Text('Pick File'),
+          onTap: () async {
+            Navigator.of(ctx).pop();
+            final picked = await FilePicker.platform.pickFiles(withData: true);
+            if (picked == null || !picked.isSinglePick) {
+              result.complete(null);
+            } else {
+              result.complete(UploadFileData(picked.files[0].path, picked.files[0].bytes));
+            }
           },
         ),
       ],
