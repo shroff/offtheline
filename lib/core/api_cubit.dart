@@ -269,7 +269,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     return true;
   }
 
-  Future<void> enqueueOfflineAction(ApiAction action) async {
+  Future<void> enqueueOfflineAction<T extends ApiCubit<D, U>>(ApiAction<T> action) async {
     if (!state.ready) return;
     debugPrint(
         '[api] Action enqueued: ${action.runtimeType} | ${action.generateDescription(this)}');

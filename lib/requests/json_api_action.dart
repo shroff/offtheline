@@ -2,21 +2,13 @@ import 'dart:convert';
 
 import 'package:appcore/core/api_cubit.dart';
 import 'package:appcore/requests/requests.dart';
-import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 
 const _contentType = 'application/json';
 
 abstract class JsonApiAction<T extends ApiCubit> extends ApiAction<T> {
-  @HiveField(-1)
-  final String method;
-  @HiveField(-2)
-  final String endpoint;
-
-  JsonApiAction(
-    this.method,
-    this.endpoint,
-  );
+  String get method;
+  String get endpoint;
 
   @override
   BaseRequest createRequest(T api) {
