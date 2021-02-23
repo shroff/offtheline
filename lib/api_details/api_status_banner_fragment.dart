@@ -29,12 +29,12 @@ class ApiStatusBannerFragment<T extends ApiCubit> extends StatelessWidget {
     } else if (qState.submitting) {
       icon = Icons.sync;
       statusText = 'Submitting';
-    } else if (qState.error != null) {
-      icon = Icons.error_outline;
-      statusText = qState.error;
     } else if (qState.paused) {
       icon = Icons.pause_circle_outline;
       statusText = 'Paused';
+    } else if (qState.error?.isNotEmpty ?? false) {
+      icon = Icons.error_outline;
+      statusText = 'Error: ${qState.error}';
     } else {
       icon = Icons.check_circle_outline;
       statusText = 'Ready';

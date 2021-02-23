@@ -61,6 +61,9 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
   @override
   void onChange(Change<ApiState> change) {
     super.onChange(change);
+    if (!change.nextState.ready) return;
+
+    bool sendNextRequest = false;
     Map<String, dynamic> changes = {};
     if (change.currentState.baseApiUrl != change.nextState.baseApiUrl) {
       debugPrint('baseApiUrl: ${change.nextState.baseApiUrl}');
@@ -74,10 +77,11 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
         changes[_keyUsedIds] = 0;
       }
       if (change.nextState.loginSession?.user
-          ?.reloadFullData(change.currentState.loginSession?.user) ?? true) {
+              ?.reloadFullData(change.currentState.loginSession?.user) ??
+          true) {
         datastore.putMetadata(_metadataKeyLastSyncTime, 0);
       }
-      _sendNextRequest();
+      sendNextRequest = true;
       if (change.nextState.loginSession == null) {
         _socketFuture
             ?.timeout(Duration.zero, onTimeout: () => null)
@@ -90,14 +94,17 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
         change.nextState.actionQueueState.paused) {
       debugPrint('actionsPaused: ${change.nextState.actionQueueState.paused}');
       changes[_keyActionsPaused] = change.nextState.actionQueueState.paused;
-      _sendNextRequest();
+      sendNextRequest = true;
     } else if (change.currentState.actionQueueState.actions !=
         change.nextState.actionQueueState.actions) {
-      _sendNextRequest();
+      sendNextRequest = true;
     }
 
     if (changes.isNotEmpty) {
       _persist.putAll(changes);
+    }
+    if (sendNextRequest) {
+      Future.microtask(() => _sendNextRequest());
     }
   }
 

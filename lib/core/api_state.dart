@@ -157,7 +157,7 @@ class ActionQueueState {
       actions: actions,
       paused: paused,
       submitting: submitting,
-      error: error,
+      error: '',
     );
   }
 

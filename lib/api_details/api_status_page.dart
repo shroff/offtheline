@@ -16,10 +16,10 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
       statusText = 'Initializing';
     } else if (qState.submitting) {
       statusText = 'Submitting';
-    } else if (qState.error != null) {
-      statusText = qState.error;
     } else if (qState.paused) {
       statusText = 'Paused';
+    } else if (qState.error?.isNotEmpty ?? false ) {
+      statusText = 'Error';
     } else {
       statusText = 'Ready';
     }
@@ -40,13 +40,13 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
                       [
                         ListTile(
                             title: Text("Status: $statusText"),
-                            subtitle: qState.error != null
+                            subtitle: qState.error?.isNotEmpty ?? false
                                 ? Text(qState.error)
                                 : null,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (qState.paused || qState.error != null)
+                                if (qState.paused || (qState.error?.isNotEmpty ?? false))
                                   IconButton(
                                       icon: Icon(Icons.play_arrow),
                                       onPressed: () {
