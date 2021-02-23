@@ -10,6 +10,7 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final qState = context.select((T api) => api.state.actionQueueState);
+    final api = context.read<T>();
 
     String statusText;
     if (qState.actions == null) {
@@ -50,13 +51,13 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
                                   IconButton(
                                       icon: Icon(Icons.play_arrow),
                                       onPressed: () {
-                                        context.read<T>().resume();
+                                        api.resume();
                                       }),
                                 if (allowPause && !qState.paused)
                                   IconButton(
                                       icon: Icon(Icons.pause),
                                       onPressed: () {
-                                        context.read<T>().pause();
+                                        api.pause();
                                       }),
                               ],
                             )),
@@ -69,7 +70,7 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
                       (context, i) {
                         final request = actions[i];
                         return ListTile(
-                          title: Text(request.description),
+                          title: Text(request.generateDescription(api)),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -78,8 +79,9 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
                                 onPressed: () {
                                   showAlertDialog(
                                     context,
-                                    title: request.description,
-                                    message: request.dataString,
+                                    title: request.generateDescription(api),
+                                    // TODO: show props
+                                    // message: request.dataString,
                                   );
                                 },
                               ),
@@ -94,7 +96,7 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
                                             title: Text('Delete Record'),
                                             content: Text(
                                                 'You are about to delete the following record:\n\n'
-                                                '${request.description}\n\n'
+                                                '${request.generateDescription(api)}\n\n'
                                                 'It will not be submitted to the server, and you will not be able to recover it.\n\n'
                                                 'Are you sure you want to do this?'),
                                             actions: <Widget>[
@@ -118,9 +120,7 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
                                           ),
                                         );
                                         if (confirm ?? false) {
-                                          context
-                                              .read<T>()
-                                              .deleteRequest(request);
+                                          api.deleteRequestAt(i);
                                         }
                                       },
                               ),

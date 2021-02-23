@@ -28,22 +28,33 @@ const _gidShift = 10; // Must match up with the server
 const _boxNamePersist = 'apiMetadata';
 const _boxNameActionQueue = 'apiActionQueue';
 
-const _keyActionName = 'name';
 const _keyBaseApiUrl = 'baseApiUrl';
 const _keyLoginSession = 'loginSession';
 const _keyUsedIds = 'usedIds';
 const _keyActionsPaused = 'actionsPaused';
 
+const _keyActionName = 'name';
+const _keyActionProps = 'props';
+const _keyActionData = 'data';
+
+typedef ApiActionDeserializer<D extends Datastore, U extends ApiUser> = ApiAction<ApiCubit<D, U>> Function({
+  Map<String, dynamic> props,
+  dynamic data,
+});
+
 abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     extends Cubit<ApiState<U>> {
-  final D datastore;
-
-  Future<WebSocket> _socketFuture;
-  Box _persist;
-  Box<Map<String, dynamic>> _actions;
   final BaseClient _client = createHttpClient();
+  final D datastore;
   final ApiUserParser<U> _parseUser;
   final Uri _fixedBaseApiUrl;
+
+  @protected
+  Map<String, ApiActionDeserializer<D, U>> get actionDeserializers;
+
+  Box _persist;
+  Box<Map<String, dynamic>> _actions;
+  Future<WebSocket> _socketFuture;
 
   ApiCubit(
     this.datastore,
@@ -121,7 +132,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       loginSession:
           LoginSession.fromJson(_persist.get(_keyLoginSession), _parseUser),
       actionQueueState: ActionQueueState(
-        actions: _requests.values.toList(growable: false),
+        actions:
+            _actions.values.map((actionMap) => deserializeAction(actionMap)),
         paused: _persist.get(_keyActionsPaused, defaultValue: false),
       ),
     ));
@@ -270,67 +282,63 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     return true;
   }
 
-  Future<void> enqueueOfflineAction<T extends ApiCubit<D, U>>(ApiAction<T> action) async {
-    if (!state.ready) return;
-    debugPrint(
-        '[api] Action enqueued: ${action.runtimeType} | ${action.generateDescription(this)}');
-    action.applyOptimisticUpdate(this);
-    // await _actions.add(action);
+  ApiAction<T> deserializeAction<T extends ApiCubit<D, U>>(
+      Map<String, dynamic> actionMap) {
+    return actionDeserializers[actionMap[_keyActionName]](
+      props: actionMap[_keyActionProps] as Map<String, dynamic>,
+      data: actionMap[_keyActionData],
+    );
   }
 
-  Future<void> enqueue(ApiAction action) async {
-    if (!state.ready) return;
-    debugPrint(
-        '[api] Request enqueued: ${action.generateDescription(this)}');
-    final actions = []..addAll(state.actionQueueState.actions);
-    actions.add(action);
+  Future<void> enqueueOfflineAction<T extends ApiCubit<D, U>>(
+      ApiAction<T> action) async {
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
+    }
+
+    if (!isSignedIn) {
+      return;
+    }
+
+    debugPrint('[api] Request enqueued: ${action.generateDescription(this)}');
+    action.applyOptimisticUpdate(this);
     await _actions.add({
-      _keyActionName: action.n
+      _keyActionName: action.name,
+      _keyActionProps: action.toMap(),
+      _keyActionData: action.binaryData,
     });
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
-        actions,
+        _actions.values.map((actionMap) => deserializeAction(actionMap)),
       ),
     ));
+  }
+
+  Future<void> enqueue(ApiRequest request) async {
+    if (!state.ready) return;
   }
 
   Future<void> deleteRequestAt(int index) async {
-    if (!state.ready) return;
-    if (index >= _requests.length) return;
-
-    if (index == 0 && state.actionQueueState.submitting) return;
-
-    if (kDebugMode) {
-      final request = _requests.getAt(index);
-      debugPrint(
-          '[api] Deleting request: ${request.endpoint} | ${request.description}');
+    while (!state.ready) {
+      await firstWhere((state) => state.ready);
     }
 
-    await _requests.deleteAt(index);
+    if (!isSignedIn ||
+      index >= _actions.length ||
+      (index == 0 && state.actionQueueState.submitting)) {
+      return;
+    }
+
+    if (kDebugMode) {
+      final action = deserializeAction(_actions.getAt(index));
+      debugPrint('[api] Deleting request: ${action.generateDescription(this)}');
+    }
+
+    await _actions.deleteAt(index);
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
-        _requests.values,
+        _actions.values.map((actionMap) => deserializeAction(actionMap)),
         resetError: index == 0,
-      ),
-    ));
-  }
-
-  Future<void> deleteRequest(ApiRequest request) async {
-    if (!state.ready) return;
-
-    bool isFirstRequest = request == _requests.getAt(0);
-    if (isFirstRequest && state.actionQueueState.submitting) return;
-
-    if (kDebugMode) {
-      debugPrint(
-          '[api] Deleting request: ${request.endpoint} | ${request.description}');
-    }
-
-    await request.delete();
-    emit(state.copyWith(
-      actionQueueState: state.actionQueueState.copyWithActions(
-        _requests.values,
-        resetError: isFirstRequest,
       ),
     ));
   }
@@ -356,7 +364,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     }
 
     if (!isSignedIn ||
-        _requests.isEmpty ||
+        _actions.isEmpty ||
         state.actionQueueState.paused ||
         state.actionQueueState.submitting) {
       return;
@@ -366,12 +374,10 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       actionQueueState: state.actionQueueState.copyWithSubmitting(true, null),
     ));
 
-    final request = _requests.getAt(0);
-    final uriBuilder = createUriBuilder(request.endpoint);
-    uriBuilder.queryParameters.addAll(createLastSyncParams());
-    final httpRequest = await request.createRequest(uriBuilder.build());
+    final action = deserializeAction(_actions.getAt(0));
+    final request = action.createRequest(this);
 
-    final error = await sendRequest(httpRequest);
+    final error = await sendRequest(request);
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithSubmitting(
         false,

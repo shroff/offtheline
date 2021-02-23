@@ -4,6 +4,8 @@ import 'package:http/http.dart';
 abstract class ApiAction<T extends ApiCubit> {
   String get name => runtimeType.toString();
 
+  dynamic get binaryData => null;
+
   String generateDescription(T api);
 
   BaseRequest createRequest(T api);

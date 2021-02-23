@@ -140,7 +140,7 @@ class LoginSession<U extends ApiUser> {
 }
 
 class ActionQueueState {
-  final List<ApiAction> actions;
+  final Iterable<ApiAction> actions;
   final bool paused;
   final bool submitting;
   final String error;
@@ -170,7 +170,7 @@ class ActionQueueState {
     );
   }
 
-  ActionQueueState copyWithActions(List<ApiAction> actions, {bool resetError = false}) {
+  ActionQueueState copyWithActions(Iterable<ApiAction> actions, {bool resetError = false}) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
