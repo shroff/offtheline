@@ -329,12 +329,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       return;
     }
 
+
+    final action = deserializeAction(_actions.getAt(index));
+    await _actions.deleteAt(index);
+    action.revertOptimisticUpdate(this);
+
     if (kDebugMode) {
-      final action = deserializeAction(_actions.getAt(index));
       debugPrint('[api] Deleting request: ${action.generateDescription(this)}');
     }
-
-    await _actions.deleteAt(index);
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
         _actions.values.map((actionMap) => deserializeAction(actionMap)),
