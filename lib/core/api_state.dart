@@ -1,22 +1,26 @@
 part of 'api_cubit.dart';
 
 @immutable
-class ApiState<U extends ApiUser> {
+class ApiState<D extends Datastore, U extends ApiUser, T extends ApiCubit<D, U, T>> {
   final bool ready;
   final Uri baseApiUrl;
   final LoginSession<U> loginSession;
   final ActionQueueState actionQueueState;
   final FetchState fetchState;
 
-  const ApiState({
+  ApiState._({
     this.ready = false,
     this.baseApiUrl,
     this.loginSession,
-    this.actionQueueState = const ActionQueueState(),
+    this.actionQueueState,
     this.fetchState = const FetchState(),
   });
 
-  ApiState<U> copyWith({
+  factory ApiState.init() {
+    return ApiState._(ready: false, actionQueueState: ActionQueueState<D, U, T>());
+  }
+
+  ApiState<D, U, T> copyWith({
     bool ready,
     Uri baseApiUrl,
     LoginSession<U> loginSession,
@@ -24,7 +28,7 @@ class ApiState<U extends ApiUser> {
     FetchState fetchState,
     bool allowNullLoginSession = false,
   }) {
-    return ApiState<U>(
+    return ApiState._(
       ready: ready ?? this.ready,
       baseApiUrl: baseApiUrl ?? this.baseApiUrl,
       loginSession: loginSession ?? (allowNullLoginSession ? null : this.loginSession),
@@ -42,7 +46,7 @@ class ApiState<U extends ApiUser> {
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ApiState<U> &&
+    return o is ApiState<D, U, T> &&
         o.ready == ready &&
         o.baseApiUrl == baseApiUrl &&
         o.loginSession == loginSession &&
@@ -139,8 +143,8 @@ class LoginSession<U extends ApiUser> {
   }
 }
 
-class ActionQueueState {
-  final Iterable<ApiAction> actions;
+class ActionQueueState<D extends Datastore, U extends ApiUser, T extends ApiCubit<D, U, T>> {
+  final Iterable<ApiAction<T>> actions;
   final bool paused;
   final bool submitting;
   final String error;
@@ -152,7 +156,7 @@ class ActionQueueState {
     this.error = '',
   });
 
-  ActionQueueState copyWithPaused(bool paused) {
+  ActionQueueState<D, U, T> copyWithPaused(bool paused) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
@@ -161,7 +165,7 @@ class ActionQueueState {
     );
   }
 
-  ActionQueueState copyWithSubmitting(bool submitting, String error) {
+  ActionQueueState<D, U, T> copyWithSubmitting(bool submitting, String error) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
@@ -170,7 +174,7 @@ class ActionQueueState {
     );
   }
 
-  ActionQueueState copyWithActions(Iterable<ApiAction> actions, {bool resetError = false}) {
+  ActionQueueState<D, U, T> copyWithActions(Iterable<ApiAction> actions, {bool resetError = false}) {
     return ActionQueueState(
       actions: actions,
       paused: paused,

@@ -37,31 +37,29 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-typedef ApiActionDeserializer<D extends Datastore, U extends ApiUser> = ApiAction<ApiCubit<D, U>> Function({
-  Map<String, dynamic> props,
-  dynamic data,
-});
+typedef ApiActionDeserializer<D extends Datastore, U extends ApiUser,
+        T extends ApiCubit<D, U, T>>
+    = ApiAction<T> Function(Map<String, dynamic> props, dynamic data);
 
-abstract class ApiCubit<D extends Datastore, U extends ApiUser>
-    extends Cubit<ApiState<U>> {
+abstract class ApiCubit<D extends Datastore, U extends ApiUser,
+    T extends ApiCubit<D, U, T>> extends Cubit<ApiState<D, U, T>> {
   final BaseClient _client = createHttpClient();
   final D datastore;
   final ApiUserParser<U> _parseUser;
   final Uri _fixedBaseApiUrl;
 
-  @protected
-  Map<String, ApiActionDeserializer<D, U>> get actionDeserializers;
-
   Box _persist;
   Box<Map<String, dynamic>> _actions;
   Future<WebSocket> _socketFuture;
+
+  Map<String, ApiActionDeserializer<D, U, T>> get deserializers;
 
   ApiCubit(
     this.datastore,
     this._parseUser, {
     Uri fixedBaseApiUrl,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
-        super(const ApiState(ready: false)) {
+        super(ApiState.init()) {
     debugPrint('[api] Initializing');
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
@@ -71,7 +69,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
   }
 
   @override
-  void onChange(Change<ApiState> change) {
+  void onChange(Change<ApiState<D, U, T>> change) {
     super.onChange(change);
     if (!change.currentState.ready) return;
 
@@ -125,15 +123,15 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     _persist = await Hive.openBox(_boxNamePersist);
     _actions = await Hive.openBox(_boxNameActionQueue);
 
-    emit(ApiState(
+    emit(ApiState._(
       ready: true,
       baseApiUrl: baseApiUrl ??
           Uri.tryParse(_persist.get(_keyBaseApiUrl, defaultValue: '')),
       loginSession:
           LoginSession.fromJson(_persist.get(_keyLoginSession), _parseUser),
-      actionQueueState: ActionQueueState(
+      actionQueueState: ActionQueueState<D, U, T>(
         actions:
-            _actions.values.map((actionMap) => deserializeAction(actionMap)),
+            _actions.values.map((actionMap) => _deserializeAction(actionMap)),
         paused: _persist.get(_keyActionsPaused, defaultValue: false),
       ),
     ));
@@ -282,16 +280,15 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     return true;
   }
 
-  ApiAction<T> deserializeAction<T extends ApiCubit<D, U>>(
-      Map<String, dynamic> actionMap) {
-    return actionDeserializers[actionMap[_keyActionName]](
-      props: actionMap[_keyActionProps] as Map<String, dynamic>,
-      data: actionMap[_keyActionData],
-    );
+  ApiAction<T> _deserializeAction(Map<String, dynamic> actionMap) {
+    final name = actionMap[_keyActionName];
+    assert(deserializers.containsKey(name));
+    final props = actionMap[_keyActionProps] as Map<String, dynamic>;
+    final data = actionMap[_keyActionData];
+    return deserializers[name](props, data);
   }
 
-  Future<void> enqueueOfflineAction<T extends ApiCubit<D, U>>(
-      ApiAction<T> action) async {
+  Future<void> enqueueOfflineAction(ApiAction<T> action) async {
     while (!state.ready) {
       await firstWhere((state) => state.ready);
     }
@@ -309,7 +306,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     });
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
-        _actions.values.map((actionMap) => deserializeAction(actionMap)),
+        _actions.values.map((actionMap) => _deserializeAction(actionMap)),
       ),
     ));
   }
@@ -324,13 +321,12 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     }
 
     if (!isSignedIn ||
-      index >= _actions.length ||
-      (index == 0 && state.actionQueueState.submitting)) {
+        index >= _actions.length ||
+        (index == 0 && state.actionQueueState.submitting)) {
       return;
     }
 
-
-    final action = deserializeAction(_actions.getAt(index));
+    final action = _deserializeAction(_actions.getAt(index));
     await _actions.deleteAt(index);
     action.revertOptimisticUpdate(this);
 
@@ -339,7 +335,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
     }
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
-        _actions.values.map((actionMap) => deserializeAction(actionMap)),
+        _actions.values.map((actionMap) => _deserializeAction(actionMap)),
         resetError: index == 0,
       ),
     ));
@@ -376,7 +372,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
       actionQueueState: state.actionQueueState.copyWithSubmitting(true, null),
     ));
 
-    final action = deserializeAction(_actions.getAt(0));
+    final action = _deserializeAction(_actions.getAt(0));
     final request = action.createRequest(this);
 
     final error = await sendRequest(request);

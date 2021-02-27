@@ -27,7 +27,6 @@ dependencies:
   connectivity:
   bloc:
   flutter_bloc:
-  hydrated_bloc:
 
 dev_dependencies:
 #   flutter_test:

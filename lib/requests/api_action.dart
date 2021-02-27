@@ -2,7 +2,7 @@ import 'package:appcore/core/api_cubit.dart';
 import 'package:http/http.dart';
 
 abstract class ApiAction<T extends ApiCubit> {
-  String get name => runtimeType.toString();
+  String get name;
 
   dynamic get binaryData => null;
 
