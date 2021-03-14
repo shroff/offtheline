@@ -1,7 +1,8 @@
 part of 'api_cubit.dart';
 
 @immutable
-class ApiState<D extends Datastore, U extends ApiUser, T extends ApiCubit<D, U, T>> {
+class ApiState<D extends Datastore, U extends ApiUser,
+    T extends ApiCubit<D, U, T>> {
   final bool ready;
   final Uri baseApiUrl;
   final LoginSession<U> loginSession;
@@ -17,7 +18,8 @@ class ApiState<D extends Datastore, U extends ApiUser, T extends ApiCubit<D, U, 
   });
 
   factory ApiState.init() {
-    return ApiState._(ready: false, actionQueueState: ActionQueueState<D, U, T>());
+    return ApiState._(
+        ready: false, actionQueueState: ActionQueueState<D, U, T>());
   }
 
   ApiState<D, U, T> copyWith({
@@ -31,7 +33,8 @@ class ApiState<D extends Datastore, U extends ApiUser, T extends ApiCubit<D, U, 
     return ApiState._(
       ready: ready ?? this.ready,
       baseApiUrl: baseApiUrl ?? this.baseApiUrl,
-      loginSession: loginSession ?? (allowNullLoginSession ? null : this.loginSession),
+      loginSession:
+          loginSession ?? (allowNullLoginSession ? null : this.loginSession),
       actionQueueState: actionQueueState ?? this.actionQueueState,
       fetchState: fetchState ?? this.fetchState,
     );
@@ -143,8 +146,9 @@ class LoginSession<U extends ApiUser> {
   }
 }
 
-class ActionQueueState<D extends Datastore, U extends ApiUser, T extends ApiCubit<D, U, T>> {
-  final Iterable<ApiAction<T>> actions;
+class ActionQueueState<D extends Datastore, U extends ApiUser,
+    T extends ApiCubit<D, U, T>> {
+  final Iterable<ApiAction<D, U, T>> actions;
   final bool paused;
   final bool submitting;
   final String error;
@@ -174,7 +178,8 @@ class ActionQueueState<D extends Datastore, U extends ApiUser, T extends ApiCubi
     );
   }
 
-  ActionQueueState<D, U, T> copyWithActions(Iterable<ApiAction> actions, {bool resetError = false}) {
+  ActionQueueState<D, U, T> copyWithActions(Iterable<ApiAction> actions,
+      {bool resetError = false}) {
     return ActionQueueState(
       actions: actions,
       paused: paused,

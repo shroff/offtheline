@@ -1,9 +1,12 @@
 import 'package:appcore/core/api_cubit.dart';
+import 'package:appcore/core/api_user.dart';
+import 'package:appcore/core/datastore.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
+class ApiStatusPage<D extends Datastore, U extends ApiUser,
+    T extends ApiCubit<D, U, T>> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key key, this.allowPause = false}) : super(key: key);
@@ -19,7 +22,7 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
       statusText = 'Submitting';
     } else if (qState.paused) {
       statusText = 'Paused';
-    } else if (qState.error?.isNotEmpty ?? false ) {
+    } else if (qState.error?.isNotEmpty ?? false) {
       statusText = 'Error';
     } else {
       statusText = 'Ready';
@@ -47,7 +50,8 @@ class ApiStatusPage<T extends ApiCubit> extends StatelessWidget {
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (qState.paused || (qState.error?.isNotEmpty ?? false))
+                                if (qState.paused ||
+                                    (qState.error?.isNotEmpty ?? false))
                                   IconButton(
                                       icon: Icon(Icons.play_arrow),
                                       onPressed: () {

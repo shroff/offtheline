@@ -39,7 +39,7 @@ const _keyActionData = 'data';
 
 typedef ApiActionDeserializer<D extends Datastore, U extends ApiUser,
         T extends ApiCubit<D, U, T>>
-    = ApiAction<T> Function(Map<String, dynamic> props, dynamic data);
+    = ApiAction<D, U, T> Function(Map<String, dynamic> props, dynamic data);
 
 abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> extends Cubit<ApiState<D, U, T>> {
@@ -280,7 +280,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     return true;
   }
 
-  ApiAction<T> _deserializeAction(Map<String, dynamic> actionMap) {
+  ApiAction<D, U, T> _deserializeAction(Map<String, dynamic> actionMap) {
     final name = actionMap[_keyActionName];
     assert(deserializers.containsKey(name));
     final props = actionMap[_keyActionProps] as Map<String, dynamic>;
@@ -288,7 +288,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     return deserializers[name](props, data);
   }
 
-  Future<void> enqueueOfflineAction(ApiAction<T> action) async {
+  Future<void> enqueueOfflineAction(ApiAction<D, U, T> action) async {
     while (!state.ready) {
       await firstWhere((state) => state.ready);
     }
