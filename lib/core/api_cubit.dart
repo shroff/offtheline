@@ -61,7 +61,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser>
   @override
   void onChange(Change<ApiState> change) {
     super.onChange(change);
-    if (!change.nextState.ready) return;
+    if (!change.currentState.ready) return;
 
     bool sendNextRequest = false;
     Map<String, dynamic> changes = {};

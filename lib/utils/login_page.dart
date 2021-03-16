@@ -55,8 +55,7 @@ class LoginPage<T extends ApiCubit> extends StatelessWidget {
         ),
       ),
     );
-    final request =
-        await buildAuthRequest(context, api.createUriBuilder(''));
+    final request = await buildAuthRequest(context, api.createUriBuilder(''));
     String response = await api.sendRequest(request, authRequired: false);
     if (response != null) {
       Navigator.of(context).pop();
