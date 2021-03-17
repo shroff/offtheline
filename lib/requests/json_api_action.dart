@@ -8,8 +8,8 @@ import 'package:http/http.dart';
 
 const _contentType = 'application/json';
 
-abstract class JsonApiAction<D extends Datastore, U extends ApiUser,
-    T extends ApiCubit<D, U, T>> extends ApiAction<D, U, T> {
+mixin JsonApiAction<D extends Datastore, U extends ApiUser,
+    T extends ApiCubit<D, U, T>> on ApiAction<D, U, T> {
   String get method;
   String get endpoint;
 
@@ -17,7 +17,10 @@ abstract class JsonApiAction<D extends Datastore, U extends ApiUser,
   BaseRequest createRequest(T api) {
     final request = Request(method, api.createUriBuilder(endpoint).build());
     request.headers['content-type'] = _contentType;
-    request.body = json.encode(generateRequestBody(api));
+    final body = generateRequestBody(api);
+    if (body != null) {
+      request.body = json.encode(generateRequestBody(api));
+    }
 
     return request;
   }
