@@ -6,7 +6,7 @@ class ApiState<D extends Datastore, U extends ApiUser,
   final bool ready;
   final Uri baseApiUrl;
   final LoginSession<U> loginSession;
-  final ActionQueueState actionQueueState;
+  final ActionQueueState<D, U, T> actionQueueState;
   final FetchState fetchState;
 
   ApiState._({
@@ -26,7 +26,7 @@ class ApiState<D extends Datastore, U extends ApiUser,
     bool ready,
     Uri baseApiUrl,
     LoginSession<U> loginSession,
-    ActionQueueState actionQueueState,
+    ActionQueueState<D, U, T> actionQueueState,
     FetchState fetchState,
     bool allowNullLoginSession = false,
   }) {
@@ -178,7 +178,8 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
     );
   }
 
-  ActionQueueState<D, U, T> copyWithActions(Iterable<ApiAction> actions,
+  ActionQueueState<D, U, T> copyWithActions(
+      Iterable<ApiAction<D, U, T>> actions,
       {bool resetError = false}) {
     return ActionQueueState(
       actions: actions,
@@ -192,7 +193,7 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ActionQueueState &&
+    return o is ActionQueueState<D, U, T> &&
         o.actions == actions &&
         o.paused == paused &&
         o.submitting == submitting &&

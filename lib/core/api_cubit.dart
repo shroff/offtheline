@@ -49,7 +49,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   final Uri _fixedBaseApiUrl;
 
   Box _persist;
-  Box<Map<String, dynamic>> _actions;
+  Box<Map> _actions;
   Future<WebSocket> _socketFuture;
 
   Map<String, ApiActionDeserializer<D, U, T>> get deserializers;
@@ -280,12 +280,13 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     return true;
   }
 
-  ApiAction<D, U, T> _deserializeAction(Map<String, dynamic> actionMap) {
+  ApiAction<D, U, T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
     final name = actionMap[_keyActionName];
     assert(deserializers.containsKey(name));
-    final props = actionMap[_keyActionProps] as Map<String, dynamic>;
+    final props = actionMap[_keyActionProps] as Map;
     final data = actionMap[_keyActionData];
-    return deserializers[name](props, data);
+    final action = deserializers[name](props.cast<String, dynamic>(), data);
+    return action;
   }
 
   Future<void> enqueueOfflineAction(ApiAction<D, U, T> action) async {
@@ -306,7 +307,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     });
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
-        _actions.values.map((actionMap) => _deserializeAction(actionMap)),
+        _actions.values.map<ApiAction<D, U, T>>(
+            (actionMap) => _deserializeAction(actionMap)),
       ),
     ));
   }
@@ -315,7 +317,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     if (!state.ready) return;
   }
 
-  Future<void> deleteRequestAt(int index) async {
+  Future<void> deleteRequestAt(int index, {bool revert = true}) async {
     while (!state.ready) {
       await firstWhere((state) => state.ready);
     }
@@ -328,7 +330,9 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
     final action = _deserializeAction(_actions.getAt(index));
     await _actions.deleteAt(index);
-    action.revertOptimisticUpdate(this);
+    if (revert) {
+      action.revertOptimisticUpdate(this);
+    }
 
     if (kDebugMode) {
       debugPrint('[api] Deleting request: ${action.generateDescription(this)}');
@@ -383,7 +387,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       ),
     ));
     if (error == null) {
-      deleteRequestAt(0);
+      deleteRequestAt(0, revert: false);
     }
   }
 
