@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:appcore/core/api_cubit.dart';
@@ -32,6 +33,16 @@ mixin FileUploadApiAction<D extends Datastore, U extends ApiUser,
 
     return request;
   }
+
+  @override
+  String generatePayloadDetails(T api) => json.encode({
+        'file': {
+          'fieldName': fileFieldName,
+          'name': fileName,
+          'size': fileContents.length,
+        },
+        'fields': generateFormFields(api),
+      });
 
   Map<String, String> generateFormFields(T api);
 }

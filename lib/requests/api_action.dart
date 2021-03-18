@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:appcore/core/api_cubit.dart';
 import 'package:appcore/core/api_user.dart';
 import 'package:appcore/core/datastore.dart';
@@ -11,11 +13,13 @@ abstract class ApiAction<D extends Datastore, U extends ApiUser,
 
   String generateDescription(T api);
 
+  String generatePayloadDetails(T api);
+
   BaseRequest createRequest(T api);
 
-  void applyOptimisticUpdate(T api);
+  FutureOr<void> applyOptimisticUpdate(T api);
 
-  void revertOptimisticUpdate(T api);
+  FutureOr<void> revertOptimisticUpdate(T api);
 
   Map<String, dynamic> toMap();
 }

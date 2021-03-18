@@ -84,8 +84,8 @@ class ApiStatusPage<D extends Datastore, U extends ApiUser,
                                   showAlertDialog(
                                     context,
                                     title: request.generateDescription(api),
-                                    // TODO: show props
-                                    // message: request.dataString,
+                                    message:
+                                        request.generatePayloadDetails(api),
                                   );
                                 },
                               ),

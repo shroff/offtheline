@@ -25,5 +25,8 @@ mixin JsonApiAction<D extends Datastore, U extends ApiUser,
     return request;
   }
 
+  @override
+  String generatePayloadDetails(T api) => json.encode(generateRequestBody(api));
+
   Map<String, dynamic> generateRequestBody(T api);
 }

@@ -298,8 +298,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       return;
     }
 
+    await action.applyOptimisticUpdate(this);
     debugPrint('[api] Request enqueued: ${action.generateDescription(this)}');
-    action.applyOptimisticUpdate(this);
     await _actions.add({
       _keyActionName: action.name,
       _keyActionProps: action.toMap(),
@@ -331,7 +331,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     final action = _deserializeAction(_actions.getAt(index));
     await _actions.deleteAt(index);
     if (revert) {
-      action.revertOptimisticUpdate(this);
+      await action.revertOptimisticUpdate(this);
     }
 
     if (kDebugMode) {
