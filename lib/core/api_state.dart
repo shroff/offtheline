@@ -1,6 +1,5 @@
 part of 'api_cubit.dart';
 
-@immutable
 class ApiState<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> {
   final bool ready;

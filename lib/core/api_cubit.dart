@@ -47,6 +47,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   final D datastore;
   final ApiUserParser<U> _parseUser;
   final Uri _fixedBaseApiUrl;
+  final String tickerPath;
 
   Box _persist;
   Box<Map> _actions;
@@ -58,6 +59,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     this.datastore,
     this._parseUser, {
     Uri fixedBaseApiUrl,
+    this.tickerPath,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
         super(ApiState.init()) {
     debugPrint('[api] Initializing');
@@ -76,7 +78,6 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     bool sendNextRequest = false;
     Map<String, dynamic> changes = {};
     if (change.currentState.baseApiUrl != change.nextState.baseApiUrl) {
-      debugPrint('baseApiUrl: ${change.nextState.baseApiUrl}');
       changes[_keyBaseApiUrl] = change.nextState.baseApiUrl.toString();
     }
 
@@ -93,16 +94,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       }
       sendNextRequest = true;
       if (change.nextState.loginSession == null) {
-        _socketFuture
-            ?.timeout(Duration.zero, onTimeout: () => null)
-            ?.then((socket) => socket?.close(1000, "logout"));
-        _socketFuture = null;
+        closeTickerSocket("logout");
+      } else {
+        Future.microtask(() => establishTickerSocket());
       }
     }
 
     if (change.currentState.actionQueueState.paused !=
         change.nextState.actionQueueState.paused) {
-      debugPrint('actionsPaused: ${change.nextState.actionQueueState.paused}');
       changes[_keyActionsPaused] = change.nextState.actionQueueState.paused;
       sendNextRequest = true;
     } else if (change.currentState.actionQueueState.actions !=
@@ -211,8 +210,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       {bool authRequired = true}) async {
     debugPrint('[api] Sending request to ${request.url}');
     if (authRequired) {
-      request.headers['Authorization'] =
-          'SessionId ${state.loginSession.sessionId}';
+      request.headers.addAll(generateAuthHeaders());
     }
     try {
       final response = await _client.send(request);
@@ -314,7 +312,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   }
 
   Future<void> enqueue(ApiRequest request) async {
-    if (!state.ready) return;
+    throw Exception('Enqueued deprecated request: $request');
   }
 
   Future<void> deleteRequestAt(int index, {bool revert = true}) async {
@@ -427,46 +425,59 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     while (!state.ready) {
       await firstWhere((state) => state.ready);
     }
-    if (!isSignedIn || state.fetchState.connected) {
+    if (tickerPath == null || !isSignedIn || state.fetchState.connected) {
       return;
     }
 
-    final uriBuilder = createUriBuilder('/v1/ticker');
+    final uriBuilder = createUriBuilder(tickerPath);
     uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
     uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: true));
 
     // ignore: close_sinks
     _socketFuture = WebSocket.connect(
       uriBuilder.toString(),
-      headers: {"Authorization": 'SessionId ${state.loginSession.sessionId}'},
+      headers: generateAuthHeaders(),
     );
     emit(state.copyWith(
       fetchState: state.fetchState.copyWith(connected: true),
     ));
     _socketFuture.then((socket) {
-      debugPrint('[api] Update socket created');
+      debugPrint('[api] Ticker socket created');
       return socket.listen((message) {
         parseResponseString(message);
       }, onError: (err) {
-        debugPrint("[api] Update socket error: $err");
+        debugPrint("[api] Ticker socket error: $err");
         _socketFuture = null;
         emit(state.copyWith(
           fetchState: state.fetchState.copyWith(connected: false),
         ));
       }, onDone: () {
         debugPrint(
-            '[api] Update socket closed: ${socket.closeCode}, ${socket.closeReason}');
+            '[api] Ticker socket closed: ${socket.closeCode}, ${socket.closeReason}');
         _socketFuture = null;
         emit(state.copyWith(
           fetchState: state.fetchState.copyWith(connected: false),
         ));
+        if (socket.closeCode != 1001) {
+          // TODO: Exponential backoff
+          Future.delayed(Duration(seconds: 1), () {
+            establishTickerSocket();
+          });
+        }
       });
     }, onError: (err) {
-      debugPrint("[api] Update socket error: $err");
+      debugPrint("[api] Ticker socket error: $err");
       _socketFuture = null;
       emit(state.copyWith(
         fetchState: state.fetchState.copyWith(connected: false),
       ));
     });
+  }
+
+  void closeTickerSocket(String reason) {
+    _socketFuture
+        ?.timeout(Duration.zero, onTimeout: () => null)
+        ?.then((socket) => socket?.close(1001, reason));
+    _socketFuture = null;
   }
 }
