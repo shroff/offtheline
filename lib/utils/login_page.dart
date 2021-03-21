@@ -59,7 +59,10 @@ class LoginPage<D extends Datastore, U extends ApiUser,
       ),
     );
     final request = await buildAuthRequest(context, api.createUriBuilder(''));
-    String response = await api.sendRequest(request, authRequired: false);
+    if (request == null) {
+      Navigator.of(context).pop();
+    }
+    final response = await api.sendRequest(request, authRequired: false);
     if (response != null) {
       Navigator.of(context).pop();
       showDialog(
