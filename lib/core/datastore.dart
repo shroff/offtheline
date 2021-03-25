@@ -62,8 +62,12 @@ abstract class Datastore {
     debugPrint('[datastore] Clearing');
 
     _readyCompleter = Completer<void>();
-    await _metadataBox.deleteFromDisk();
-    _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);
+    if (kIsWeb) {
+      await _metadataBox?.clear();
+    } else {
+      await _metadataBox.deleteFromDisk();
+      _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);
+    }
     await _openBoxes(clear: true);
 
     debugPrint('[datastore] Clearing Done');
