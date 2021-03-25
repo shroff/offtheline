@@ -420,7 +420,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     ));
   }
 
-  void establishTickerSocket() async {
+  void establishTickerSocket({bool incremental = true}) async {
     // * Make sure we are ready
     while (!state.ready) {
       await firstWhere((state) => state.ready);
@@ -431,7 +431,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
     final uriBuilder = createUriBuilder(tickerPath);
     uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
-    uriBuilder.queryParameters.addAll(createLastSyncParams(incremental: true));
+    uriBuilder.queryParameters
+        .addAll(createLastSyncParams(incremental: incremental));
 
     // ignore: close_sinks
     _socketFuture = WebSocket.connect(
@@ -478,6 +479,5 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     _socketFuture
         ?.timeout(Duration.zero, onTimeout: () => null)
         ?.then((socket) => socket?.close(1001, reason));
-    _socketFuture = null;
   }
 }
