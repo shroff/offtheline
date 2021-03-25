@@ -73,47 +73,47 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   @override
   void onChange(Change<ApiState<D, U, T>> change) {
     super.onChange(change);
-    if (!change.currentState.ready) return;
+    if (!change.nextState.ready) return;
 
-    bool sendNextRequest = false;
     Map<String, dynamic> changes = {};
     if (change.currentState.baseApiUrl != change.nextState.baseApiUrl) {
       changes[_keyBaseApiUrl] = change.nextState.baseApiUrl.toString();
     }
 
-    if (change.currentState.loginSession != change.nextState.loginSession) {
-      changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
-      if (change.currentState.loginSession?.gid !=
-          change.nextState.loginSession?.gid) {
-        changes[_keyUsedIds] = 0;
+    if (change.currentState.ready) {
+      if (change.currentState.actionQueueState !=
+          change.nextState.actionQueueState) {
+        if (change.currentState.actionQueueState.paused !=
+            change.nextState.actionQueueState.paused) {
+          changes[_keyActionsPaused] = change.nextState.actionQueueState.paused;
+        }
+        Future.microtask(() {
+          _sendNextRequest();
+        });
       }
-      if (change.nextState.loginSession?.user
-              ?.reloadFullData(change.currentState.loginSession?.user) ??
-          true) {
-        datastore.putMetadata(_metadataKeyLastSyncTime, 0);
+
+      if (change.currentState.loginSession != change.nextState.loginSession) {
+        changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
+        if (change.nextState.loginSession?.user
+                ?.reloadFullData(change.currentState.loginSession?.user) ??
+            true) {
+          datastore.putMetadata(_metadataKeyLastSyncTime, 0);
+        }
       }
-      sendNextRequest = true;
+    } else {
+      // Login or logout
       if (change.nextState.loginSession == null) {
         closeTickerSocket("logout");
       } else {
-        Future.microtask(() => establishTickerSocket());
+        Future.microtask(() {
+          establishTickerSocket();
+          _sendNextRequest();
+        });
       }
-    }
-
-    if (change.currentState.actionQueueState.paused !=
-        change.nextState.actionQueueState.paused) {
-      changes[_keyActionsPaused] = change.nextState.actionQueueState.paused;
-      sendNextRequest = true;
-    } else if (change.currentState.actionQueueState.actions !=
-        change.nextState.actionQueueState.actions) {
-      sendNextRequest = true;
     }
 
     if (changes.isNotEmpty) {
       _persist.putAll(changes);
-    }
-    if (sendNextRequest) {
-      Future.microtask(() => _sendNextRequest());
     }
   }
 
