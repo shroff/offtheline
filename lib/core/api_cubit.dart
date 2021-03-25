@@ -365,6 +365,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
     if (!isSignedIn ||
         _actions.isEmpty ||
+        (state.actionQueueState.error?.isNotEmpty ?? false) ||
         state.actionQueueState.paused ||
         state.actionQueueState.submitting) {
       return;

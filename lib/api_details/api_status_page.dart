@@ -43,28 +43,25 @@ class ApiStatusPage<D extends Datastore, U extends ApiUser,
                     delegate: SliverChildListDelegate.fixed(
                       [
                         ListTile(
-                            title: Text("Status: $statusText"),
-                            subtitle: qState.error?.isNotEmpty ?? false
-                                ? Text(qState.error)
-                                : null,
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (qState.paused ||
-                                    (qState.error?.isNotEmpty ?? false))
-                                  IconButton(
-                                      icon: Icon(Icons.play_arrow),
-                                      onPressed: () {
-                                        api.resume();
-                                      }),
-                                if (allowPause && !qState.paused)
-                                  IconButton(
+                          title: Text("Status: $statusText"),
+                          subtitle: qState.error?.isNotEmpty ?? false
+                              ? Text(qState.error)
+                              : null,
+                          trailing: (qState.paused ||
+                                  (qState.error?.isNotEmpty ?? false))
+                              ? IconButton(
+                                  icon: Icon(Icons.play_arrow),
+                                  onPressed: () {
+                                    api.resume();
+                                  })
+                              : (allowPause && !qState.paused)
+                                  ? IconButton(
                                       icon: Icon(Icons.pause),
                                       onPressed: () {
                                         api.pause();
-                                      }),
-                              ],
-                            )),
+                                      })
+                                  : null,
+                        ),
                         Divider(),
                       ],
                     ),
