@@ -151,7 +151,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     while (state.actionQueueState.submitting ||
         state.fetchState.fetching ||
         state.fetchState.connected) {
-      await firstWhere((state) =>
+      await stream.firstWhere((state) =>
           !state.actionQueueState.submitting &&
           !state.fetchState.fetching &&
           !state.fetchState.connected);
@@ -289,7 +289,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
   Future<void> enqueueOfflineAction(ApiAction<D, U, T> action) async {
     while (!state.ready) {
-      await firstWhere((state) => state.ready);
+      await stream.firstWhere((state) => state.ready);
     }
 
     if (!isSignedIn) {
@@ -317,7 +317,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
   Future<void> deleteRequestAt(int index, {bool revert = true}) async {
     while (!state.ready) {
-      await firstWhere((state) => state.ready);
+      await stream.firstWhere((state) => state.ready);
     }
 
     if (!isSignedIn ||
@@ -360,7 +360,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   void _sendNextRequest() async {
     // * Make sure we are ready
     while (!state.ready) {
-      await firstWhere((state) => state.ready);
+      await stream.firstWhere((state) => state.ready);
     }
 
     if (!isSignedIn ||
@@ -395,7 +395,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
     // * Make sure we are ready
     while (!state.ready) {
-      await firstWhere((state) => state.ready);
+      await stream.firstWhere((state) => state.ready);
     }
     if (!isSignedIn ||
         state.fetchState.fetching ||
@@ -424,7 +424,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   void establishTickerSocket({bool incremental = true}) async {
     // * Make sure we are ready
     while (!state.ready) {
-      await firstWhere((state) => state.ready);
+      await stream.firstWhere((state) => state.ready);
     }
     if (tickerPath == null || !isSignedIn || state.fetchState.connected) {
       return;

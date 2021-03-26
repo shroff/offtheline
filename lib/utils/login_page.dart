@@ -4,7 +4,7 @@ import 'package:appcore/core/datastore.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_auth_buttons/flutter_auth_buttons.dart';
+import 'package:auth_buttons/auth_buttons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart';
 import 'package:uri/uri.dart';
@@ -32,7 +32,7 @@ class LoginPage<D extends Datastore, U extends ApiUser,
     }
     // * Make sure we are ready
     while (!api.state.ready) {
-      await api.firstWhere((state) => state.ready);
+      await api.stream.firstWhere((state) => state.ready);
     }
     if (api.isSignedIn) {
       return;
@@ -132,7 +132,7 @@ class LoginPage<D extends Datastore, U extends ApiUser,
                           : null,
                     ),
                   if (buildGoogleAuthRequest != null)
-                    GoogleSignInButton(
+                    GoogleAuthButton(
                       onPressed: api.canLogIn
                           ? () {
                               _performLogin(context, buildGoogleAuthRequest);
