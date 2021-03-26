@@ -41,7 +41,7 @@ class UploadApiRequest extends ApiRequest {
     this.fileName, {
     this.method = 'post',
     this.fileFieldName = 'file',
-    this.formFields,
+    required this.formFields,
   });
 
   String toString() =>

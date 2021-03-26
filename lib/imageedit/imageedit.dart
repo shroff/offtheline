@@ -10,9 +10,9 @@ import 'image_resize.dart';
 
 class ImageEditPage extends StatefulWidget {
   _ImageEditArgs args(BuildContext context) =>
-      ModalRoute.of(context).settings.arguments;
+      ModalRoute.of(context)!.settings.arguments as _ImageEditArgs;
 
-  static Future<List<int>> navigateTo(BuildContext context,
+  static Future<List<int>?> navigateTo(BuildContext context,
       List<int> imageBytes, ImageConstraints constraints) {
     return Navigator.of(context).push<List<int>>(MaterialPageRoute(
         builder: (context) => ImageEditPage(),
@@ -34,7 +34,7 @@ class _ImageEditArgs {
 
 class _ImageEditState extends State<ImageEditPage> {
   bool initialized = false;
-  ImageData imageData;
+  ImageData? imageData;
 
   @override
   void didChangeDependencies() {
@@ -43,7 +43,7 @@ class _ImageEditState extends State<ImageEditPage> {
       initialized = true;
       final args = widget.args(context);
       ui
-          .instantiateImageCodec(args.imageBytes)
+          .instantiateImageCodec(args.imageBytes as Uint8List)
           .then((codec) => codec.getNextFrame())
           .then((frame) => frame.image)
           .then((image) {
@@ -68,10 +68,11 @@ class _ImageEditState extends State<ImageEditPage> {
             IconButton(
               icon: Icon(Icons.check),
               onPressed: () async {
+                if (imageData == null) return;
                 final args = widget.args(context);
                 final data = ImageProcessingData(
                   args.imageBytes,
-                  imageData.viewport,
+                  imageData!.viewport,
                   args.constraints.imageTargetSize,
                 );
                 List<int> result;
@@ -98,10 +99,10 @@ class _ImageEditState extends State<ImageEditPage> {
         ),
         body: imageData != null
             ? ImageViewportTransformer(
-                imageData: imageData,
+                imageData: imageData!,
                 onUpdateViewport: (Rect viewport) {
                   setState(() {
-                    imageData = imageData.withViewport(viewport);
+                    imageData = imageData!.withViewport(viewport);
                   });
                 },
               )
@@ -116,9 +117,9 @@ class ImageViewportTransformer extends StatefulWidget {
   final Function(Rect) onUpdateViewport;
 
   const ImageViewportTransformer({
-    Key key,
-    @required this.imageData,
-    @required this.onUpdateViewport,
+    Key? key,
+    required this.imageData,
+    required this.onUpdateViewport,
   }) : super(key: key);
 
   @override
@@ -127,10 +128,10 @@ class ImageViewportTransformer extends StatefulWidget {
 }
 
 class _ImageViewportTransformerState extends State<ImageViewportTransformer> {
-  double imageWidth;
-  double imageHeight;
-  Rect viewport;
-  Offset startOffset;
+  late double imageWidth;
+  late double imageHeight;
+  late Rect viewport;
+  late Offset startOffset;
   double viewportCanvasRatio = 1;
 
   @override
@@ -146,7 +147,7 @@ class _ImageViewportTransformerState extends State<ImageViewportTransformer> {
         child: GestureDetector(
           onScaleStart: (ScaleStartDetails details) {
             viewportCanvasRatio =
-                widget.imageData.viewport.width / context.size.width;
+                widget.imageData.viewport.width / context.size!.width;
             startOffset = details.focalPoint;
           },
           onScaleUpdate: (ScaleUpdateDetails details) {
@@ -218,7 +219,7 @@ class ImageDataPainter extends CustomPainter {
   final ImageData imageData;
   final Paint defaultPaint = Paint();
 
-  ImageDataPainter({@required this.imageData});
+  ImageDataPainter({required this.imageData});
 
   @override
   void paint(Canvas canvas, Size size) {

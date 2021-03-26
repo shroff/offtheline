@@ -9,7 +9,7 @@ class ApiStatusPage<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> extends StatelessWidget {
   final bool allowPause;
 
-  const ApiStatusPage({Key key, this.allowPause = false}) : super(key: key);
+  const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     final qState = context.select((T api) => api.state.actionQueueState);
@@ -45,7 +45,7 @@ class ApiStatusPage<D extends Datastore, U extends ApiUser,
                         ListTile(
                           title: Text("Status: $statusText"),
                           subtitle: qState.error?.isNotEmpty ?? false
-                              ? Text(qState.error)
+                              ? Text(qState.error!)
                               : null,
                           trailing: (qState.paused ||
                                   (qState.error?.isNotEmpty ?? false))

@@ -7,7 +7,7 @@ const _boxNameDatastoreMetadata = 'datastoreMetadata';
 const _metadataKeySchemaVersion = 'schemaVersion';
 
 abstract class Datastore {
-  Box _metadataBox;
+  late Box _metadataBox;
   Completer<void> _readyCompleter = Completer();
   Future<void> get ready => _readyCompleter.future;
 
@@ -17,7 +17,7 @@ abstract class Datastore {
     registerTypeAdapters();
   }
 
-  E getMetadata<E>(String key, {E defaultValue}) {
+  E? getMetadata<E>(String key, {E? defaultValue}) {
     return _metadataBox.get(key, defaultValue: defaultValue);
   }
 

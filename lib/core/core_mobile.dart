@@ -19,17 +19,17 @@ class _ProxiedSecureStorage extends Storage {
   Future<void> initialize() async {}
 
   @override
-  Future<String> read({String key}) {
+  Future<String?> read({required String key}) {
     return storage.read(key: key);
   }
 
   @override
-  Future<void> write({String key, String value}) {
+  Future<void> write({required String key, required String value}) {
     return storage.write(key: key, value: value);
   }
 
   @override
-  Future<void> delete({String key}) {
+  Future<void> delete({required String key}) {
     return storage.delete(key: key);
   }
 

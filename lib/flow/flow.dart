@@ -6,17 +6,17 @@ abstract class FlowManager<T> extends StatefulWidget {
   final String title;
 
   const FlowManager({
-    Key key,
-    @required this.title,
+    Key? key,
+    required this.title,
   }) : super(key: key);
 
   FlowManagerArgs<T> flowArgs(BuildContext context) =>
-      ModalRoute.of(context).settings.arguments;
+      ModalRoute.of(context)!.settings.arguments as FlowManagerArgs<T>;
 
   static _FlowManagerState<T> of<T>(BuildContext context) {
     return context
-        .dependOnInheritedWidgetOfExactType<InheritedFlowManager>()
-        .data;
+        .dependOnInheritedWidgetOfExactType<InheritedFlowManager>()!
+        .data as _FlowManagerState<T>;
   }
 
   FutureOr<bool> confirmDropFlow(BuildContext context) {
@@ -44,15 +44,15 @@ class FlowManagerArgs<T> {
 }
 
 class FlowStep<T> {
-  final Widget Function(BuildContext, GlobalKey<State>) buildPage;
+  final Widget Function(BuildContext, GlobalKey<State>?) buildPage;
   final Function(T, BuildContext) setStateOnStart;
-  final String Function(T, BuildContext) generateNextStepName;
-  final String Function(T, BuildContext) generateNextButtonText;
-  final bool Function(T, BuildContext) nextEnabled;
+  final String Function(T, BuildContext)? generateNextStepName;
+  final String Function(T, BuildContext)? generateNextButtonText;
+  final bool Function(T, BuildContext)? nextEnabled;
   final FutureOr<bool> Function(T, BuildContext) onFinish;
 
   FlowStep({
-    @required this.buildPage,
+    required this.buildPage,
     this.generateNextStepName,
     this.generateNextButtonText,
     this.setStateOnStart = _doNothing,
@@ -67,9 +67,9 @@ class InheritedFlowManager extends InheritedWidget {
   final _FlowManagerState data;
 
   InheritedFlowManager({
-    Key key,
-    @required this.data,
-    @required Widget child,
+    Key? key,
+    required this.data,
+    required Widget child,
   }) : super(key: key, child: child);
 
   @override
@@ -79,7 +79,7 @@ class InheritedFlowManager extends InheritedWidget {
 class _FlowManagerState<T> extends State<FlowManager> {
   final PageStorageBucket _bucket = PageStorageBucket();
 
-  List<FlowStep<T>> steps;
+  late List<FlowStep<T>> steps;
   T data;
 
   FlowStep<T> get currentStep => steps[steps.length - 1];
@@ -88,7 +88,7 @@ class _FlowManagerState<T> extends State<FlowManager> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = widget.flowArgs(context);
-    steps = [args.steps[args.initialStep]];
+    steps = [args.steps[args.initialStep] as FlowStep<T>];
     data = args.initialData;
     setState(() {
       currentStep.setStateOnStart(data, context);
@@ -108,13 +108,13 @@ class _FlowManagerState<T> extends State<FlowManager> {
           Navigator.of(context).pop(data);
         }
       } else {
-        final stepName = currentStep.generateNextStepName(data, context);
+        final stepName = currentStep.generateNextStepName!(data, context);
         final step = widget.flowArgs(context).steps[stepName];
         debugPrint('[flow] Next to $stepName');
         if (step == null) throw "Unknown next state: $step";
 
         setState(() {
-          steps.add(step);
+          steps.add(step as FlowStep<T>);
           currentStep.setStateOnStart(data, context);
         });
       }
@@ -163,7 +163,7 @@ class _FlowManagerState<T> extends State<FlowManager> {
                   textColor: Colors.white,
                   textTheme: ButtonTextTheme.primary,
                   onPressed:
-                      currentStep.nextEnabled(data, context) ? nextStep : null,
+                      currentStep.nextEnabled!(data, context) ? nextStep : null,
                 ),
             ],
           ),

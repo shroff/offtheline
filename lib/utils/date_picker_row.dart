@@ -5,19 +5,19 @@ final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 const Duration _oneDay = Duration(days: 1);
 
 class DatePickerRow extends StatefulWidget {
-  final Function(DateTime) onDateChanged;
+  final Function(DateTime)? onDateChanged;
   final double buttonSpacing;
   final double iconSize;
-  final DateTime selectedDate;
+  final DateTime? selectedDate;
   final DateTime firstDate;
   final DateTime lastDate;
-  final String titleText;
+  final String? titleText;
   final TextStyle titleTextStyle;
 
   DatePickerRow({
-    Key key,
-    @required this.firstDate,
-    @required this.lastDate,
+    Key? key,
+    required this.firstDate,
+    required this.lastDate,
     this.selectedDate,
     this.onDateChanged,
     this.buttonSpacing = 16.0,
@@ -33,7 +33,7 @@ class DatePickerRow extends StatefulWidget {
 }
 
 class DatePickerRowState extends State<DatePickerRow> {
-  DateTime selectedDate;
+  late DateTime selectedDate;
 
   @override
   void initState() {
@@ -59,7 +59,7 @@ class DatePickerRowState extends State<DatePickerRow> {
               Align(
                 alignment: Alignment.topLeft,
                 child: Text(
-                  widget.titleText,
+                  widget.titleText!,
                   style: widget.titleTextStyle,
                 ),
               ),
@@ -80,7 +80,7 @@ class DatePickerRowState extends State<DatePickerRow> {
                   child: FlatButton(
                     child: Text(_dateFormat.format(selectedDate)),
                     onPressed: () async {
-                      DateTime date = await showDatePicker(
+                      DateTime? date = await showDatePicker(
                         context: context,
                         initialDate: selectedDate.compareTo(widget.lastDate) > 0
                             ? widget.lastDate

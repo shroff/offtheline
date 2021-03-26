@@ -4,11 +4,11 @@ import 'package:localstorage/localstorage.dart';
 abstract class Storage {
   Future<void> initialize();
 
-  Future<String> read({String key});
+  Future<String?> read({required String key});
 
-  Future<void> write({String key, String value});
+  Future<void> write({required String key, required String value});
 
-  Future<void> delete({String key});
+  Future<void> delete({required String key});
 
   Future<void> deleteAll();
 }
@@ -24,17 +24,17 @@ class ProxiedLocalStorage extends Storage {
   }
 
   @override
-  Future<String> read({String key}) async {
+  Future<String?> read({required String key}) async {
     return storage.getItem(key);
   }
 
   @override
-  Future<void> write({String key, String value}) async {
+  Future<void> write({required String key, required String value}) async {
     return storage.setItem(key, value);
   }
 
   @override
-  Future<void> delete({String key}) async {
+  Future<void> delete({required String key}) async {
     return storage.deleteItem(key);
   }
 

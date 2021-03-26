@@ -23,7 +23,7 @@ class UploadApiRequestAdapter extends TypeAdapter<UploadApiRequest> {
       fields[5] as String,
       method: fields[0] as String,
       fileFieldName: fields[4] as String,
-      formFields: (fields[6] as Map)?.cast<String, String>(),
+      (formFields: (fields[6] as Map?)?.cast<String, String>())!,
     );
   }
 

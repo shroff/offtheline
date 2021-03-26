@@ -4,29 +4,32 @@ class ApiState<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> {
   final bool ready;
   final Uri baseApiUrl;
-  final LoginSession<U> loginSession;
+  final LoginSession<U>? loginSession;
   final ActionQueueState<D, U, T> actionQueueState;
   final FetchState fetchState;
 
   ApiState._({
     this.ready = false,
-    this.baseApiUrl,
+    required this.baseApiUrl,
     this.loginSession,
-    this.actionQueueState,
+    required this.actionQueueState,
     this.fetchState = const FetchState(),
   });
 
   factory ApiState.init() {
     return ApiState._(
-        ready: false, actionQueueState: ActionQueueState<D, U, T>());
+      ready: false,
+      baseApiUrl: Uri(),
+      actionQueueState: ActionQueueState<D, U, T>(),
+    );
   }
 
   ApiState<D, U, T> copyWith({
-    bool ready,
-    Uri baseApiUrl,
-    LoginSession<U> loginSession,
-    ActionQueueState<D, U, T> actionQueueState,
-    FetchState fetchState,
+    bool? ready,
+    Uri? baseApiUrl,
+    LoginSession<U>? loginSession,
+    ActionQueueState<D, U, T>? actionQueueState,
+    FetchState? fetchState,
     bool allowNullLoginSession = false,
   }) {
     return ApiState._(
@@ -78,10 +81,10 @@ class LoginSession<U extends ApiUser> {
   );
 
   LoginSession<U> copyWith({
-    String sessionId,
-    int gid,
-    int usedIds,
-    U user,
+    String? sessionId,
+    int? gid,
+    int? usedIds,
+    U? user,
   }) {
     return LoginSession<U>(
       sessionId ?? this.sessionId,
@@ -119,7 +122,8 @@ class LoginSession<U extends ApiUser> {
 
   String toJson() => json.encode(toMap());
 
-  factory LoginSession.fromJson(String source, ApiUserParser<U> parseUser) =>
+  factory LoginSession.fromJson(
+          String source, ApiUserParser<U> parseUser) =>
       (source == null || source.isEmpty)
           ? null
           : LoginSession.fromMap(json.decode(source), parseUser);
@@ -150,13 +154,13 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
   final Iterable<ApiAction<D, U, T>> actions;
   final bool paused;
   final bool submitting;
-  final String error;
+  final String? error;
 
   const ActionQueueState({
-    this.actions,
+    this.actions = const [],
     this.paused = false,
     this.submitting = false,
-    this.error = '',
+    this.error,
   });
 
   ActionQueueState<D, U, T> copyWithPaused(bool paused) {
@@ -164,11 +168,11 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
       actions: actions,
       paused: paused,
       submitting: submitting,
-      error: '',
+      error: null,
     );
   }
 
-  ActionQueueState<D, U, T> copyWithSubmitting(bool submitting, String error) {
+  ActionQueueState<D, U, T> copyWithSubmitting(bool submitting, String? error) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
@@ -216,25 +220,13 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
 class FetchState {
   final bool fetching;
   final bool connected;
-  final String error;
+  final String? error;
 
   const FetchState({
     this.fetching = false,
     this.connected = false,
-    this.error = '',
+    this.error,
   });
-
-  FetchState copyWith({
-    bool fetching,
-    bool connected,
-    String error,
-  }) {
-    return FetchState(
-      fetching: fetching ?? this.fetching,
-      connected: connected ?? this.connected,
-      error: error,
-    );
-  }
 
   @override
   bool operator ==(Object o) {

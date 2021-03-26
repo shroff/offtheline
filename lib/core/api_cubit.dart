@@ -46,19 +46,19 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   final BaseClient _client = createHttpClient();
   final D datastore;
   final ApiUserParser<U> _parseUser;
-  final Uri _fixedBaseApiUrl;
-  final String tickerPath;
+  final Uri? _fixedBaseApiUrl;
+  final String? tickerPath;
 
-  Box _persist;
-  Box<Map> _actions;
-  Future<WebSocket> _socketFuture;
+  late Box _persist;
+  late Box<Map> _actions;
+  Future<WebSocket>? _socketFuture;
 
   Map<String, ApiActionDeserializer<D, U, T>> get deserializers;
 
   ApiCubit(
     this.datastore,
     this._parseUser, {
-    Uri fixedBaseApiUrl,
+    Uri? fixedBaseApiUrl,
     this.tickerPath,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
         super(ApiState.init()) {
@@ -117,7 +117,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     }
   }
 
-  Future<void> _initialize(Uri baseApiUrl) async {
+  Future<void> _initialize(Uri? baseApiUrl) async {
     await datastore.ready;
     _persist = await Hive.openBox(_boxNamePersist);
     _actions = await Hive.openBox(_boxNameActionQueue);
@@ -125,7 +125,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     emit(ApiState._(
       ready: true,
       baseApiUrl: baseApiUrl ??
-          Uri.tryParse(_persist.get(_keyBaseApiUrl, defaultValue: '')),
+          Uri.tryParse(_persist.get(_keyBaseApiUrl, defaultValue: ''))!,
       loginSession:
           LoginSession.fromJson(_persist.get(_keyLoginSession), _parseUser),
       actionQueueState: ActionQueueState<D, U, T>(
@@ -174,9 +174,11 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   }
 
   Map<String, String> generateAuthHeaders() {
-    return {
-      'Authorization': 'SessionId ${state.loginSession.sessionId}',
-    };
+    return state.loginSession == null
+        ? const {}
+        : {
+            'Authorization': 'SessionId ${state.loginSession!.sessionId}',
+          };
   }
 
   String createUrl(String path) {
@@ -189,10 +191,10 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     return builder;
   }
 
-  Future<int> generateNextId() async {
+  Future<int?> generateNextId() async {
     if (state.loginSession == null) return null;
     final usedIds = _persist.get(_keyUsedIds, defaultValue: 0);
-    final nextId = usedIds | (state.loginSession.gid << _gidShift);
+    final nextId = usedIds | (state.loginSession!.gid << _gidShift);
     await _persist.put(_keyUsedIds, usedIds + 1);
     return nextId;
   }
@@ -206,7 +208,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
             }
           : <String, String>{};
 
-  Future<String> sendRequest(BaseRequest request,
+  Future<String?> sendRequest(BaseRequest request,
       {bool authRequired = true}) async {
     debugPrint('[api] Sending request to ${request.url}');
     if (authRequired) {
@@ -235,7 +237,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   Future<void> parseResponseString(String responseString,
       {bool authRequired = true}) async {
     if (responseString.isNotEmpty) {
-      final responseMap = json.decode(responseString) as Map<String, dynamic>;
+      final responseMap =
+          json.decode(responseString) as Map<String, dynamic>;
       await parseResponseMap(responseMap, authRequired: authRequired);
     }
   }
@@ -244,7 +247,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       {bool authRequired = true}) async {
     if (authRequired && !isSignedIn) return false;
     debugPrint('[api] Parsing response');
-    LoginSession<U> parsedSession;
+    LoginSession<U>? parsedSession;
     if (response.containsKey('session')) {
       debugPrint('[api] Parsing session');
       final sessionMap = response['session'] as Map<String, dynamic>;
@@ -264,7 +267,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       debugPrint('[api] Data Parsed');
       if (data.containsKey(_dataKeyTime)) {
         datastore.putMetadata(
-            _metadataKeyLastSyncTime, data[_dataKeyTime] as int);
+            _metadataKeyLastSyncTime, data[_dataKeyTime] as int?);
       }
     }
     if (response.containsKey('debug')) {
@@ -283,7 +286,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     assert(deserializers.containsKey(name));
     final props = actionMap[_keyActionProps] as Map;
     final data = actionMap[_keyActionData];
-    final action = deserializers[name](props.cast<String, dynamic>(), data);
+    final action = deserializers[name]!(props.cast<String, dynamic>(), data);
     return action;
   }
 
@@ -296,8 +299,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       return;
     }
 
-    await action.applyOptimisticUpdate(this);
-    debugPrint('[api] Request enqueued: ${action.generateDescription(this)}');
+    await action.applyOptimisticUpdate(this as T);
+    debugPrint('[api] Request enqueued: ${action.generateDescription(this as T)}');
     await _actions.add({
       _keyActionName: action.name,
       _keyActionProps: action.toMap(),
@@ -326,14 +329,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       return;
     }
 
-    final action = _deserializeAction(_actions.getAt(index));
+    final action = _deserializeAction(_actions.getAt(index)!);
     await _actions.deleteAt(index);
     if (revert) {
-      await action.revertOptimisticUpdate(this);
+      await action.revertOptimisticUpdate(this as T);
     }
 
     if (kDebugMode) {
-      debugPrint('[api] Deleting request: ${action.generateDescription(this)}');
+      debugPrint('[api] Deleting request: ${action.generateDescription(this as T)}');
     }
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
@@ -375,8 +378,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       actionQueueState: state.actionQueueState.copyWithSubmitting(true, null),
     ));
 
-    final action = _deserializeAction(_actions.getAt(0));
-    final request = action.createRequest(this);
+    final action = _deserializeAction(_actions.getAt(0)!);
+    final request = action.createRequest(this as T);
 
     final error = await sendRequest(request);
     emit(state.copyWith(
@@ -404,7 +407,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     }
 
     emit(state.copyWith(
-      fetchState: state.fetchState.copyWith(fetching: true),
+      fetchState: const FetchState(fetching: true),
     ));
 
     final uriBuilder = createUriBuilder('/v1/sync');
@@ -414,7 +417,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
     final error = await sendRequest(httpRequest, authRequired: true);
     emit(state.copyWith(
-      fetchState: state.fetchState.copyWith(
+      fetchState: FetchState(
         fetching: false,
         error: error,
       ),
@@ -430,7 +433,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       return;
     }
 
-    final uriBuilder = createUriBuilder(tickerPath);
+    final uriBuilder = createUriBuilder(tickerPath!);
     uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
     uriBuilder.queryParameters
         .addAll(createLastSyncParams(incremental: incremental));
@@ -441,9 +444,9 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       headers: generateAuthHeaders(),
     );
     emit(state.copyWith(
-      fetchState: state.fetchState.copyWith(connected: true),
+      fetchState: const FetchState(connected: true),
     ));
-    _socketFuture.then((socket) {
+    _socketFuture!.then((socket) {
       debugPrint('[api] Ticker socket created');
       return socket.listen((message) {
         parseResponseString(message);
@@ -451,14 +454,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
         debugPrint("[api] Ticker socket error: $err");
         _socketFuture = null;
         emit(state.copyWith(
-          fetchState: state.fetchState.copyWith(connected: false),
+          fetchState: const FetchState(connected: false),
         ));
       }, onDone: () {
         debugPrint(
             '[api] Ticker socket closed: ${socket.closeCode}, ${socket.closeReason}');
         _socketFuture = null;
         emit(state.copyWith(
-          fetchState: state.fetchState.copyWith(connected: false),
+          fetchState: const FetchState(connected: false),
         ));
         if (socket.closeCode != 1001) {
           // TODO: Exponential backoff
@@ -471,14 +474,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       debugPrint("[api] Ticker socket error: $err");
       _socketFuture = null;
       emit(state.copyWith(
-        fetchState: state.fetchState.copyWith(connected: false),
+        fetchState: const FetchState(connected: false),
       ));
     });
   }
 
   void closeTickerSocket(String reason) {
     _socketFuture
-        ?.timeout(Duration.zero, onTimeout: () => null)
+        ?.timeout(Duration.zero, onTimeout: (() => null) as FutureOr<WebSocket> Function()?)
         ?.then((socket) => socket?.close(1001, reason));
   }
 }

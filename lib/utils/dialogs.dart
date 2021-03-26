@@ -3,14 +3,14 @@ library dialogs;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-Future<Uri> showUriDialog(
+Future<Uri?> showUriDialog(
   BuildContext context, {
-  String title,
-  Uri preset,
+  String? title,
+  Uri? preset,
   bool allowHttp = false,
 }) {
   final controller = TextEditingController();
-  var https = true;
+  bool https = true;
   if (preset != null) {
     controller.text = preset.authority + preset.path;
     if (allowHttp && preset.scheme == 'http') {
@@ -48,7 +48,7 @@ Future<Uri> showUriDialog(
                     value: https,
                     onChanged: (checked) {
                       setState(() {
-                        https = checked;
+                        https = checked!;
                         preset = Uri.tryParse(
                             (https ? "https://" : "http://") + controller.text);
                       });
@@ -80,8 +80,11 @@ Future<Uri> showUriDialog(
   );
 }
 
-Future<T> showProgressDialog<T>(BuildContext context,
-    {String title, String message}) {
+Future showProgressDialog(
+  BuildContext context, {
+  String? title,
+  String? message,
+}) {
   return showDialog(
     context: context,
     barrierDismissible: false,
@@ -105,11 +108,11 @@ Future<T> showProgressDialog<T>(BuildContext context,
   );
 }
 
-Future<bool> showAlertDialog(
+Future<bool?> showAlertDialog(
   BuildContext context, {
-  String title,
-  String message,
-  String negativeText,
+  String? title,
+  String? message,
+  String? negativeText,
   String positiveText = 'OK',
 }) {
   return showDialog(
@@ -131,29 +134,29 @@ Future<bool> showAlertDialog(
               Navigator.of(context).pop(false);
             },
           ),
-        if (positiveText != null)
-          FlatButton(
-            child: Text(positiveText),
-            onPressed: () {
-              Navigator.of(context).pop(true);
-            },
-          ),
+        FlatButton(
+          child: Text(positiveText),
+          onPressed: () {
+            Navigator.of(context).pop(true);
+          },
+        ),
       ],
     ),
   );
 }
 
-Future<String> showInputDialog(
+Future<String?> showInputDialog(
   BuildContext context, {
-  String title,
-  String labelText,
-  String hintText,
-  String preset,
-  TextCapitalization capitalization,
+  String? title,
+  String? labelText,
+  String? hintText,
+  String? preset,
+  TextCapitalization? capitalization,
   bool numeric = false,
   bool decimal = false,
 }) {
-  TextEditingController controller = new TextEditingController()..text = preset;
+  TextEditingController controller = new TextEditingController()
+    ..text = (preset ?? '');
   return showDialog(
     context: context,
     barrierDismissible: false,
@@ -189,11 +192,11 @@ Future<String> showInputDialog(
   );
 }
 
-Future<T> showOptionsDialog<T>(
+Future<T?> showOptionsDialog<T>(
   BuildContext context,
   List<T> options,
   Widget Function(T) buildItem, {
-  bool Function(T, String) filter,
+  bool Function(T, String)? filter,
 }) async {
   var results = options;
   return showDialog(

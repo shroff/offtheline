@@ -11,7 +11,7 @@ const _imageQuality = 80;
 
 class UploadFileData {
   final String fileName;
-  final List<int> contents;
+  final List<int>? contents;
 
   String get fileNameBase => path.basenameWithoutExtension(fileName);
   String get fileNameExt => path.extension(fileName);
@@ -29,12 +29,12 @@ class ImageConstraints {
 }
 
 
-Future<UploadFileData> pickFile(
+Future<UploadFileData?> pickFile(
   BuildContext context,
   ImagePicker picker,
   ImageConstraints constraints,
 ) async {
-  Completer result = Completer<UploadFileData>();
+  Completer result = Completer<UploadFileData?>();
   showModalBottomSheet(
     context: context,
     builder: (ctx) => Column(
@@ -66,17 +66,17 @@ Future<UploadFileData> pickFile(
             if (picked == null || !picked.isSinglePick) {
               result.complete(null);
             } else {
-              result.complete(UploadFileData(picked.files[0].path, picked.files[0].bytes));
+              result.complete(UploadFileData(picked.files[0].path!, picked.files[0].bytes));
             }
           },
         ),
       ],
     ),
   );
-  return result.future;
+  return result.future as FutureOr<UploadFileData?>;
 }
 
-Future<UploadFileData> _pickAndEditImage(
+Future<UploadFileData?> _pickAndEditImage(
   BuildContext context,
   ImagePicker picker,
   ImageSource source,

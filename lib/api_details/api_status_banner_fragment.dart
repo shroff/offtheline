@@ -10,7 +10,7 @@ class ApiStatusBannerFragment<D extends Datastore, U extends ApiUser,
   final bool allowPause;
 
   const ApiStatusBannerFragment({
-    Key key,
+    Key? key,
     this.allowPause = true,
   }) : super(key: key);
 

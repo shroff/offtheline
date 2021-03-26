@@ -26,7 +26,7 @@ Future<List<int>> processImage<K>(
   final images = {
     0: image,
   };
-  return processItems(_processImage, useIsolateIfAvailable, images).then((result) => result[0]);
+  return processItems(_processImage, useIsolateIfAvailable, images).then((result) => result[0]!);
 }
 
 Future<Map<K, List<int>>> processImages<K>(
@@ -37,16 +37,16 @@ Future<Map<K, List<int>>> processImages<K>(
 }
 
 Future<List<int>> _processImage(ImageProcessingData data) async {
-  image.Image src;
+  image.Image? src;
 // Decode
   debugPrint('Decoding Image');
   src = image.decodeImage(data.bytes);
-  debugPrint('Original: ${src.width}x${src.height}');
+  debugPrint('Original: ${src!.width}x${src.height}');
 
 // Read orientation from EXIF and then clear information
-  final exif = await readExifFromBytes(data.bytes);
+  final exif = await (readExifFromBytes(data.bytes) as FutureOr<Map<String?, IfdTag>>);
   final orientation = (exif.containsKey('Image Orientation'))
-      ? exif['Image Orientation'].values[0] as int
+      ? (exif['Image Orientation']!.values![0] as int?)!
       : 1;
   debugPrint('EXIF Orientation: $orientation');
   src.exif.rawData = null;

@@ -7,20 +7,20 @@ const _cardRadius = 6.0;
 
 class GroupedCardList extends StatelessWidget {
   final String titleText;
-  final String subtitleText;
-  final String trailingText;
-  final Widget trailing;
+  final String? subtitleText;
+  final String? trailingText;
+  final Widget? trailing;
   final List<GroupedCardItemData> items;
-  final Function(bool) setCollapsed;
+  final Function(bool)? setCollapsed;
   final bool collapsed;
 
   const GroupedCardList({
-    Key key,
-    this.titleText,
+    Key? key,
+    required this.titleText,
     this.subtitleText,
     this.trailingText,
     this.trailing,
-    this.items,
+    required this.items,
     this.setCollapsed,
     this.collapsed = true,
   }) : super(key: key);
@@ -52,7 +52,7 @@ class GroupedCardList extends StatelessWidget {
                             ? trailing
                             : trailingText != null
                                 ? Text(
-                                    trailingText,
+                                    trailingText!,
                                     style: const TextStyle(fontSize: 18),
                                   )
                                 : null,
@@ -60,7 +60,7 @@ class GroupedCardList extends StatelessWidget {
                         onTap: (setCollapsed == null)
                             ? null
                             : () {
-                                setCollapsed(!collapsed);
+                                setCollapsed!(!collapsed);
                               },
                         showExpansionIcon: (setCollapsed != null),
                       )
@@ -74,15 +74,15 @@ class GroupedCardList extends StatelessWidget {
 
 class GroupedCardHeader extends StatelessWidget {
   final String title;
-  final String subtitle;
-  final Widget trailing;
+  final String? subtitle;
+  final Widget? trailing;
   final bool collapsed;
   final bool showExpansionIcon;
-  final Function() onTap;
+  final void Function()? onTap;
 
   const GroupedCardHeader({
-    Key key,
-    @required this.title,
+    Key? key,
+    required this.title,
     this.subtitle,
     this.trailing,
     this.collapsed = false,
@@ -104,7 +104,7 @@ class GroupedCardHeader extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           child: Row(
-            children: <Widget>[
+            children: <Widget >[
               if (showExpansionIcon)
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -118,7 +118,7 @@ class GroupedCardHeader extends StatelessWidget {
                   style: TextStyle(fontSize: 20),
                 ),
               ),
-              if (trailing != null) this.trailing,
+              if (trailing != null) trailing!,
             ],
           ),
         ),
@@ -127,18 +127,18 @@ class GroupedCardHeader extends StatelessWidget {
 
 class GroupedCardItemData {
   final int sortOrder;
-  final int secondarySortOrder;
+  final int? secondarySortOrder;
   final String title;
-  final Function onTap;
-  final Function onLongPress;
-  final int amount;
-  final String subtitle;
-  final String third;
+  final void Function()? onTap;
+  final void Function()? onLongPress;
+  final int? amount;
+  final String? subtitle;
+  final String? third;
 
   GroupedCardItemData({
-    this.sortOrder,
+    required this.sortOrder,
     this.secondarySortOrder,
-    this.title,
+    required this.title,
     this.amount,
     this.subtitle,
     this.third,
@@ -150,7 +150,7 @@ class GroupedCardItemData {
 class GroupedCardItem extends StatelessWidget {
   final GroupedCardItemData data;
 
-  const GroupedCardItem({Key key, @required this.data}) : super(key: key);
+  const GroupedCardItem({Key? key, required this.data}) : super(key: key);
 
   @override
   Widget build(BuildContext context) => CardFragmentMiddle(
@@ -179,11 +179,11 @@ class GroupedCardItem extends StatelessWidget {
                           fontSize: 18,
                         ),
                       ),
-                      if (data.subtitle != null && data.subtitle.isNotEmpty)
-                        Text(data.subtitle),
-                      if (data.third != null && data.third.isNotEmpty)
+                      if (data.subtitle?.isNotEmpty ?? false)
+                        Text(data.subtitle!),
+                      if (data.third?.isNotEmpty ?? false)
                         Text(
-                          data.third,
+                          data.third!,
                           style: const TextStyle(color: Colors.blueGrey),
                         ),
                     ],
@@ -204,7 +204,7 @@ class GroupedCardItem extends StatelessWidget {
 }
 
 class GroupedCardFooter extends StatelessWidget {
-  const GroupedCardFooter({Key key}) : super(key: key);
+  const GroupedCardFooter({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) => CardFragmentBottom(
@@ -216,11 +216,11 @@ class GroupedCardFooter extends StatelessWidget {
 
 class CardFragmentTop extends StatelessWidget {
   final Widget child;
-  final double marginHorizontal;
-  final double marginTop;
+  final double? marginHorizontal;
+  final double? marginTop;
 
   const CardFragmentTop(
-      {Key key, @required this.child, this.marginTop, this.marginHorizontal})
+      {Key? key, required this.child, this.marginTop, this.marginHorizontal})
       : super(key: key);
 
   @override
@@ -240,10 +240,10 @@ class CardFragmentTop extends StatelessWidget {
 
 class CardFragmentMiddle extends StatelessWidget {
   final Widget child;
-  final double marginHorizontal;
+  final double? marginHorizontal;
 
   const CardFragmentMiddle(
-      {Key key, @required this.child, this.marginHorizontal})
+      {Key? key, required this.child, this.marginHorizontal})
       : super(key: key);
 
   @override
@@ -258,11 +258,11 @@ class CardFragmentMiddle extends StatelessWidget {
 
 class CardFragmentBottom extends StatelessWidget {
   final Widget child;
-  final double marginHorizontal;
-  final double marginBottom;
+  final double? marginHorizontal;
+  final double? marginBottom;
 
   const CardFragmentBottom(
-      {Key key, @required this.child, this.marginBottom, this.marginHorizontal})
+      {Key? key, required this.child, this.marginBottom, this.marginHorizontal})
       : super(key: key);
 
   @override

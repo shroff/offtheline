@@ -13,11 +13,11 @@ typedef AuthRequestBuilder = Future<Request> Function(BuildContext, UriBuilder);
 
 class LoginPage<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> extends StatelessWidget {
-  final AuthRequestBuilder buildGoogleAuthRequest;
-  final AuthRequestBuilder buildSessionIdAuthRequest;
+  final AuthRequestBuilder? buildGoogleAuthRequest;
+  final AuthRequestBuilder? buildSessionIdAuthRequest;
 
   const LoginPage({
-    Key key,
+    Key? key,
     this.buildGoogleAuthRequest,
     this.buildSessionIdAuthRequest,
   }) : super(key: key);
@@ -127,7 +127,7 @@ class LoginPage<D extends Datastore, U extends ApiUser,
                       child: Text("Log in with Session ID"),
                       onPressed: api.canLogIn
                           ? () {
-                              _performLogin(context, buildSessionIdAuthRequest);
+                              _performLogin(context, buildSessionIdAuthRequest!);
                             }
                           : null,
                     ),
@@ -135,7 +135,7 @@ class LoginPage<D extends Datastore, U extends ApiUser,
                     GoogleAuthButton(
                       onPressed: api.canLogIn
                           ? () {
-                              _performLogin(context, buildGoogleAuthRequest);
+                              _performLogin(context, buildGoogleAuthRequest!);
                             }
                           : null,
                     ),

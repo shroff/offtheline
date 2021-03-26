@@ -29,7 +29,7 @@ class SimpleApiRequest extends ApiRequest {
     this.endpoint,
     this.description, {
     this.body,
-    this.contentType,
+    required this.contentType,
   });
 
   SimpleApiRequest.json(
