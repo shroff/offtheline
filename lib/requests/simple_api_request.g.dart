@@ -8,13 +8,13 @@ part of 'simple_api_request.dart';
 
 class SimpleApiRequestAdapter extends TypeAdapter<SimpleApiRequest> {
   @override
-  final typeId = 1;
+  final int typeId = 1;
 
   @override
   SimpleApiRequest read(BinaryReader reader) {
-    var numOfFields = reader.readByte();
-    var fields = <int, dynamic>{
-      for (var i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return SimpleApiRequest(
       fields[0] as String,
@@ -40,4 +40,14 @@ class SimpleApiRequestAdapter extends TypeAdapter<SimpleApiRequest> {
       ..writeByte(4)
       ..write(obj.body);
   }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SimpleApiRequestAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }

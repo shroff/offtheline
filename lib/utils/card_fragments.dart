@@ -10,17 +10,17 @@ class GroupedCardList extends StatelessWidget {
   final String? subtitleText;
   final String? trailingText;
   final Widget? trailing;
-  final List<GroupedCardItemData> items;
+  final List<GroupedCardItemData>? items;
   final Function(bool)? setCollapsed;
   final bool collapsed;
 
   const GroupedCardList({
     Key? key,
     required this.titleText,
+    required this.items,
     this.subtitleText,
     this.trailingText,
     this.trailing,
-    required this.items,
     this.setCollapsed,
     this.collapsed = true,
   }) : super(key: key);
@@ -56,7 +56,7 @@ class GroupedCardList extends StatelessWidget {
                                     style: const TextStyle(fontSize: 18),
                                   )
                                 : null,
-                        collapsed: collapsed || items.isEmpty,
+                        collapsed: collapsed || items!.isEmpty,
                         onTap: (setCollapsed == null)
                             ? null
                             : () {
@@ -64,11 +64,11 @@ class GroupedCardList extends StatelessWidget {
                               },
                         showExpansionIcon: (setCollapsed != null),
                       )
-                    : (index > items.length)
+                    : (index > items!.length)
                         ? GroupedCardFooter()
-                        : GroupedCardItem(data: items[index - 1]),
+                        : GroupedCardItem(data: items![index - 1]),
                 childCount: 1 +
-                    ((collapsed || items.isEmpty) ? 0 : (items.length + 1))),
+                    ((collapsed || items!.isEmpty) ? 0 : (items!.length + 1))),
       );
 }
 
@@ -104,7 +104,7 @@ class GroupedCardHeader extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           child: Row(
-            children: <Widget >[
+            children: <Widget>[
               if (showExpansionIcon)
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),

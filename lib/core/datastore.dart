@@ -63,7 +63,7 @@ abstract class Datastore {
 
     _readyCompleter = Completer<void>();
     if (kIsWeb) {
-      await _metadataBox?.clear();
+      await _metadataBox.clear();
     } else {
       await _metadataBox.deleteFromDisk();
       _metadataBox = await Hive.openBox(_boxNameDatastoreMetadata);

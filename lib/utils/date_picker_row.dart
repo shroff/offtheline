@@ -24,9 +24,7 @@ class DatePickerRow extends StatefulWidget {
     this.iconSize = 16.0,
     this.titleText,
     this.titleTextStyle = const TextStyle(fontSize: 14),
-  })  : assert(firstDate != null),
-        assert(lastDate != null),
-        super(key: key);
+  }) : super(key: key);
 
   @override
   State<DatePickerRow> createState() => DatePickerRowState();
@@ -46,7 +44,7 @@ class DatePickerRowState extends State<DatePickerRow> {
       setState(() {
         selectedDate = date;
       });
-    widget?.onDateChanged?.call(date);
+    widget.onDateChanged?.call(date);
   }
 
   @override
@@ -69,22 +67,27 @@ class DatePickerRowState extends State<DatePickerRow> {
                 IconButton(
                   icon: Icon(Icons.arrow_back_ios),
                   iconSize: widget.iconSize,
-                  onPressed: selectedDate.difference(widget.firstDate).inDays <= 0
-                      ? null
-                      : () {
-                          _setSelectedDate(selectedDate.subtract(_oneDay));
-                        },
+                  onPressed:
+                      selectedDate.difference(widget.firstDate).inDays <= 0
+                          ? null
+                          : () {
+                              _setSelectedDate(selectedDate.subtract(_oneDay));
+                            },
                 ),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: widget.buttonSpacing),
-                  child: FlatButton(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: widget.buttonSpacing),
+                  child: TextButton(
                     child: Text(_dateFormat.format(selectedDate)),
+                    style: TextButton.styleFrom(primary: Colors.black),
                     onPressed: () async {
                       DateTime? date = await showDatePicker(
                         context: context,
                         initialDate: selectedDate.compareTo(widget.lastDate) > 0
                             ? widget.lastDate
-                            : selectedDate.compareTo(widget.firstDate) < 0 ? widget.firstDate : selectedDate,
+                            : selectedDate.compareTo(widget.firstDate) < 0
+                                ? widget.firstDate
+                                : selectedDate,
                         firstDate: widget.firstDate,
                         lastDate: widget.lastDate,
                       );
@@ -97,11 +100,12 @@ class DatePickerRowState extends State<DatePickerRow> {
                 IconButton(
                   icon: Icon(Icons.arrow_forward_ios),
                   iconSize: widget.iconSize,
-                  onPressed: widget.lastDate.difference(selectedDate).inDays <= 0
-                      ? null
-                      : () {
-                          _setSelectedDate(selectedDate.add(_oneDay));
-                        },
+                  onPressed:
+                      widget.lastDate.difference(selectedDate).inDays <= 0
+                          ? null
+                          : () {
+                              _setSelectedDate(selectedDate.add(_oneDay));
+                            },
                 ),
               ],
             ),

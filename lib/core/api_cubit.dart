@@ -95,7 +95,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       if (change.currentState.loginSession != change.nextState.loginSession) {
         changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
         if (change.nextState.loginSession?.user
-                ?.reloadFullData(change.currentState.loginSession?.user) ??
+                .reloadFullData(change.currentState.loginSession?.user) ??
             true) {
           datastore.putMetadata(_metadataKeyLastSyncTime, 0);
         }
@@ -164,10 +164,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
   bool get canChangeBaseApiUrl => _fixedBaseApiUrl == null;
   bool get canLogIn =>
-      state.ready &&
-      !isSignedIn &&
-      state.baseApiUrl != null &&
-      (!kIsWeb || state.baseApiUrl.hasAuthority);
+      state.ready && !isSignedIn && (!kIsWeb || state.baseApiUrl.hasAuthority);
 
   set baseApiUrl(Uri value) {
     emit(state.copyWith(baseApiUrl: value));
@@ -237,8 +234,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   Future<void> parseResponseString(String responseString,
       {bool authRequired = true}) async {
     if (responseString.isNotEmpty) {
-      final responseMap =
-          json.decode(responseString) as Map<String, dynamic>;
+      final responseMap = json.decode(responseString) as Map<String, dynamic>;
       await parseResponseMap(responseMap, authRequired: authRequired);
     }
   }
@@ -300,7 +296,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     }
 
     await action.applyOptimisticUpdate(this as T);
-    debugPrint('[api] Request enqueued: ${action.generateDescription(this as T)}');
+    debugPrint(
+        '[api] Request enqueued: ${action.generateDescription(this as T)}');
     await _actions.add({
       _keyActionName: action.name,
       _keyActionProps: action.toMap(),
@@ -336,7 +333,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     }
 
     if (kDebugMode) {
-      debugPrint('[api] Deleting request: ${action.generateDescription(this as T)}');
+      debugPrint(
+          '[api] Deleting request: ${action.generateDescription(this as T)}');
     }
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
@@ -438,14 +436,14 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     uriBuilder.queryParameters
         .addAll(createLastSyncParams(incremental: incremental));
 
+    emit(state.copyWith(
+      fetchState: const FetchState(connected: true),
+    ));
     // ignore: close_sinks
     _socketFuture = WebSocket.connect(
       uriBuilder.toString(),
       headers: generateAuthHeaders(),
     );
-    emit(state.copyWith(
-      fetchState: const FetchState(connected: true),
-    ));
     _socketFuture!.then((socket) {
       debugPrint('[api] Ticker socket created');
       return socket.listen((message) {
@@ -480,8 +478,9 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   }
 
   void closeTickerSocket(String reason) {
+    //TODO: test timeout behavior
     _socketFuture
-        ?.timeout(Duration.zero, onTimeout: (() => null) as FutureOr<WebSocket> Function()?)
-        ?.then((socket) => socket?.close(1001, reason));
+        ?.timeout(Duration.zero)
+        .then((socket) => socket.close(1001, reason));
   }
 }

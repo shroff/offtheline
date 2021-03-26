@@ -79,20 +79,24 @@ class InheritedFlowManager extends InheritedWidget {
 class _FlowManagerState<T> extends State<FlowManager> {
   final PageStorageBucket _bucket = PageStorageBucket();
 
+  bool initialized = false;
   late List<FlowStep<T>> steps;
-  T data;
+  late T data;
 
   FlowStep<T> get currentStep => steps[steps.length - 1];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = widget.flowArgs(context);
-    steps = [args.steps[args.initialStep] as FlowStep<T>];
-    data = args.initialData;
-    setState(() {
-      currentStep.setStateOnStart(data, context);
-    });
+    if (!initialized) {
+      initialized = true;
+      final args = widget.flowArgs(context);
+      steps = [args.steps[args.initialStep] as FlowStep<T>];
+      data = args.initialData;
+      setState(() {
+        currentStep.setStateOnStart(data, context);
+      });
+    }
   }
 
   void updateState(Function() fn) {
@@ -103,7 +107,7 @@ class _FlowManagerState<T> extends State<FlowManager> {
     if ((currentStep.nextEnabled?.call(data, context) ?? true) &&
         (await currentStep.onFinish(data, context))) {
       if (currentStep.generateNextStepName == null) {
-        if ((await widget.finishFlow(context, data)) ?? false) {
+        if (await widget.finishFlow(context, data)) {
           debugPrint('[flow] Finish');
           Navigator.of(context).pop(data);
         }
@@ -154,14 +158,13 @@ class _FlowManagerState<T> extends State<FlowManager> {
             ),
             actions: <Widget>[
               if (currentStep.nextEnabled != null)
-                FlatButton(
+                TextButton(
                   child: Text(currentStep.generateNextStepName == null
                       ? widget.flowArgs(context).finishText
                       : currentStep.generateNextButtonText
                               ?.call(data, context) ??
                           'NEXT'),
-                  textColor: Colors.white,
-                  textTheme: ButtonTextTheme.primary,
+                  style: TextButton.styleFrom(primary: Colors.white),
                   onPressed:
                       currentStep.nextEnabled!(data, context) ? nextStep : null,
                 ),

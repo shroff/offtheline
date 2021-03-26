@@ -97,36 +97,32 @@ class LoginSession<U extends ApiUser> {
     return {
       'sessionId': sessionId,
       'gid': gid,
-      'user': user?.toMap(),
+      'user': user.toMap(),
     };
   }
 
-  factory LoginSession.fromMap(
+  static LoginSession<U>? fromMap<U extends ApiUser>(
       Map<String, dynamic> map, ApiUserParser<U> parseUser) {
-    if (map == null) return null;
+    final sessionId = map['sessionId'];
+    final gid = map['gid'];
+    final user = parseUser(map['user']);
 
-    final session = LoginSession<U>(
-      map['sessionId'],
-      map['gid'],
-      parseUser(map['user']),
-    );
-
-    if (session.sessionId == null ||
-        session.gid == null ||
-        session.user == null) {
+    if (sessionId == null || gid == null || user == null) {
       return null;
     }
+
+    final session = LoginSession<U>(sessionId, gid, user);
 
     return session;
   }
 
   String toJson() => json.encode(toMap());
 
-  factory LoginSession.fromJson(
-          String source, ApiUserParser<U> parseUser) =>
-      (source == null || source.isEmpty)
+  static LoginSession<U>? fromJson<U extends ApiUser>(
+          String? source, ApiUserParser<U> parseUser) =>
+      (source?.isEmpty ?? true)
           ? null
-          : LoginSession.fromMap(json.decode(source), parseUser);
+          : LoginSession.fromMap(json.decode(source!), parseUser);
 
   @override
   String toString() {

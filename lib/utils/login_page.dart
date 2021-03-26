@@ -9,7 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart';
 import 'package:uri/uri.dart';
 
-typedef AuthRequestBuilder = Future<Request> Function(BuildContext, UriBuilder);
+typedef AuthRequestBuilder = Future<Request?> Function(
+    BuildContext, UriBuilder);
 
 class LoginPage<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> extends StatelessWidget {
@@ -61,6 +62,7 @@ class LoginPage<D extends Datastore, U extends ApiUser,
     final request = await buildAuthRequest(context, api.createUriBuilder(''));
     if (request == null) {
       Navigator.of(context).pop();
+      return;
     }
     final response = await api.sendRequest(request, authRequired: false);
     if (response != null) {
@@ -106,9 +108,7 @@ class LoginPage<D extends Datastore, U extends ApiUser,
                 children: <Widget>[
                   if (api.canChangeBaseApiUrl)
                     TextButton(
-                      child: state.baseApiUrl == null
-                          ? Text('Set Server Address')
-                          : Text("Change Server Address"),
+                      child: Text("Change Server Address"),
                       onPressed: () async {
                         final uri = await showUriDialog(
                           context,
@@ -127,7 +127,8 @@ class LoginPage<D extends Datastore, U extends ApiUser,
                       child: Text("Log in with Session ID"),
                       onPressed: api.canLogIn
                           ? () {
-                              _performLogin(context, buildSessionIdAuthRequest!);
+                              _performLogin(
+                                  context, buildSessionIdAuthRequest!);
                             }
                           : null,
                     ),

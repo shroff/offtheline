@@ -60,13 +60,13 @@ Future<Uri?> showUriDialog(
           ],
         ),
         actions: <Widget>[
-          FlatButton(
+          TextButton(
             child: Text('CANCEL'),
             onPressed: () {
               Navigator.of(context).pop(null);
             },
           ),
-          FlatButton(
+          ElevatedButton(
             child: Text('OK'),
             onPressed: preset == null
                 ? null
@@ -128,13 +128,13 @@ Future<bool?> showAlertDialog(
             ),
       actions: <Widget>[
         if (negativeText != null)
-          FlatButton(
+          TextButton(
             child: Text(negativeText),
             onPressed: () {
               Navigator.of(context).pop(false);
             },
           ),
-        FlatButton(
+        ElevatedButton(
           child: Text(positiveText),
           onPressed: () {
             Navigator.of(context).pop(true);
@@ -175,13 +175,13 @@ Future<String?> showInputDialog(
             : TextInputType.text,
       ),
       actions: <Widget>[
-        FlatButton(
+        TextButton(
           child: Text('CANCEL'),
           onPressed: () {
             Navigator.of(context).pop(null);
           },
         ),
-        FlatButton(
+        ElevatedButton(
           child: Text('OK'),
           onPressed: () {
             Navigator.of(context).pop(controller.text);

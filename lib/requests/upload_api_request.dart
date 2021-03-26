@@ -26,13 +26,13 @@ class UploadApiRequest extends ApiRequest {
 
   @override
   String get dataString => {
-    'fields': formFields,
-    'file': {
-      'fieldName': fileFieldName,
-      'name': fileName,
-      'size': contents.lengthInBytes,
-    }
-  }.toString();
+        'fields': formFields,
+        'file': {
+          'fieldName': fileFieldName,
+          'name': fileName,
+          'size': contents.lengthInBytes,
+        }
+      }.toString();
 
   UploadApiRequest(
     this.endpoint,
@@ -41,7 +41,7 @@ class UploadApiRequest extends ApiRequest {
     this.fileName, {
     this.method = 'post',
     this.fileFieldName = 'file',
-    required this.formFields,
+    this.formFields = const {},
   });
 
   String toString() =>
@@ -50,7 +50,7 @@ class UploadApiRequest extends ApiRequest {
   @override
   Future<BaseRequest> createRequest(Uri uri) async {
     final request = MultipartRequest(method, uri);
-    request.fields.addAll(formFields ?? {});
+    request.fields.addAll(formFields);
     final filePart = MultipartFile.fromBytes(
       fileFieldName,
       contents,

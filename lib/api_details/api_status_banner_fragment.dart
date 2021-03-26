@@ -17,19 +17,15 @@ class ApiStatusBannerFragment<D extends Datastore, U extends ApiUser,
   @override
   Widget build(BuildContext context) {
     final qState = context.select((T api) => api.state.actionQueueState);
-    if (qState.actions?.isEmpty ?? true) return Container();
-    final pendingRequests = qState.actions == null
-        ? ''
-        : qState.actions.length == 1
-            ? '1 entry pending'
-            : '${qState.actions.length} entries pending';
+    if (qState.actions.isEmpty) return Container();
+    final pendingRequests = qState.actions.length == 1
+        ? '1 entry pending'
+        : '${qState.actions.length} entries pending';
 
     IconData icon;
     String statusText;
-    if (qState.actions == null) {
-      icon = Icons.power_settings_new;
-      statusText = 'Initializing';
-    } else if (qState.submitting) {
+    // TODO: !qState.ready
+    if (qState.submitting) {
       icon = Icons.sync;
       statusText = 'Submitting';
     } else if (qState.paused) {
@@ -55,15 +51,14 @@ class ApiStatusBannerFragment<D extends Datastore, U extends ApiUser,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            if (icon != null)
-              Padding(
-                padding: EdgeInsets.only(right: 16),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: Colors.white,
-                ),
+            Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Icon(
+                icon,
+                size: 32,
+                color: Colors.white,
               ),
+            ),
             Expanded(
               flex: 1,
               child: Column(
@@ -77,14 +72,13 @@ class ApiStatusBannerFragment<D extends Datastore, U extends ApiUser,
                       fontSize: 16,
                     ),
                   ),
-                  if (pendingRequests != null)
-                    Text(
-                      pendingRequests,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
+                  Text(
+                    pendingRequests,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
                     ),
+                  ),
                 ],
               ),
             ),

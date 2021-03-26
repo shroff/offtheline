@@ -8,13 +8,13 @@ part of 'upload_api_request.dart';
 
 class UploadApiRequestAdapter extends TypeAdapter<UploadApiRequest> {
   @override
-  final typeId = 2;
+  final int typeId = 2;
 
   @override
   UploadApiRequest read(BinaryReader reader) {
-    var numOfFields = reader.readByte();
-    var fields = <int, dynamic>{
-      for (var i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return UploadApiRequest(
       fields[1] as String,
@@ -23,7 +23,7 @@ class UploadApiRequestAdapter extends TypeAdapter<UploadApiRequest> {
       fields[5] as String,
       method: fields[0] as String,
       fileFieldName: fields[4] as String,
-      (formFields: (fields[6] as Map?)?.cast<String, String>())!,
+      formFields: (fields[6] as Map).cast<String, String>(),
     );
   }
 
@@ -46,4 +46,14 @@ class UploadApiRequestAdapter extends TypeAdapter<UploadApiRequest> {
       ..writeByte(6)
       ..write(obj.formFields);
   }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UploadApiRequestAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }

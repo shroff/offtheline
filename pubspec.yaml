@@ -27,6 +27,10 @@ dependencies:
   localstorage: ^4.0.0
   uri:
 
+dependency_overrides:    
+  auth_buttons:
+    path: ../flutter_auth_buttons/
+
 dev_dependencies:
 #   flutter_test:
 #     sdk: flutter

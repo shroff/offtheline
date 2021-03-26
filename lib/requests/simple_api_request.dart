@@ -22,7 +22,7 @@ class SimpleApiRequest extends ApiRequest {
   final dynamic body;
 
   @override
-  String get dataString => body?.toString();
+  String get dataString => body.toString();
 
   SimpleApiRequest(
     this.method,
@@ -46,9 +46,7 @@ class SimpleApiRequest extends ApiRequest {
   @override
   Future<BaseRequest> createRequest(Uri uri) async {
     final request = Request(method, uri);
-    if (contentType != null) {
-      request.headers['content-type'] = contentType;
-    }
+    request.headers['content-type'] = contentType;
     if (body != null) {
       request.body = jsonEncode(body);
     }

@@ -13,8 +13,10 @@ Future<Map<K, R>> processItems<K, T, R>(
   final ReceivePort receivePort = ReceivePort();
   final isolateEntryData = _IsolateEntryData(receivePort.sendPort, processItem);
   final isolate = (useIsolateIfAvailable)
-      ? await Isolate.spawn(_GenericIsolateEntry.entry,
-          _GenericIsolateEntry<K, T, R>(_processImagesIsolateEntry as void Function<K, T, R>(_IsolateEntryData<T, R>), isolateEntryData))
+      ? await Isolate.spawn(
+          _GenericIsolateEntry.entry,
+          _GenericIsolateEntry<K, T, R>(
+              _processImagesIsolateEntry, isolateEntryData))
       : null;
   if (useIsolateIfAvailable) {
     debugPrint('Using Isolate');

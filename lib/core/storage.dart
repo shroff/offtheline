@@ -1,8 +1,9 @@
+import 'dart:async';
 
 import 'package:localstorage/localstorage.dart';
 
 abstract class Storage {
-  Future<void> initialize();
+  FutureOr<bool> initialize();
 
   Future<String?> read({required String key});
 
@@ -16,10 +17,11 @@ abstract class Storage {
 class ProxiedLocalStorage extends Storage {
   final LocalStorage storage;
 
-  ProxiedLocalStorage(String filename) : storage = LocalStorage('$filename.json');
+  ProxiedLocalStorage(String filename)
+      : storage = LocalStorage('$filename.json');
 
   @override
-  Future<void> initialize() async {
+  FutureOr<bool> initialize() async {
     return storage.ready;
   }
 

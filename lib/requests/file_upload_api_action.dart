@@ -23,7 +23,7 @@ mixin FileUploadApiAction<D extends Datastore, U extends ApiUser,
   BaseRequest createRequest(T api) {
     final uri = api.createUriBuilder(endpoint).build();
     final request = MultipartRequest(method, uri);
-    request.fields.addAll(generateFormFields(api) ?? {});
+    request.fields.addAll(generateFormFields(api));
     final filePart = MultipartFile.fromBytes(
       fileFieldName,
       fileContents,

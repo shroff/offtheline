@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -16,7 +17,7 @@ class _ProxiedSecureStorage extends Storage {
   final storage = FlutterSecureStorage();
 
   @override
-  Future<void> initialize() async {}
+  FutureOr<bool> initialize() => true;
 
   @override
   Future<String?> read({required String key}) {
