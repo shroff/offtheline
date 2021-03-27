@@ -14,13 +14,15 @@ typedef AuthRequestBuilder = Future<Request?> Function(
 
 class LoginPage<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> extends StatelessWidget {
-  final AuthRequestBuilder? buildGoogleAuthRequest;
   final AuthRequestBuilder? buildSessionIdAuthRequest;
+  final AuthRequestBuilder? buildEmailAuthRequest;
+  final AuthRequestBuilder? buildGoogleAuthRequest;
 
   const LoginPage({
     Key? key,
-    this.buildGoogleAuthRequest,
     this.buildSessionIdAuthRequest,
+    this.buildEmailAuthRequest,
+    this.buildGoogleAuthRequest,
   }) : super(key: key);
 
   void _performLogin(
@@ -129,6 +131,15 @@ class LoginPage<D extends Datastore, U extends ApiUser,
                           ? () {
                               _performLogin(
                                   context, buildSessionIdAuthRequest!);
+                            }
+                          : null,
+                    ),
+                  if (buildEmailAuthRequest != null)
+                    ElevatedButton(
+                      child: Text("Log in with Email"),
+                      onPressed: api.canLogIn
+                          ? () {
+                              _performLogin(context, buildEmailAuthRequest!);
                             }
                           : null,
                     ),
