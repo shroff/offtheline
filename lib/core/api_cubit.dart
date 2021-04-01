@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -43,14 +44,18 @@ typedef ApiActionDeserializer<D extends Datastore, U extends ApiUser,
 
 abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     T extends ApiCubit<D, U, T>> extends Cubit<ApiState<D, U, T>> {
+  bool _initializedOnce = false;
+
   final BaseClient _client = createHttpClient();
+  final Uri? _fixedBaseApiUrl;
+
   final D datastore;
   final ApiUserParser<U> _parseUser;
-  final Uri? _fixedBaseApiUrl;
-  final String? tickerPath;
 
   late Box _persist;
   late Box<Map> _actions;
+
+  final String? tickerPath;
   Future<WebSocket>? _socketFuture;
 
   @protected
@@ -127,6 +132,11 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     await datastore.ready;
     _persist = await Hive.openBox(_boxNamePersist);
     _actions = await Hive.openBox(_boxNameActionQueue);
+    if (!_initializedOnce) {
+      _initializedOnce = true;
+      await initializeOnce();
+    }
+    await initialize();
 
     emit(ApiState._(
       ready: true,
@@ -142,6 +152,12 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     ));
     debugPrint('[api] Ready');
   }
+
+  @protected
+  FutureOr<void> initializeOnce() {}
+
+  @protected
+  FutureOr<void> initialize() {}
 
   Future<void> logout() async {
     debugPrint('[api] Logging Out');
