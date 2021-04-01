@@ -53,6 +53,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   late Box<Map> _actions;
   Future<WebSocket>? _socketFuture;
 
+  Map<String, String> headers = Map.unmodifiable({});
+
   Map<String, ApiActionDeserializer<D, U, T>> get deserializers;
 
   ApiCubit(
@@ -93,6 +95,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       }
 
       if (change.currentState.loginSession != change.nextState.loginSession) {
+        _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
         changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
         if (change.nextState.loginSession?.user
                 .reloadFullData(change.currentState.loginSession?.user) ??
@@ -101,6 +104,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
         }
       }
     } else {
+      _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
       // Login or logout
       if (change.nextState.loginSession == null) {
         closeTickerSocket("logout");
@@ -170,12 +174,12 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     emit(state.copyWith(baseApiUrl: value));
   }
 
-  Map<String, String> generateAuthHeaders() {
-    return state.loginSession == null
-        ? const {}
-        : {
-            'Authorization': 'SessionId ${state.loginSession!.sessionId}',
-          };
+  void _recomputeHeaders({String? sessionId}) {
+    final headersBuilder = <String, String>{};
+    if (sessionId != null) {
+      headersBuilder['Authorization'] = 'SessionId $sessionId';
+    }
+    headers = Map.unmodifiable(headersBuilder);
   }
 
   String createUrl(String path) {
@@ -209,7 +213,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       {bool authRequired = true}) async {
     debugPrint('[api] Sending request to ${request.url}');
     if (authRequired) {
-      request.headers.addAll(generateAuthHeaders());
+      request.headers.addAll(headers);
     }
     try {
       final response = await _client.send(request);
@@ -442,7 +446,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     // ignore: close_sinks
     _socketFuture = WebSocket.connect(
       uriBuilder.toString(),
-      headers: generateAuthHeaders(),
+      headers: headers,
     );
     _socketFuture!.then((socket) {
       debugPrint('[api] Ticker socket created');
