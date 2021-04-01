@@ -53,6 +53,8 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   late Box<Map> _actions;
   Future<WebSocket>? _socketFuture;
 
+  @protected
+  String? get userAgent => null;
   Map<String, String> headers = Map.unmodifiable({});
 
   Map<String, ApiActionDeserializer<D, U, T>> get deserializers;
@@ -176,6 +178,10 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
   void _recomputeHeaders({String? sessionId}) {
     final headersBuilder = <String, String>{};
+    final userAgent = this.userAgent;
+    if (userAgent != null) {
+      headersBuilder['User-Agent'] = userAgent;
+    }
     if (sessionId != null) {
       headersBuilder['Authorization'] = 'SessionId $sessionId';
     }
