@@ -337,10 +337,6 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     ));
   }
 
-  Future<void> enqueue(ApiRequest request) async {
-    throw Exception('Enqueued deprecated request: $request');
-  }
-
   Future<void> deleteRequestAt(int index, {bool revert = true}) async {
     while (!state.ready) {
       await stream.firstWhere((state) => state.ready);
