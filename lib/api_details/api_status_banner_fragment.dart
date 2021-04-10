@@ -1,12 +1,11 @@
 import 'package:appcore/api_details/api_status_page.dart';
 import 'package:appcore/core/api_cubit.dart';
-import 'package:appcore/core/api_user.dart';
 import 'package:appcore/core/datastore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusBannerFragment<D extends Datastore, U extends ApiUser,
-    T extends ApiCubit<D, U, T>> extends StatelessWidget {
+class ApiStatusBannerFragment<D extends Datastore, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -42,7 +41,7 @@ class ApiStatusBannerFragment<D extends Datastore, U extends ApiUser,
     return InkWell(
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => ApiStatusPage<D, U, T>(allowPause: allowPause),
+          builder: (context) => ApiStatusPage<D, S, T>(allowPause: allowPause),
         ));
       },
       child: Container(

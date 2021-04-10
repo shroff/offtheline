@@ -2,13 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:appcore/core/api_cubit.dart';
-import 'package:appcore/core/api_user.dart';
 import 'package:appcore/core/datastore.dart';
 import 'package:appcore/requests/requests.dart';
 import 'package:http/http.dart';
 
-mixin FileUploadApiAction<D extends Datastore, U extends ApiUser,
-    T extends ApiCubit<D, U, T>> on ApiAction<D, U, T> {
+mixin FileUploadApiAction<D extends Datastore, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> on ApiAction<D, S, T> {
   @override
   dynamic get binaryData => fileContents;
 

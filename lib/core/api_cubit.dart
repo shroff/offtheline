@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:appcore/core/api_user.dart';
 import 'package:appcore/requests/requests.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
@@ -38,19 +37,18 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-typedef ApiActionDeserializer<D extends Datastore, U extends ApiUser,
-        T extends ApiCubit<D, U, T>>
-    = ApiAction<D, U, T> Function(Map<String, dynamic> props, dynamic data);
+typedef ApiActionDeserializer<D extends Datastore, S extends ApiSession,
+        T extends ApiCubit<D, S, T>>
+    = ApiAction<D, S, T> Function(Map<String, dynamic> props, dynamic data);
 
-abstract class ApiCubit<D extends Datastore, U extends ApiUser,
-    T extends ApiCubit<D, U, T>> extends Cubit<ApiState<D, U, T>> {
+abstract class ApiCubit<D extends Datastore, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> extends Cubit<ApiState<D, S, T>> {
   bool _initializedOnce = false;
 
   final BaseClient _client = createHttpClient();
   final Uri? _fixedBaseApiUrl;
 
   final D datastore;
-  final ApiUserParser<U> _parseUser;
 
   late Box _persist;
   late Box<Map> _actions;
@@ -62,11 +60,10 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   String? get userAgent => null;
   Map<String, String> headers = Map.unmodifiable({});
 
-  Map<String, ApiActionDeserializer<D, U, T>> get deserializers;
+  Map<String, ApiActionDeserializer<D, S, T>> get deserializers;
 
   ApiCubit(
-    this.datastore,
-    this._parseUser, {
+    this.datastore, {
     Uri? fixedBaseApiUrl,
     this.tickerPath,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
@@ -80,7 +77,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
   }
 
   @override
-  void onChange(Change<ApiState<D, U, T>> change) {
+  void onChange(Change<ApiState<D, S, T>> change) {
     super.onChange(change);
     if (!change.nextState.ready) return;
 
@@ -104,11 +101,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       if (change.currentState.loginSession != change.nextState.loginSession) {
         _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
         changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
-        if (change.nextState.loginSession?.user
-                .reloadFullData(change.currentState.loginSession?.user) ??
-            true) {
-          datastore.putMetadata(_metadataKeyLastSyncTime, 0);
-        }
+        datastore.putMetadata(_metadataKeyLastSyncTime, 0);
       }
     } else {
       _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
@@ -137,14 +130,15 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       await initializeOnce();
     }
     await initialize();
-
+    final apiSession = parseSession(json
+        .decode(_persist.get(_keyLoginSession, defaultValue: '{}'))
+        .cast<String, dynamic>());
     emit(ApiState._(
       ready: true,
       baseApiUrl: baseApiUrl ??
           Uri.tryParse(_persist.get(_keyBaseApiUrl, defaultValue: ''))!,
-      loginSession:
-          LoginSession.fromJson(_persist.get(_keyLoginSession), _parseUser),
-      actionQueueState: ActionQueueState<D, U, T>(
+      loginSession: apiSession,
+      actionQueueState: ActionQueueState<D, S, T>(
         actions:
             _actions.values.map((actionMap) => _deserializeAction(actionMap)),
         paused: _persist.get(_keyActionsPaused, defaultValue: false),
@@ -158,6 +152,9 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
 
   @protected
   FutureOr<void> initialize() {}
+
+  @protected
+  S? parseSession(Map<String, dynamic> map);
 
   Future<void> logout() async {
     debugPrint('[api] Logging Out');
@@ -269,11 +266,10 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
       {bool authRequired = true}) async {
     if (authRequired && !isSignedIn) return false;
     debugPrint('[api] Parsing response');
-    LoginSession<U>? parsedSession;
+    S? parsedSession;
     if (response.containsKey('session')) {
       debugPrint('[api] Parsing session');
-      final sessionMap = response['session'] as Map<String, dynamic>;
-      parsedSession = LoginSession.fromMap(sessionMap, _parseUser);
+      parsedSession = parseSession(response['session'] as Map<String, dynamic>);
       if (parsedSession == null) return false;
     }
 
@@ -303,7 +299,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     return true;
   }
 
-  ApiAction<D, U, T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
+  ApiAction<D, S, T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
     final name = actionMap[_keyActionName];
     assert(deserializers.containsKey(name));
     final props = actionMap[_keyActionProps] as Map;
@@ -312,7 +308,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     return action;
   }
 
-  Future<void> enqueueOfflineAction(ApiAction<D, U, T> action) async {
+  Future<void> enqueueOfflineAction(ApiAction<D, S, T> action) async {
     while (!state.ready) {
       await stream.firstWhere((state) => state.ready);
     }
@@ -331,7 +327,7 @@ abstract class ApiCubit<D extends Datastore, U extends ApiUser,
     });
     emit(state.copyWith(
       actionQueueState: state.actionQueueState.copyWithActions(
-        _actions.values.map<ApiAction<D, U, T>>(
+        _actions.values.map<ApiAction<D, S, T>>(
             (actionMap) => _deserializeAction(actionMap)),
       ),
     ));

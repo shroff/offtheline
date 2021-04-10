@@ -1,11 +1,11 @@
 part of 'api_cubit.dart';
 
-class ApiState<D extends Datastore, U extends ApiUser,
-    T extends ApiCubit<D, U, T>> {
+class ApiState<D extends Datastore, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> {
   final bool ready;
   final Uri baseApiUrl;
-  final LoginSession<U>? loginSession;
-  final ActionQueueState<D, U, T> actionQueueState;
+  final S? loginSession;
+  final ActionQueueState<D, S, T> actionQueueState;
   final FetchState fetchState;
 
   ApiState._({
@@ -20,15 +20,15 @@ class ApiState<D extends Datastore, U extends ApiUser,
     return ApiState._(
       ready: false,
       baseApiUrl: Uri(),
-      actionQueueState: ActionQueueState<D, U, T>(),
+      actionQueueState: ActionQueueState<D, S, T>(),
     );
   }
 
-  ApiState<D, U, T> copyWith({
+  ApiState<D, S, T> copyWith({
     bool? ready,
     Uri? baseApiUrl,
-    LoginSession<U>? loginSession,
-    ActionQueueState<D, U, T>? actionQueueState,
+    S? loginSession,
+    ActionQueueState<D, S, T>? actionQueueState,
     FetchState? fetchState,
     bool allowNullLoginSession = false,
   }) {
@@ -51,7 +51,7 @@ class ApiState<D extends Datastore, U extends ApiUser,
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ApiState<D, U, T> &&
+    return o is ApiState<D, S, T> &&
         o.ready == ready &&
         o.baseApiUrl == baseApiUrl &&
         o.loginSession == loginSession &&
@@ -69,85 +69,23 @@ class ApiState<D extends Datastore, U extends ApiUser,
   }
 }
 
-class LoginSession<U extends ApiUser> {
-  final String sessionId;
-  final int gid;
-  final U user;
+abstract class ApiSession {
+  String get sessionId;
+  int get gid;
 
-  LoginSession(
-    this.sessionId,
-    this.gid,
-    this.user,
-  );
-
-  LoginSession<U> copyWith({
-    String? sessionId,
-    int? gid,
-    int? usedIds,
-    U? user,
-  }) {
-    return LoginSession<U>(
-      sessionId ?? this.sessionId,
-      gid ?? this.gid,
-      user ?? this.user,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'sessionId': sessionId,
-      'gid': gid,
-      'user': user.toMap(),
-    };
-  }
-
-  static LoginSession<U>? fromMap<U extends ApiUser>(
-      Map<String, dynamic> map, ApiUserParser<U> parseUser) {
-    final sessionId = map['sessionId'];
-    final gid = map['gid'];
-    final user = parseUser(map['user']);
-
-    if (sessionId == null || gid == null || user == null) {
-      return null;
-    }
-
-    final session = LoginSession<U>(sessionId, gid, user);
-
-    return session;
-  }
+  Map<String, dynamic> toMap();
 
   String toJson() => json.encode(toMap());
 
-  static LoginSession<U>? fromJson<U extends ApiUser>(
-          String? source, ApiUserParser<U> parseUser) =>
-      (source?.isEmpty ?? true)
-          ? null
-          : LoginSession.fromMap(json.decode(source!), parseUser);
-
   @override
   String toString() {
-    return 'LoginSession(sessionId: $sessionId, gid: $gid, user: $user)';
-  }
-
-  @override
-  bool operator ==(Object o) {
-    if (identical(this, o)) return true;
-
-    return o is LoginSession<U> &&
-        o.sessionId == sessionId &&
-        o.gid == gid &&
-        o.user == user;
-  }
-
-  @override
-  int get hashCode {
-    return sessionId.hashCode ^ gid.hashCode ^ user.hashCode;
+    return '${this.runtimeType}(sessionId: $sessionId, gid: $gid)';
   }
 }
 
-class ActionQueueState<D extends Datastore, U extends ApiUser,
-    T extends ApiCubit<D, U, T>> {
-  final Iterable<ApiAction<D, U, T>> actions;
+class ActionQueueState<D extends Datastore, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> {
+  final Iterable<ApiAction<D, S, T>> actions;
   final bool paused;
   final bool submitting;
   final String? error;
@@ -159,7 +97,7 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
     this.error,
   });
 
-  ActionQueueState<D, U, T> copyWithPaused(bool paused) {
+  ActionQueueState<D, S, T> copyWithPaused(bool paused) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
@@ -168,7 +106,7 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
     );
   }
 
-  ActionQueueState<D, U, T> copyWithSubmitting(bool submitting, String? error) {
+  ActionQueueState<D, S, T> copyWithSubmitting(bool submitting, String? error) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
@@ -177,8 +115,8 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
     );
   }
 
-  ActionQueueState<D, U, T> copyWithActions(
-      Iterable<ApiAction<D, U, T>> actions,
+  ActionQueueState<D, S, T> copyWithActions(
+      Iterable<ApiAction<D, S, T>> actions,
       {bool resetError = false}) {
     return ActionQueueState(
       actions: actions,
@@ -192,7 +130,7 @@ class ActionQueueState<D extends Datastore, U extends ApiUser,
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ActionQueueState<D, U, T> &&
+    return o is ActionQueueState<D, S, T> &&
         o.actions == actions &&
         o.paused == paused &&
         o.submitting == submitting &&

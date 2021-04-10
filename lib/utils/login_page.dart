@@ -1,5 +1,4 @@
 import 'package:appcore/core/api_cubit.dart';
-import 'package:appcore/core/api_user.dart';
 import 'package:appcore/core/datastore.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -12,8 +11,8 @@ import 'package:uri/uri.dart';
 typedef AuthRequestBuilder = Future<Request?> Function(
     BuildContext, UriBuilder);
 
-class LoginPage<D extends Datastore, U extends ApiUser,
-    T extends ApiCubit<D, U, T>> extends StatelessWidget {
+class LoginPage<D extends Datastore, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> extends StatelessWidget {
   final AuthRequestBuilder? buildSessionIdAuthRequest;
   final AuthRequestBuilder? buildEmailAuthRequest;
   final AuthRequestBuilder? buildGoogleAuthRequest;
