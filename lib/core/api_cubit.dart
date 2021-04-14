@@ -53,9 +53,6 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
   late Box _persist;
   late Box<Map> _actions;
 
-  final String? tickerPath;
-  Future<WebSocket>? _socketFuture;
-
   @protected
   String? get userAgent => null;
   Map<String, String> headers = Map.unmodifiable({});
@@ -65,7 +62,6 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
   ApiCubit(
     this.datastore, {
     Uri? fixedBaseApiUrl,
-    this.tickerPath,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
         super(ApiState.init()) {
     debugPrint('[api] Initializing');
@@ -105,12 +101,8 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
       }
     } else {
       _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
-      // Login or logout
-      if (change.nextState.loginSession == null) {
-        closeTickerSocket("logout");
-      } else {
+      if (change.nextState.loginSession != null) {
         Future.microtask(() {
-          establishTickerSocket();
           _sendNextRequest();
         });
       }
@@ -254,16 +246,20 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
     }
   }
 
-  Future<void> parseResponseString(String responseString,
-      {bool authRequired = true}) async {
+  Future<void> parseResponseString(
+    String responseString, {
+    bool authRequired = true,
+  }) async {
     if (responseString.isNotEmpty) {
       final responseMap = json.decode(responseString) as Map<String, dynamic>;
       await parseResponseMap(responseMap, authRequired: authRequired);
     }
   }
 
-  Future<bool> parseResponseMap(Map<String, dynamic> response,
-      {bool authRequired = true}) async {
+  Future<bool> parseResponseMap(
+    Map<String, dynamic> response, {
+    bool authRequired = true,
+  }) async {
     if (authRequired && !isSignedIn) return false;
     debugPrint('[api] Parsing response');
     S? parsedSession;
@@ -438,67 +434,5 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
         error: error,
       ),
     ));
-  }
-
-  void establishTickerSocket({bool incremental = true}) async {
-    // * Make sure we are ready
-    while (!state.ready) {
-      await stream.firstWhere((state) => state.ready);
-    }
-    if (tickerPath == null || !isSignedIn || state.fetchState.connected) {
-      return;
-    }
-
-    final uriBuilder = createUriBuilder(tickerPath!);
-    uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
-    uriBuilder.queryParameters
-        .addAll(createLastSyncParams(incremental: incremental));
-
-    emit(state.copyWith(
-      fetchState: const FetchState(connected: true),
-    ));
-    // ignore: close_sinks
-    _socketFuture = WebSocket.connect(
-      uriBuilder.toString(),
-      headers: headers,
-    );
-    _socketFuture!.then((socket) {
-      debugPrint('[api] Ticker socket created');
-      return socket.listen((message) {
-        parseResponseString(message);
-      }, onError: (err) {
-        debugPrint("[api] Ticker socket error: $err");
-        _socketFuture = null;
-        emit(state.copyWith(
-          fetchState: const FetchState(connected: false),
-        ));
-      }, onDone: () {
-        debugPrint(
-            '[api] Ticker socket closed: ${socket.closeCode}, ${socket.closeReason}');
-        _socketFuture = null;
-        emit(state.copyWith(
-          fetchState: const FetchState(connected: false),
-        ));
-        if (socket.closeCode != 1001) {
-          // TODO: Exponential backoff
-          Future.delayed(Duration(seconds: 1), () {
-            establishTickerSocket();
-          });
-        }
-      });
-    }, onError: (err) {
-      debugPrint("[api] Ticker socket error: $err");
-      _socketFuture = null;
-      emit(state.copyWith(
-        fetchState: const FetchState(connected: false),
-      ));
-    });
-  }
-
-  void closeTickerSocket(String reason) {
-    //TODO: test timeout behavior
-    _socketFuture
-        ?.timeout(Duration.zero)
-        .then((socket) => socket.close(1001, reason));
   }
 }
