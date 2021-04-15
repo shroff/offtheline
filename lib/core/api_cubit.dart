@@ -1,18 +1,4 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:appcore/requests/requests.dart';
-import 'package:bloc/bloc.dart';
-import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
-import 'package:http/http.dart';
-import 'package:uri/uri.dart';
-
-import 'datastore.dart';
-import 'core.dart';
-
-part 'api_state.dart';
+part of 'api.dart';
 
 const _boxNamePersist = 'apiMetadata';
 const _boxNameActionQueue = 'apiActionQueue';
@@ -56,7 +42,7 @@ abstract class ApiCubit<
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
         super(ApiState.init()) {
     debugPrint('[api] Initializing');
-    datastore.initialize(this as T);
+    datastore._initialize(this as T);
     _initialize(_fixedBaseApiUrl);
   }
 

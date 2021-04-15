@@ -1,11 +1,9 @@
 import 'dart:io';
 
-import 'package:appcore/core/api_cubit.dart';
+import 'package:appcore/core/api.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:uri/uri.dart';
-
-import 'datastore.dart';
 
 abstract class TickerSyncCubit<
     I,

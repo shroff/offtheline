@@ -1,6 +1,5 @@
 import 'package:appcore/api_details/api_status_page.dart';
-import 'package:appcore/core/api_cubit.dart';
-import 'package:appcore/core/datastore.dart';
+import 'package:appcore/core/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

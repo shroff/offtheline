@@ -1,4 +1,4 @@
-part of 'api_cubit.dart';
+part of 'api.dart';
 
 class ApiState<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
     T extends ApiCubit<I, D, S, T>> {

@@ -1,10 +1,8 @@
-import 'package:appcore/core/datastore.dart';
+import 'package:appcore/core/api.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart';
 import 'package:uri/uri.dart';
-
-import 'api_cubit.dart';
-import 'core.dart';
 
 abstract class PeriodicSyncCubit<
     I,

@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:appcore/core/api_cubit.dart';
-import 'package:appcore/core/datastore.dart';
+import 'package:appcore/core/api.dart';
 import 'package:http/http.dart';
 
 abstract class ApiAction<I, D extends Datastore<I, D, S, T>,
