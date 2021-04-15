@@ -60,9 +60,6 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
         super(ApiState.init()) {
     debugPrint('[api] Initializing');
-    Hive.registerAdapter(UploadApiRequestAdapter());
-    Hive.registerAdapter(SimpleApiRequestAdapter());
-
     datastore.initialize(this);
     _initialize(_fixedBaseApiUrl);
   }
