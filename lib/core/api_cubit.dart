@@ -18,11 +18,6 @@ import 'core_stub.dart'
 
 part 'api_state.dart';
 
-const _dataKeyTime = "__time";
-const _dataKeyClearData = "__clearData";
-const _metadataKeyLastSyncTime = "lastSyncTime";
-const _paramKeyLastSyncTime = "lastSyncTime";
-
 const _gidShift = 10; // Must match up with the server
 
 const _boxNamePersist = 'apiMetadata';
@@ -68,7 +63,7 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
     Hive.registerAdapter(UploadApiRequestAdapter());
     Hive.registerAdapter(SimpleApiRequestAdapter());
 
-    datastore.initialize();
+    datastore.initialize(this);
     _initialize(_fixedBaseApiUrl);
   }
 
@@ -97,7 +92,6 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
       if (change.currentState.loginSession != change.nextState.loginSession) {
         _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
         changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
-        datastore.putMetadata(_metadataKeyLastSyncTime, 0);
       }
     } else {
       _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
@@ -211,15 +205,6 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
     return nextId;
   }
 
-  Map<String, String> createLastSyncParams({bool incremental = true}) =>
-      incremental
-          ? <String, String>{
-              _paramKeyLastSyncTime: datastore
-                  .getMetadata(_metadataKeyLastSyncTime, defaultValue: 0)
-                  .toString(),
-            }
-          : <String, String>{};
-
   Future<String?> sendRequest(BaseRequest request,
       {bool authRequired = true}) async {
     debugPrint('[api] Sending request to ${request.url}');
@@ -252,48 +237,16 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
   }) async {
     if (responseString.isNotEmpty) {
       final responseMap = json.decode(responseString) as Map<String, dynamic>;
-      await parseResponseMap(responseMap, authRequired: authRequired);
+      if (authRequired && !isSignedIn) return;
+
+      final newState = await parseResponseMap(responseMap);
+      if (newState != null) {
+        emit(newState);
+      }
     }
   }
 
-  Future<bool> parseResponseMap(
-    Map<String, dynamic> response, {
-    bool authRequired = true,
-  }) async {
-    if (authRequired && !isSignedIn) return false;
-    debugPrint('[api] Parsing response');
-    S? parsedSession;
-    if (response.containsKey('session')) {
-      debugPrint('[api] Parsing session');
-      parsedSession = parseSession(response['session'] as Map<String, dynamic>);
-      if (parsedSession == null) return false;
-    }
-
-    if (response.containsKey('data')) {
-      debugPrint('[api] Parsing data');
-      final data = response['data'] as Map<String, dynamic>;
-      if (data.containsKey(_dataKeyClearData) && data[_dataKeyClearData]) {
-        await datastore.wipe();
-        print("[api] Clearing Data");
-      }
-      await datastore.parseData(data);
-
-      debugPrint('[api] Data Parsed');
-      if (data.containsKey(_dataKeyTime)) {
-        datastore.putMetadata(
-            _metadataKeyLastSyncTime, data[_dataKeyTime] as int?);
-      }
-    }
-    if (response.containsKey('debug')) {
-      debugPrint(response['debug'].toString());
-    }
-
-    if (parsedSession != null) {
-      emit(state.copyWith(loginSession: parsedSession));
-    }
-    debugPrint('[api] Response parsed');
-    return true;
-  }
+  FutureOr<ApiState<D, S, T>?> parseResponseMap(Map<String, dynamic> response);
 
   ApiAction<D, S, T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
     final name = actionMap[_keyActionName];
@@ -403,36 +356,5 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
     if (error == null) {
       deleteRequestAt(0, revert: false);
     }
-  }
-
-  void fetchUpdates({bool incremental = true}) async {
-    debugPrint('[api] Fetching Updates');
-
-    // * Make sure we are ready
-    while (!state.ready) {
-      await stream.firstWhere((state) => state.ready);
-    }
-    if (!isSignedIn ||
-        state.fetchState.fetching ||
-        state.fetchState.connected) {
-      return;
-    }
-
-    emit(state.copyWith(
-      fetchState: const FetchState(fetching: true),
-    ));
-
-    final uriBuilder = createUriBuilder('/v1/sync');
-    uriBuilder.queryParameters
-        .addAll(createLastSyncParams(incremental: incremental));
-    final httpRequest = Request('get', uriBuilder.build());
-
-    final error = await sendRequest(httpRequest, authRequired: true);
-    emit(state.copyWith(
-      fetchState: FetchState(
-        fetching: false,
-        error: error,
-      ),
-    ));
   }
 }

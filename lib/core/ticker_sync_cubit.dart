@@ -3,27 +3,31 @@ import 'dart:io';
 import 'package:appcore/core/api_cubit.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
+import 'package:uri/uri.dart';
 
-class TickerSyncCubit extends Cubit<TickerSyncState> {
-  final ApiCubit api;
-  final String path;
+import 'datastore.dart';
+
+abstract class TickerSyncCubit<D extends Datastore, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> extends Cubit<TickerSyncState> {
+  final T api;
 
   Future<WebSocket>? _socketFuture;
 
   TickerSyncCubit(
     this.api,
-    this.path,
   ) : super(const TickerSyncStateDisconnected()) {
     api.stream.listen((event) {
       if (event.loginSession == null) {
-        closeTickerSocket('logout');
+        disconnect('logout');
       } else {
-        establishTickerSocket();
+        connect();
       }
     });
   }
 
-  void establishTickerSocket({bool incremental = true}) async {
+  UriBuilder createUriBuilder();
+
+  void connect() async {
     // * Make sure we are ready
     while (!api.state.ready) {
       await api.stream.firstWhere((state) => state.ready);
@@ -32,10 +36,8 @@ class TickerSyncCubit extends Cubit<TickerSyncState> {
       return;
     }
 
-    final uriBuilder = api.createUriBuilder(path);
+    final uriBuilder = createUriBuilder();
     uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
-    uriBuilder.queryParameters
-        .addAll(createLastSyncParams(incremental: incremental));
 
     debugPrint('[sync] Connecting');
     emit(const TickerSyncStateConnecting());
@@ -62,7 +64,7 @@ class TickerSyncCubit extends Cubit<TickerSyncState> {
         if (socket.closeCode != 1001) {
           // TODO: Exponential backoff
           Future.delayed(Duration(seconds: 1), () {
-            establishTickerSocket();
+            connect();
           });
         }
       });
@@ -73,7 +75,9 @@ class TickerSyncCubit extends Cubit<TickerSyncState> {
     });
   }
 
-  void closeTickerSocket(String reason) {
+  UriBuilder addParams(UriBuilder builder) => builder;
+
+  void disconnect(String reason) {
     //TODO: test timeout behavior
     _socketFuture
         ?.timeout(Duration.zero)

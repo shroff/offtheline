@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
+import 'api_cubit.dart';
+
 const _boxNameDatastoreMetadata = 'datastoreMetadata';
 const _metadataKeySchemaVersion = 'schemaVersion';
 
@@ -25,7 +27,8 @@ abstract class Datastore {
     return _metadataBox.put(key, value);
   }
 
-  Future<void> initialize() async {
+  @mustCallSuper
+  Future<void> initialize(ApiCubit api) async {
     if (_readyCompleter.isCompleted) return;
     debugPrint('[datastore] Initializing');
 
