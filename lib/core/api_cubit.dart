@@ -10,11 +10,7 @@ import 'package:http/http.dart';
 import 'package:uri/uri.dart';
 
 import 'datastore.dart';
-import 'core_stub.dart'
-// ignore: uri_does_not_exist
-    if (dart.library.html) 'core_browser.dart'
-// ignore: uri_does_not_exist
-    if (dart.library.io) 'core_mobile.dart';
+import 'core.dart';
 
 part 'api_state.dart';
 
@@ -233,9 +229,12 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
     bool authRequired = true,
   }) async {
     if (responseString.isNotEmpty) {
-      final responseMap = json.decode(responseString) as Map<String, dynamic>;
+      while (!state.ready) {
+        await stream.firstWhere((state) => state.ready);
+      }
       if (authRequired && !isSignedIn) return;
 
+      final responseMap = json.decode(responseString) as Map<String, dynamic>;
       final newState = await parseResponseMap(responseMap);
       if (newState != null) {
         emit(newState);
