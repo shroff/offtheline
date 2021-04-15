@@ -7,8 +7,11 @@ import 'package:uri/uri.dart';
 
 import 'datastore.dart';
 
-abstract class TickerSyncCubit<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> extends Cubit<TickerSyncState> {
+abstract class TickerSyncCubit<
+    I,
+    D extends Datastore<I, D, S, T>,
+    S extends ApiSession,
+    T extends ApiCubit<I, D, S, T>> extends Cubit<TickerSyncState> {
   final T api;
 
   Future<WebSocket>? _socketFuture;

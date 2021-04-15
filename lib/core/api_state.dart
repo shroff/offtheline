@@ -1,11 +1,11 @@
 part of 'api_cubit.dart';
 
-class ApiState<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> {
+class ApiState<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
+    T extends ApiCubit<I, D, S, T>> {
   final bool ready;
   final Uri baseApiUrl;
   final S? loginSession;
-  final ActionQueueState<D, S, T> actionQueueState;
+  final ActionQueueState<I, D, S, T> actionQueueState;
 
   ApiState._({
     this.ready = false,
@@ -18,15 +18,15 @@ class ApiState<D extends Datastore, S extends ApiSession,
     return ApiState._(
       ready: false,
       baseApiUrl: Uri(),
-      actionQueueState: ActionQueueState<D, S, T>(),
+      actionQueueState: ActionQueueState<I, D, S, T>(),
     );
   }
 
-  ApiState<D, S, T> copyWith({
+  ApiState<I, D, S, T> copyWith({
     bool? ready,
     Uri? baseApiUrl,
     S? loginSession,
-    ActionQueueState<D, S, T>? actionQueueState,
+    ActionQueueState<I, D, S, T>? actionQueueState,
     bool allowNullLoginSession = false,
   }) {
     return ApiState._(
@@ -47,7 +47,7 @@ class ApiState<D extends Datastore, S extends ApiSession,
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ApiState<D, S, T> &&
+    return o is ApiState<I, D, S, T> &&
         o.ready == ready &&
         o.baseApiUrl == baseApiUrl &&
         o.loginSession == loginSession &&
@@ -65,7 +65,6 @@ class ApiState<D extends Datastore, S extends ApiSession,
 
 abstract class ApiSession {
   String get sessionId;
-  int get gid;
 
   Map<String, dynamic> toMap();
 
@@ -73,13 +72,13 @@ abstract class ApiSession {
 
   @override
   String toString() {
-    return '${this.runtimeType}(sessionId: $sessionId, gid: $gid)';
+    return '${this.runtimeType}(sessionId: $sessionId)';
   }
 }
 
-class ActionQueueState<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> {
-  final Iterable<ApiAction<D, S, T>> actions;
+class ActionQueueState<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
+    T extends ApiCubit<I, D, S, T>> {
+  final Iterable<ApiAction<I, D, S, T>> actions;
   final bool paused;
   final bool submitting;
   final String? error;
@@ -91,7 +90,7 @@ class ActionQueueState<D extends Datastore, S extends ApiSession,
     this.error,
   });
 
-  ActionQueueState<D, S, T> copyWithPaused(bool paused) {
+  ActionQueueState<I, D, S, T> copyWithPaused(bool paused) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
@@ -100,7 +99,8 @@ class ActionQueueState<D extends Datastore, S extends ApiSession,
     );
   }
 
-  ActionQueueState<D, S, T> copyWithSubmitting(bool submitting, String? error) {
+  ActionQueueState<I, D, S, T> copyWithSubmitting(
+      bool submitting, String? error) {
     return ActionQueueState(
       actions: actions,
       paused: paused,
@@ -109,8 +109,8 @@ class ActionQueueState<D extends Datastore, S extends ApiSession,
     );
   }
 
-  ActionQueueState<D, S, T> copyWithActions(
-      Iterable<ApiAction<D, S, T>> actions,
+  ActionQueueState<I, D, S, T> copyWithActions(
+      Iterable<ApiAction<I, D, S, T>> actions,
       {bool resetError = false}) {
     return ActionQueueState(
       actions: actions,
@@ -124,7 +124,7 @@ class ActionQueueState<D extends Datastore, S extends ApiSession,
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ActionQueueState<D, S, T> &&
+    return o is ActionQueueState<I, D, S, T> &&
         o.actions == actions &&
         o.paused == paused &&
         o.submitting == submitting &&

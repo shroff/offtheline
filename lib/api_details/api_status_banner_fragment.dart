@@ -4,8 +4,11 @@ import 'package:appcore/core/datastore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusBannerFragment<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> extends StatelessWidget {
+class ApiStatusBannerFragment<
+    I,
+    D extends Datastore<I, D, S, T>,
+    S extends ApiSession,
+    T extends ApiCubit<I, D, S, T>> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -41,7 +44,8 @@ class ApiStatusBannerFragment<D extends Datastore, S extends ApiSession,
     return InkWell(
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => ApiStatusPage<D, S, T>(allowPause: allowPause),
+          builder: (context) =>
+              ApiStatusPage<I, D, S, T>(allowPause: allowPause),
         ));
       },
       child: Container(

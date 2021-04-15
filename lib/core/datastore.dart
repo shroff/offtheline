@@ -8,16 +8,16 @@ import 'api_cubit.dart';
 const _boxNameDatastoreMetadata = 'datastoreMetadata';
 const _metadataKeySchemaVersion = 'schemaVersion';
 
-abstract class Datastore {
+abstract class Datastore<I, D extends Datastore<I, D, S, T>,
+    S extends ApiSession, T extends ApiCubit<I, D, S, T>> {
+  late final T api;
   late Box _metadataBox;
   Completer<void> _readyCompleter = Completer();
   Future<void> get ready => _readyCompleter.future;
 
   int get schemaVersion;
 
-  Datastore() {
-    registerTypeAdapters();
-  }
+  Datastore();
 
   E? getMetadata<E>(String key, {E? defaultValue}) {
     return _metadataBox.get(key, defaultValue: defaultValue);
@@ -28,9 +28,10 @@ abstract class Datastore {
   }
 
   @mustCallSuper
-  Future<void> initialize(ApiCubit api) async {
+  Future<void> initialize(T api) async {
     if (_readyCompleter.isCompleted) return;
     debugPrint('[datastore] Initializing');
+    this.api = api;
 
     await _openBoxes();
 
@@ -38,7 +39,7 @@ abstract class Datastore {
     _readyCompleter.complete();
   }
 
-  void registerTypeAdapters();
+  Future<I?> generateId();
 
   Future<void> openBoxes();
 

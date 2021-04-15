@@ -4,8 +4,8 @@ import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> extends StatelessWidget {
+class ApiStatusPage<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
+    T extends ApiCubit<I, D, S, T>> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);

@@ -11,8 +11,8 @@ import 'package:uri/uri.dart';
 typedef AuthRequestBuilder = Future<Request?> Function(
     BuildContext, UriBuilder);
 
-class LoginPage<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> extends StatelessWidget {
+class LoginPage<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
+    T extends ApiCubit<I, D, S, T>> extends StatelessWidget {
   final AuthRequestBuilder? buildSessionIdAuthRequest;
   final AuthRequestBuilder? buildEmailAuthRequest;
   final AuthRequestBuilder? buildGoogleAuthRequest;

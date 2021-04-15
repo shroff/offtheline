@@ -4,8 +4,8 @@ import 'package:appcore/core/api_cubit.dart';
 import 'package:appcore/core/datastore.dart';
 import 'package:http/http.dart';
 
-abstract class ApiAction<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> {
+abstract class ApiAction<I, D extends Datastore<I, D, S, T>,
+    S extends ApiSession, T extends ApiCubit<I, D, S, T>> {
   String get name;
 
   dynamic get binaryData => null;

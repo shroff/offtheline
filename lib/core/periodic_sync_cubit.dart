@@ -6,8 +6,11 @@ import 'package:uri/uri.dart';
 import 'api_cubit.dart';
 import 'core.dart';
 
-abstract class PeriodicSyncCubit<D extends Datastore, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> extends Cubit<PeriodicSyncState> {
+abstract class PeriodicSyncCubit<
+    I,
+    D extends Datastore<I, D, S, T>,
+    S extends ApiSession,
+    T extends ApiCubit<I, D, S, T>> extends Cubit<PeriodicSyncState> {
   final T api;
 
   PeriodicSyncCubit(this.api) : super(PeriodicSyncState());
