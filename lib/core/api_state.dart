@@ -6,14 +6,12 @@ class ApiState<D extends Datastore, S extends ApiSession,
   final Uri baseApiUrl;
   final S? loginSession;
   final ActionQueueState<D, S, T> actionQueueState;
-  final FetchState fetchState;
 
   ApiState._({
     this.ready = false,
     required this.baseApiUrl,
     this.loginSession,
     required this.actionQueueState,
-    this.fetchState = const FetchState(),
   });
 
   factory ApiState.init() {
@@ -29,7 +27,6 @@ class ApiState<D extends Datastore, S extends ApiSession,
     Uri? baseApiUrl,
     S? loginSession,
     ActionQueueState<D, S, T>? actionQueueState,
-    FetchState? fetchState,
     bool allowNullLoginSession = false,
   }) {
     return ApiState._(
@@ -38,13 +35,12 @@ class ApiState<D extends Datastore, S extends ApiSession,
       loginSession:
           loginSession ?? (allowNullLoginSession ? null : this.loginSession),
       actionQueueState: actionQueueState ?? this.actionQueueState,
-      fetchState: fetchState ?? this.fetchState,
     );
   }
 
   @override
   String toString() {
-    return 'ApiState(ready: $ready, baseApiUrl: $baseApiUrl, loginSession: $loginSession, actionQueueState: $actionQueueState, fetchState: $fetchState)';
+    return 'ApiState(ready: $ready, baseApiUrl: $baseApiUrl, loginSession: $loginSession, actionQueueState: $actionQueueState';
   }
 
   @override
@@ -55,8 +51,7 @@ class ApiState<D extends Datastore, S extends ApiSession,
         o.ready == ready &&
         o.baseApiUrl == baseApiUrl &&
         o.loginSession == loginSession &&
-        o.actionQueueState == actionQueueState &&
-        o.fetchState == fetchState;
+        o.actionQueueState == actionQueueState;
   }
 
   @override
@@ -64,8 +59,7 @@ class ApiState<D extends Datastore, S extends ApiSession,
     return ready.hashCode ^
         baseApiUrl.hashCode ^
         loginSession.hashCode ^
-        actionQueueState.hashCode ^
-        fetchState.hashCode;
+        actionQueueState.hashCode;
   }
 }
 
@@ -149,33 +143,4 @@ class ActionQueueState<D extends Datastore, S extends ApiSession,
   String toString() {
     return 'ActionQueueState(actions: $actions, paused: $paused, submitting: $submitting, error: $error)';
   }
-}
-
-class FetchState {
-  final bool fetching;
-  final bool connected;
-  final String? error;
-
-  const FetchState({
-    this.fetching = false,
-    this.connected = false,
-    this.error,
-  });
-
-  @override
-  bool operator ==(Object o) {
-    if (identical(this, o)) return true;
-
-    return o is FetchState &&
-        o.fetching == fetching &&
-        o.connected == connected &&
-        o.error == error;
-  }
-
-  @override
-  int get hashCode => fetching.hashCode ^ connected.hashCode ^ error.hashCode;
-
-  @override
-  String toString() =>
-      'FetchState(fetching: $fetching, connected: $connected, error: $error)';
 }

@@ -146,13 +146,8 @@ abstract class ApiCubit<D extends Datastore, S extends ApiSession,
     await Hive.deleteBoxFromDisk(_boxNamePersist);
 
     // * Wait for any ongoing connections to finish
-    while (state.actionQueueState.submitting ||
-        state.fetchState.fetching ||
-        state.fetchState.connected) {
-      await stream.firstWhere((state) =>
-          !state.actionQueueState.submitting &&
-          !state.fetchState.fetching &&
-          !state.fetchState.connected);
+    while (state.actionQueueState.submitting) {
+      await stream.firstWhere((state) => !state.actionQueueState.submitting);
     }
 
     await _initialize(state.baseApiUrl);
