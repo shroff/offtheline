@@ -6,20 +6,15 @@ const _keyBaseApiUrl = 'baseApiUrl';
 const _keyLoginSession = 'loginSession';
 const _keyActionsPaused = 'actionsPaused';
 
-typedef ApiActionDeserializer<D extends Datastore<D, S, T>,
-        S extends ApiSession, T extends ApiCubit<D, S, T>>
-    = ApiAction<D, S, T> Function(Map<String, dynamic> props, dynamic data);
+typedef ApiActionDeserializer<S extends ApiSession, T extends ApiCubit<S, T>>
+    = ApiAction<S, T> Function(Map<String, dynamic> props, dynamic data);
 
-abstract class ApiCubit<D extends Datastore<D, S, T>, S extends ApiSession,
-    T extends ApiCubit<D, S, T>> extends Cubit<ApiState<D, S, T>> {
-  bool _initializedOnce = false;
-
+abstract class ApiCubit<S extends ApiSession, T extends ApiCubit<S, T>>
+    extends Cubit<ApiState<S, T>> {
   final BaseClient _client = createHttpClient();
   final Uri? _fixedBaseApiUrl;
 
-  final D datastore;
-
-  late Box _persist;
+  late final Box _persist;
 
   bool get isSignedIn => state.isSignedIn;
   bool get canChangeBaseApiUrl => _fixedBaseApiUrl == null;
@@ -35,56 +30,56 @@ abstract class ApiCubit<D extends Datastore<D, S, T>, S extends ApiSession,
   String? get userAgent => null;
   Map<String, String> headers = Map.unmodifiable({});
 
-  ApiCubit(
-    this.datastore, {
+  ApiCubit({
     Uri? fixedBaseApiUrl,
   })  : this._fixedBaseApiUrl = fixedBaseApiUrl,
         super(ApiState.init()) {
     debugPrint('[api] Initializing');
-    datastore._initialize(this as T);
-    _initialize(_fixedBaseApiUrl);
+
+    Hive.openBox(_boxNamePersist).then((box) async {
+      _persist = box;
+
+      await initialize();
+
+      final apiSession = parseSession(json
+          .decode(_persist.get(_keyLoginSession, defaultValue: '{}'))
+          .cast<String, dynamic>());
+      emit(ApiState._(
+        ready: true,
+        baseApiUrl: _fixedBaseApiUrl ??
+            Uri.tryParse(box.get(_keyLoginSession, defaultValue: '')) ??
+            Uri(),
+        loginSession: apiSession,
+      ));
+      debugPrint('[api] Ready');
+    });
   }
 
   @override
-  void onChange(Change<ApiState<D, S, T>> change) {
+  void onChange(Change<ApiState<S, T>> change) {
     super.onChange(change);
     if (!change.nextState.ready) return;
 
-    Map<String, dynamic> changes = {};
     if (change.currentState.baseApiUrl != change.nextState.baseApiUrl) {
-      changes[_keyBaseApiUrl] = change.nextState.baseApiUrl.toString();
+      _persist.put(_keyBaseApiUrl, change.nextState.baseApiUrl.toString());
     }
 
     if (change.currentState.ready) {
       if (change.currentState.loginSession != change.nextState.loginSession) {
         _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
-        changes[_keyLoginSession] = change.nextState.loginSession?.toJson();
+        _persist.put(_keyLoginSession, change.nextState.loginSession?.toJson());
       }
     } else {
       _recomputeHeaders(sessionId: change.nextState.loginSession?.sessionId);
     }
-
-    if (changes.isNotEmpty) {
-      _persist.putAll(changes);
-    }
   }
 
-  Future<void> _initialize(Uri? baseApiUrl) async {
-    await datastore.ready;
-    if (!_initializedOnce) {
-      _initializedOnce = true;
-      await initializeOnce();
-    }
-    final apiSession = parseSession(json
-        .decode(_persist.get(_keyLoginSession, defaultValue: '{}'))
-        .cast<String, dynamic>());
-    emit(ApiState._(
-      ready: true,
-      baseApiUrl: baseApiUrl ??
-          Uri.tryParse(_persist.get(_keyBaseApiUrl, defaultValue: ''))!,
-      loginSession: apiSession,
-    ));
-    debugPrint('[api] Ready');
+  E? getMetadata<E>(String key, {E? defaultValue}) {
+    return _persist.get(key, defaultValue: defaultValue);
+  }
+
+  Future<void> putMetadata<E>(String key, E value) {
+    return _persist.put(key, value);
   }
 
   Future<void> logout() async {
@@ -92,13 +87,19 @@ abstract class ApiCubit<D extends Datastore<D, S, T>, S extends ApiSession,
 
     emit(ApiState._(baseApiUrl: state.baseApiUrl));
 
-    await Hive.deleteBoxFromDisk(_boxNamePersist);
-    datastore.wipe();
+    await clear();
+    await _persist.clear();
 
     // TODO: Wait for any ongoing connections to finish?
 
     emit(state.copyWith(ready: true));
   }
+
+  @protected
+  Future<void> initialize();
+
+  @protected
+  Future<void> clear();
 
   void _recomputeHeaders({String? sessionId}) {
     final headersBuilder = <String, String>{};
@@ -167,11 +168,8 @@ abstract class ApiCubit<D extends Datastore<D, S, T>, S extends ApiSession,
   }
 
   @protected
-  FutureOr<void> initializeOnce() {}
-
-  @protected
   S? parseSession(Map<String, dynamic> map);
 
   @protected
-  FutureOr<ApiState<I, D, S, T>?> parseResponse(Map<String, dynamic> response);
+  FutureOr<ApiState<S, T>?> parseResponse(Map<String, dynamic> response);
 }

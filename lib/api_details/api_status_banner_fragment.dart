@@ -1,13 +1,11 @@
 import 'package:appcore/api_details/api_status_page.dart';
+import 'package:appcore/core/action_queue_cubit.dart';
 import 'package:appcore/core/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusBannerFragment<
-    I,
-    D extends Datastore<I, D, S, T>,
-    S extends ApiSession,
-    T extends ApiCubit<I, D, S, T>> extends StatelessWidget {
+class ApiStatusBannerFragment<S extends ApiSession, T extends ApiCubit<S, T>>
+    extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -17,7 +15,7 @@ class ApiStatusBannerFragment<
 
   @override
   Widget build(BuildContext context) {
-    final qState = context.select((T api) => api.state.actionQueueState);
+    final qState = context.select((ActionQueueCubit queue) => queue.state);
     if (qState.actions.isEmpty) return Container();
     final pendingRequests = qState.actions.length == 1
         ? '1 entry pending'
@@ -43,8 +41,7 @@ class ApiStatusBannerFragment<
     return InkWell(
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) =>
-              ApiStatusPage<I, D, S, T>(allowPause: allowPause),
+          builder: (context) => ApiStatusPage<S, T>(allowPause: allowPause),
         ));
       },
       child: Container(

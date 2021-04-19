@@ -4,11 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:uri/uri.dart';
 
-abstract class PeriodicSyncCubit<
-    I,
-    D extends Datastore<I, D, S, T>,
-    S extends ApiSession,
-    T extends ApiCubit<I, D, S, T>> extends Cubit<PeriodicSyncState> {
+abstract class PeriodicSyncCubit<S extends ApiSession, T extends ApiCubit<S, T>>
+    extends Cubit<PeriodicSyncState> {
   final T api;
 
   PeriodicSyncCubit(this.api) : super(PeriodicSyncState());

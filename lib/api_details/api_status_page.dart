@@ -1,17 +1,19 @@
+import 'package:appcore/core/action_queue_cubit.dart';
 import 'package:appcore/core/api.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
-    T extends ApiCubit<I, D, S, T>> extends StatelessWidget {
+class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S, T>>
+    extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final qState = context.select((T api) => api.state.actionQueueState);
     final api = context.read<T>();
+    final queue = context.watch<ActionQueueCubit>();
+    final qState = queue.state;
 
     String statusText;
     // TODO: qState.ready
@@ -47,13 +49,13 @@ class ApiStatusPage<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
                             ? IconButton(
                                 icon: Icon(Icons.play_arrow),
                                 onPressed: () {
-                                  api.resume();
+                                  queue.resume();
                                 })
                             : (allowPause && !qState.paused)
                                 ? IconButton(
                                     icon: Icon(Icons.pause),
                                     onPressed: () {
-                                      api.pause();
+                                      queue.pause();
                                     })
                                 : null,
                   ),
@@ -111,7 +113,7 @@ class ApiStatusPage<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
                                     ),
                                   );
                                   if (confirm ?? false) {
-                                    api.deleteRequestAt(i);
+                                    queue.deleteRequestAt(i);
                                   }
                                 },
                         ),

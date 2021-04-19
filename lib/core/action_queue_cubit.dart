@@ -12,17 +12,14 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-abstract class ActionQueueCubit<
-    D extends Datastore<D, S, T>,
-    S extends ApiSession,
-    T extends ApiCubit<D, S, T>> extends Cubit<ActionQueueState> {
-  final ApiCubit<D, S, T> api;
-
+abstract class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
+    extends Cubit<ActionQueueState> {
+  final T api;
   late final Box<Map> _actions;
 
-  Map<String, ApiActionDeserializer<D, S, T>> get deserializers;
+  Map<String, ApiActionDeserializer<S, T>> get deserializers;
 
-  ActionQueueCubit(this.api) : super(ActionQueueState<D, S, T>()) {
+  ActionQueueCubit(this.api) : super(ActionQueueState<S, T>()) {
     _initialize();
   }
 
@@ -34,7 +31,7 @@ abstract class ActionQueueCubit<
     }
 
     if (api.isSignedIn) {
-      emit(ActionQueueState<D, S, T>(
+      emit(ActionQueueState<S, T>(
         ready: true,
         actions: _actions.values.map((data) => _deserializeAction(data)),
       ));
@@ -57,7 +54,7 @@ abstract class ActionQueueCubit<
     });
   }
 
-  ApiAction<D, S, T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
+  ApiAction<S, T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
     final name = actionMap[_keyActionName];
     assert(deserializers.containsKey(name));
     final props = actionMap[_keyActionProps] as Map;
@@ -66,7 +63,7 @@ abstract class ActionQueueCubit<
     return action;
   }
 
-  Future<void> enqueueOfflineAction(ApiAction<D, S, T> action) async {
+  Future<void> enqueueOfflineAction(ApiAction<S, T> action) async {
     await awaitReady();
 
     if (!api.isSignedIn) {

@@ -5,11 +5,8 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:uri/uri.dart';
 
-abstract class TickerSyncCubit<
-    I,
-    D extends Datastore<I, D, S, T>,
-    S extends ApiSession,
-    T extends ApiCubit<I, D, S, T>> extends Cubit<TickerSyncState> {
+abstract class TickerSyncCubit<S extends ApiSession, T extends ApiCubit<S, T>>
+    extends Cubit<TickerSyncState> {
   final T api;
 
   Future<WebSocket>? _socketFuture;

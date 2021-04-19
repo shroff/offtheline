@@ -6,13 +6,13 @@ import 'package:http/http.dart';
 
 const _contentType = 'application/json';
 
-mixin JsonApiAction<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
-    T extends ApiCubit<I, D, S, T>> on ApiAction<I, D, S, T> {
+mixin JsonApiAction<S extends ApiSession, T extends ApiCubit<S, T>>
+    on ApiAction<S, T> {
   String get method;
   String get endpoint;
 
   @override
-  BaseRequest createRequest(ApiCubit<I, D, S, T> api) {
+  BaseRequest createRequest(T api) {
     final request = Request(method, api.createUriBuilder(endpoint).build());
     request.headers['content-type'] = _contentType;
     final body = generateRequestBody(api);
@@ -24,8 +24,7 @@ mixin JsonApiAction<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
   }
 
   @override
-  String generatePayloadDetails(ApiCubit<I, D, S, T> api) =>
-      json.encode(generateRequestBody(api));
+  String generatePayloadDetails(T api) => json.encode(generateRequestBody(api));
 
-  Map<String, dynamic>? generateRequestBody(ApiCubit<I, D, S, T> api);
+  Map<String, dynamic>? generateRequestBody(T api);
 }

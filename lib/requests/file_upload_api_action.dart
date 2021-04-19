@@ -5,11 +5,8 @@ import 'package:appcore/core/api.dart';
 import 'package:appcore/requests/requests.dart';
 import 'package:http/http.dart';
 
-mixin FileUploadApiAction<
-    I,
-    D extends Datastore<I, D, S, T>,
-    S extends ApiSession,
-    T extends ApiCubit<I, D, S, T>> on ApiAction<I, D, S, T> {
+mixin FileUploadApiAction<S extends ApiSession, T extends ApiCubit<S, T>>
+    on ApiAction<S, T> {
   @override
   dynamic get binaryData => fileContents;
 
@@ -21,7 +18,7 @@ mixin FileUploadApiAction<
   Uint8List get fileContents;
 
   @override
-  BaseRequest createRequest(ApiCubit<I, D, S, T> api) {
+  BaseRequest createRequest(T api) {
     final uri = api.createUriBuilder(endpoint).build();
     final request = MultipartRequest(method, uri);
     request.fields.addAll(generateFormFields(api));
@@ -36,7 +33,7 @@ mixin FileUploadApiAction<
   }
 
   @override
-  String generatePayloadDetails(ApiCubit<I, D, S, T> api) => json.encode({
+  String generatePayloadDetails(T api) => json.encode({
         'file': {
           'fieldName': fileFieldName,
           'name': fileName,
@@ -45,5 +42,5 @@ mixin FileUploadApiAction<
         'fields': generateFormFields(api),
       });
 
-  Map<String, String> generateFormFields(ApiCubit<I, D, S, T> api);
+  Map<String, String> generateFormFields(T api);
 }
