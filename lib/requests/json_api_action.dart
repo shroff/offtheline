@@ -12,7 +12,7 @@ mixin JsonApiAction<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
   String get endpoint;
 
   @override
-  BaseRequest createRequest(T api) {
+  BaseRequest createRequest(ApiCubit<I, D, S, T> api) {
     final request = Request(method, api.createUriBuilder(endpoint).build());
     request.headers['content-type'] = _contentType;
     final body = generateRequestBody(api);
@@ -24,7 +24,8 @@ mixin JsonApiAction<I, D extends Datastore<I, D, S, T>, S extends ApiSession,
   }
 
   @override
-  String generatePayloadDetails(T api) => json.encode(generateRequestBody(api));
+  String generatePayloadDetails(ApiCubit<I, D, S, T> api) =>
+      json.encode(generateRequestBody(api));
 
-  Map<String, dynamic>? generateRequestBody(T api);
+  Map<String, dynamic>? generateRequestBody(ApiCubit<I, D, S, T> api);
 }

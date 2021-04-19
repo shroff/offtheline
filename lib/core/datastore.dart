@@ -2,8 +2,8 @@ part of 'api.dart';
 
 const _boxNameDatastoreMetadata = 'datastoreMetadata';
 
-abstract class Datastore<I, D extends Datastore<I, D, S, T>,
-    S extends ApiSession, T extends ApiCubit<I, D, S, T>> {
+abstract class Datastore<D extends Datastore<D, S, T>, S extends ApiSession,
+    T extends ApiCubit<D, S, T>> {
   late final T api;
   late final Box _metadataBox;
   Completer<void> _readyCompleter = Completer();
@@ -46,8 +46,6 @@ abstract class Datastore<I, D extends Datastore<I, D, S, T>,
     debugPrint('[datastore] Clearing Done');
     _readyCompleter.complete();
   }
-
-  Future<I?> generateId();
 
   Future<void> initialize();
 

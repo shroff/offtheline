@@ -21,7 +21,7 @@ mixin FileUploadApiAction<
   Uint8List get fileContents;
 
   @override
-  BaseRequest createRequest(T api) {
+  BaseRequest createRequest(ApiCubit<I, D, S, T> api) {
     final uri = api.createUriBuilder(endpoint).build();
     final request = MultipartRequest(method, uri);
     request.fields.addAll(generateFormFields(api));
@@ -36,7 +36,7 @@ mixin FileUploadApiAction<
   }
 
   @override
-  String generatePayloadDetails(T api) => json.encode({
+  String generatePayloadDetails(ApiCubit<I, D, S, T> api) => json.encode({
         'file': {
           'fieldName': fileFieldName,
           'name': fileName,
@@ -45,5 +45,5 @@ mixin FileUploadApiAction<
         'fields': generateFormFields(api),
       });
 
-  Map<String, String> generateFormFields(T api);
+  Map<String, String> generateFormFields(ApiCubit<I, D, S, T> api);
 }
