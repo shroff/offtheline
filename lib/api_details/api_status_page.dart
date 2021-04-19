@@ -1,23 +1,21 @@
-import 'package:appcore/core/action_queue_cubit.dart';
-import 'package:appcore/core/api.dart';
+import 'package:appcore/actions/actions.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S, T>>
-    extends StatelessWidget {
+class ApiStatusPage extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final api = context.read<T>();
     final queue = context.watch<ActionQueueCubit>();
     final qState = queue.state;
 
     String statusText;
-    // TODO: qState.ready
-    if (qState.submitting) {
+    if (!qState.ready) {
+      statusText = 'Initializing';
+    } else if (qState.submitting) {
       statusText = 'Submitting';
     } else if (qState.paused) {
       statusText = 'Paused';
@@ -68,7 +66,7 @@ class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S, T>>
                 (context, i) {
                   final request = actions[i];
                   return ListTile(
-                    title: Text(request.generateDescription(api)),
+                    title: Text(queue.generateDescription(request)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -77,8 +75,8 @@ class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S, T>>
                           onPressed: () {
                             showAlertDialog(
                               context,
-                              title: request.generateDescription(api),
-                              message: request.generatePayloadDetails(api),
+                              title: queue.generateDescription(request),
+                              message: queue.generatePayloadDetails(request),
                             );
                           },
                         ),
@@ -93,7 +91,7 @@ class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S, T>>
                                       title: Text('Delete Record'),
                                       content: Text(
                                           'You are about to delete the following record:\n\n'
-                                          '${request.generateDescription(api)}\n\n'
+                                          '${queue.generateDescription(request)}\n\n'
                                           'It will not be submitted to the server, and you will not be able to recover it.\n\n'
                                           'Are you sure you want to do this?'),
                                       actions: <Widget>[
@@ -113,7 +111,7 @@ class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S, T>>
                                     ),
                                   );
                                   if (confirm ?? false) {
-                                    queue.deleteRequestAt(i);
+                                    queue.removeAt(i);
                                   }
                                 },
                         ),

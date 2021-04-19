@@ -1,10 +1,4 @@
-import 'package:appcore/core/api.dart';
-import 'package:appcore/requests/api_action.dart';
-import 'package:bloc/bloc.dart';
-import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
-
-part 'action_queue_state.dart';
+part of 'actions.dart';
 
 const _boxNameActionQueue = 'apiActionQueue';
 
@@ -12,23 +6,23 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-abstract class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
+class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
     extends Cubit<ActionQueueState> {
   final T api;
+  final Map<String, ApiActionDeserializer<S, T>> deserializers;
   late final Box<Map> _actions;
 
-  Map<String, ApiActionDeserializer<S, T>> get deserializers;
-
-  ActionQueueCubit(this.api) : super(ActionQueueState<S, T>()) {
+  ActionQueueCubit(this.api, this.deserializers)
+      : super(ActionQueueState<S, T>()) {
     _initialize();
   }
 
   void _initialize() async {
-    _actions = await Hive.openBox(_boxNameActionQueue);
-
     while (!api.state.ready) {
       await api.stream.firstWhere((state) => state.ready);
     }
+
+    _actions = await Hive.openBox(_boxNameActionQueue);
 
     if (api.isSignedIn) {
       emit(ActionQueueState<S, T>(
@@ -63,7 +57,7 @@ abstract class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
     return action;
   }
 
-  Future<void> enqueueOfflineAction(ApiAction<S, T> action) async {
+  Future<void> add(ApiAction<S, T> action) async {
     await awaitReady();
 
     if (!api.isSignedIn) {
@@ -79,7 +73,7 @@ abstract class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
     });
   }
 
-  Future<void> deleteRequestAt(int index, {bool revert = true}) async {
+  Future<void> removeAt(int index, {bool revert = true}) async {
     await awaitReady();
 
     if (!api.isSignedIn ||
@@ -114,6 +108,14 @@ abstract class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
     _sendNextRequest();
   }
 
+  String generateDescription(ApiAction action) {
+    return action.generateDescription(api);
+  }
+
+  String generatePayloadDetails(ApiAction action) {
+    return action.generatePayloadDetails(api);
+  }
+
   void _sendNextRequest() async {
     await awaitReady();
 
@@ -133,7 +135,7 @@ abstract class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
     final error = await api.sendRequest(request);
     emit(state.copyWithSubmitting(false, error));
     if (error == null) {
-      deleteRequestAt(0, revert: false);
+      removeAt(0, revert: false);
     }
   }
 

@@ -1,11 +1,9 @@
 import 'package:appcore/api_details/api_status_page.dart';
-import 'package:appcore/core/action_queue_cubit.dart';
-import 'package:appcore/core/api.dart';
+import 'package:appcore/actions/actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusBannerFragment<S extends ApiSession, T extends ApiCubit<S, T>>
-    extends StatelessWidget {
+class ApiStatusBannerFragment extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -23,8 +21,10 @@ class ApiStatusBannerFragment<S extends ApiSession, T extends ApiCubit<S, T>>
 
     IconData icon;
     String statusText;
-    // TODO: !qState.ready
-    if (qState.submitting) {
+    if (!qState.ready) {
+      icon = Icons.sync;
+      statusText = 'Initializing';
+    } else if (qState.submitting) {
       icon = Icons.sync;
       statusText = 'Submitting';
     } else if (qState.paused) {
@@ -41,7 +41,7 @@ class ApiStatusBannerFragment<S extends ApiSession, T extends ApiCubit<S, T>>
     return InkWell(
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => ApiStatusPage<S, T>(allowPause: allowPause),
+          builder: (context) => ApiStatusPage(allowPause: allowPause),
         ));
       },
       child: Container(

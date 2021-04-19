@@ -5,22 +5,19 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:uri/uri.dart';
 
-abstract class TickerSyncCubit<S extends ApiSession, T extends ApiCubit<S, T>>
-    extends Cubit<TickerSyncState> {
-  final T api;
+abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
+  final ApiCubit api;
 
   Future<WebSocket>? _socketFuture;
 
   TickerSyncCubit(
     this.api,
-  ) : super(const TickerSyncStateDisconnected()) {
-    api.stream.listen((event) {
-      if (event.loginSession == null) {
-        disconnect('logout');
-      } else {
-        connect();
-      }
-    });
+  ) : super(const TickerSyncStateDisconnected());
+
+  @override
+  Future<void> close() async {
+    disconnect('close');
+    await super.close();
   }
 
   UriBuilder createUriBuilder();
