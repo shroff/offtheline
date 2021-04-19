@@ -1,6 +1,6 @@
 part of 'api.dart';
 
-class ApiState<S extends ApiSession, T extends ApiCubit<S, T>> {
+class ApiState<S extends ApiSession> {
   final bool ready;
   final Uri baseApiUrl;
   final S? loginSession;
@@ -20,7 +20,7 @@ class ApiState<S extends ApiSession, T extends ApiCubit<S, T>> {
     );
   }
 
-  ApiState<S, T> copyWith({
+  ApiState<S> copyWith({
     bool? ready,
     Uri? baseApiUrl,
     S? loginSession,
@@ -41,7 +41,7 @@ class ApiState<S extends ApiSession, T extends ApiCubit<S, T>> {
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ApiState<S, T> &&
+    return o is ApiState<S> &&
         o.ready == ready &&
         o.baseApiUrl == baseApiUrl &&
         o.loginSession == loginSession;

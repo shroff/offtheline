@@ -1,8 +1,8 @@
 part of 'actions.dart';
 
-class ActionQueueState<S extends ApiSession, T extends ApiCubit<S, T>> {
+class ActionQueueState<S extends ApiSession, T extends ApiCubit<S>> {
   final bool ready;
-  final Iterable<ApiAction<S, T>> actions;
+  final Iterable<ApiAction<T>> actions;
   final bool paused;
   final bool submitting;
   final String? error;
@@ -35,7 +35,7 @@ class ActionQueueState<S extends ApiSession, T extends ApiCubit<S, T>> {
     );
   }
 
-  ActionQueueState<S, T> copyWithActions(Iterable<ApiAction<S, T>> actions) {
+  ActionQueueState<S, T> copyWithActions(Iterable<ApiAction<T>> actions) {
     return ActionQueueState(
       ready: true,
       actions: actions,

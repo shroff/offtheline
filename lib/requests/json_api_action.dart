@@ -6,8 +6,8 @@ import 'package:http/http.dart';
 
 const _contentType = 'application/json';
 
-mixin JsonApiAction<S extends ApiSession, T extends ApiCubit<S, T>>
-    on ApiAction<S, T> {
+mixin JsonApiAction<S extends ApiSession, T extends ApiCubit<S>>
+    on ApiAction<T> {
   String get method;
   String get endpoint;
 

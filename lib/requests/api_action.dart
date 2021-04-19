@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:appcore/core/api.dart';
 import 'package:http/http.dart';
 
-abstract class ApiAction<S extends ApiSession, T extends ApiCubit<S, T>> {
+abstract class ApiAction<T extends ApiCubit> {
   String get name;
 
   dynamic get binaryData => null;

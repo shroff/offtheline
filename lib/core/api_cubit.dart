@@ -5,8 +5,8 @@ const _boxNamePersist = 'apiMetadata';
 const _keyBaseApiUrl = 'baseApiUrl';
 const _keyLoginSession = 'loginSession';
 
-typedef ApiActionDeserializer<S extends ApiSession, T extends ApiCubit<S, T>>
-    = ApiAction<S, T> Function(Map<String, dynamic> props, dynamic data);
+typedef ApiActionDeserializer<S extends ApiSession, T extends ApiCubit<S>>
+    = ApiAction<T> Function(Map<String, dynamic> props, dynamic data);
 
 mixin ApiHooks {
   FutureOr<void> processResponse(Map<String, dynamic> response) {}
@@ -14,8 +14,8 @@ mixin ApiHooks {
   FutureOr<void> clear() {}
 }
 
-abstract class ApiCubit<S extends ApiSession, T extends ApiCubit<S, T>>
-    extends Cubit<ApiState<S, T>> with ApiHooks {
+abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>>
+    with ApiHooks {
   late final Box _persist;
   final BaseClient _client = createHttpClient();
   final Uri? _fixedBaseApiUrl;
@@ -61,7 +61,7 @@ abstract class ApiCubit<S extends ApiSession, T extends ApiCubit<S, T>>
   }
 
   @override
-  void onChange(Change<ApiState<S, T>> change) {
+  void onChange(Change<ApiState<S>> change) {
     super.onChange(change);
     if (!change.nextState.ready) return;
 

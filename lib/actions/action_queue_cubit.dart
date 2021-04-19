@@ -6,7 +6,7 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
+class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
     extends Cubit<ActionQueueState> {
   final T api;
   final Map<String, ApiActionDeserializer<S, T>> deserializers;
@@ -48,7 +48,7 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
     });
   }
 
-  ApiAction<S, T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
+  ApiAction<T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
     final name = actionMap[_keyActionName];
     assert(deserializers.containsKey(name));
     final props = actionMap[_keyActionProps] as Map;
@@ -57,7 +57,7 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S, T>>
     return action;
   }
 
-  Future<void> add(ApiAction<S, T> action) async {
+  Future<void> add(ApiAction<T> action) async {
     await awaitReady();
 
     if (!api.isSignedIn) {

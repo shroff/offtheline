@@ -5,8 +5,8 @@ import 'package:appcore/core/api.dart';
 import 'package:appcore/requests/requests.dart';
 import 'package:http/http.dart';
 
-mixin FileUploadApiAction<S extends ApiSession, T extends ApiCubit<S, T>>
-    on ApiAction<S, T> {
+mixin FileUploadApiAction<S extends ApiSession, T extends ApiCubit<S>>
+    on ApiAction<T> {
   @override
   dynamic get binaryData => fileContents;
 
