@@ -8,27 +8,27 @@ const _keyLoginSession = 'loginSession';
 typedef ApiActionDeserializer<S extends ApiSession, T extends ApiCubit<S>>
     = ApiAction<T> Function(Map<String, dynamic> props, dynamic data);
 
-mixin ApiHooks {
-  FutureOr<void> processResponse(Map<String, dynamic> response) {}
-}
+typedef ResponseProcessor = FutureOr<void> Function(
+    Map<String, dynamic> response);
 
-abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>>
-    with ApiHooks {
-  late final Box _persist;
+abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
   final BaseClient _client = createHttpClient();
-  Map<String, String> headers = Map.unmodifiable({});
-  late final List<ApiHooks> _hooks;
-
+  final processingResponses = ValueNotifier<int>(0);
+  final List<ResponseProcessor> _responseProcessors = [];
   final Uri? _fixedApiBase;
+  late final Box _persist;
+
   Uri _apiBase = Uri();
-  Uri get apiBase => _fixedApiBase ?? _apiBase;
   bool get canChangeApiBase => _fixedApiBase == null;
+  Uri get apiBase => _fixedApiBase ?? _apiBase;
   set apiBase(Uri value) {
     if (canChangeApiBase) {
       _apiBase = value;
       _persist.put(_keyBaseApiUrl, value.toString());
     }
   }
+
+  Map<String, String> headers = Map.unmodifiable({});
 
   ApiCubit({
     Uri? fixedApiBase,
@@ -38,15 +38,12 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>>
 
     Hive.openBox(_boxNamePersist).then((box) async {
       _persist = box;
-      _hooks = [];
-
-      await initialize();
 
       apiBase = _fixedApiBase ??
           Uri.tryParse(box.get(_keyLoginSession, defaultValue: '')) ??
           Uri();
 
-      final session = parseSession(json
+      final session = await initialize(json
           .decode(_persist.get(_keyLoginSession, defaultValue: '{}'))
           .cast<String, dynamic>());
       if (session != null) {
@@ -74,12 +71,12 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>>
     return _persist.put(key, value);
   }
 
-  void registerHook(ApiHooks hook) {
-    _hooks.add(hook);
+  void addResponseProcessor(ResponseProcessor processor) {
+    _responseProcessors.add(processor);
   }
 
-  void unregisterHook(ApiHooks hook) {
-    _hooks.remove(hook);
+  void removeResponseProcessor(ResponseProcessor processor) {
+    _responseProcessors.remove(processor);
   }
 
   String createUrl(String path) {
@@ -93,10 +90,21 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>>
   }
 
   Future<String?> login(BaseRequest request, Uri apiBase) async {
+    if (state is! ApiStateLoggedOut) {
+      return "Not Logged Out";
+    }
+
+    emit(const ApiStateLoggingIn());
     final error = await sendRequest(request);
     if (error == null) {
       this.apiBase = apiBase;
     }
+
+    // Failsafe, in case there was an error in parseResponseString
+    if (state is ApiStateLoggingIn) {
+      emit(const ApiStateLoggedOut());
+    }
+
     return error;
   }
 
@@ -133,41 +141,64 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>>
   }) async {
     if (responseString.isNotEmpty) {
       final sessionId = state.session?.sessionId;
-      if (sessionId != requestSession?.sessionId) return;
+      if (state is ApiStateLoggingOut || sessionId != requestSession?.sessionId)
+        return;
 
-      final responseMap = json.decode(responseString) as Map<String, dynamic>;
-      debugPrint('[api] Parsing response');
-      await processResponseMap(responseMap);
-      for (final hook in _hooks) {
-        await hook.processResponse(responseMap);
+      processingResponses.value = processingResponses.value + 1;
+
+      try {
+        final responseMap = json.decode(responseString) as Map<String, dynamic>;
+        debugPrint('[api] Parsing response');
+        S? parsedSession = await processResponse(responseMap);
+        for (final processResponse in _responseProcessors) {
+          await processResponse(responseMap);
+        }
+        if (parsedSession != null) {
+          emit(ApiStateLoggedIn(parsedSession));
+        } else {
+          logout();
+        }
+      } finally {
+        processingResponses.value = processingResponses.value - 1;
+        debugPrint('[api] Response parsed');
       }
-      debugPrint('[api] Response parsed');
     }
   }
 
   Future<void> logout() async {
+    if (state is! ApiStateLoggedIn) {
+      return;
+    }
     debugPrint('[api] Logging Out');
 
     emit(const ApiStateLoggingOut());
 
     await _persist.clear();
     await clear();
-    // TODO: Wait for any ongoing connections to finish?
+
+    if (processingResponses.value != 0) {
+      final completer = Completer();
+      final callback = () {
+        if (processingResponses.value == 0) {
+          completer.complete();
+        }
+      };
+      processingResponses.addListener(callback);
+      await completer.future;
+      processingResponses.removeListener(callback);
+    }
 
     emit(const ApiStateLoggedOut());
   }
 
   @protected
-  Future<void> initialize();
-
-  @protected
-  S? parseSession(Map<String, dynamic> map);
+  FutureOr<S?> initialize(Map<String, dynamic> sessionMap);
 
   @protected
   Map<String, String> populateHeaders(Map<String, String> headers, S? session);
 
   @protected
-  FutureOr<void> processResponseMap(Map<String, dynamic> responseMap);
+  FutureOr<S?> processResponse(Map<String, dynamic> responseMap);
 
   @protected
   Future<void> clear();

@@ -8,8 +8,8 @@ class ApiStateLoggedOut<S extends ApiSession> extends ApiState<S> {
   const ApiStateLoggedOut();
 }
 
-class ApiStateLoggingOut<S extends ApiSession> extends ApiState<S> {
-  const ApiStateLoggingOut();
+class ApiStateLoggingIn<S extends ApiSession> extends ApiState<S> {
+  const ApiStateLoggingIn();
 }
 
 class ApiStateLoggedIn<S extends ApiSession> extends ApiState<S> {
@@ -29,6 +29,10 @@ class ApiStateLoggedIn<S extends ApiSession> extends ApiState<S> {
 
   @override
   int get hashCode => session.hashCode;
+}
+
+class ApiStateLoggingOut<S extends ApiSession> extends ApiState<S> {
+  const ApiStateLoggingOut();
 }
 
 @immutable
