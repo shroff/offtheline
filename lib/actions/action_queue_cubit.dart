@@ -7,7 +7,7 @@ const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
 class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
-    extends Cubit<ActionQueueState> {
+    extends Cubit<ActionQueueState<S, T>> {
   final T api;
   final Map<String, ApiActionDeserializer<S, T>> deserializers;
   late final Box<Map> _actions;
@@ -18,27 +18,12 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
   }
 
   void _initialize() async {
-    while (!api.state.ready) {
-      await api.stream.firstWhere((state) => state.ready);
-    }
-
     _actions = await Hive.openBox(_boxNameActionQueue);
 
-    if (api.isSignedIn) {
-      emit(ActionQueueState<S, T>(
-        ready: true,
-        actions: _actions.values.map((data) => _deserializeAction(data)),
-      ));
-      _sendNextRequest();
-    } else {
+    final session = api.state.session;
+    if (session == null) {
       _actions.clear();
     }
-
-    api.stream.listen((state) {
-      if (state.ready && !state.isSignedIn) {
-        _actions.clear();
-      }
-    });
 
     _actions.watch().listen((event) {
       emit(state.copyWithActions(
@@ -46,6 +31,29 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
       ));
       _sendNextRequest();
     });
+
+    api.stream.listen((apiState) {
+      if (apiState.session == null) {
+        _actions.clear();
+        emit(ActionQueueState<S, T>(
+          ready: true,
+          actions: [],
+        ));
+      }
+    });
+
+    emit(ActionQueueState<S, T>(
+      ready: true,
+      actions: _actions.values.map((data) => _deserializeAction(data)),
+    ));
+    _sendNextRequest();
+  }
+
+  @override
+  Future<void> close() async {
+    debugPrint('[action-queue] Closing');
+    await _actions.close();
+    await super.close();
   }
 
   ApiAction<T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
@@ -58,9 +66,8 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
   }
 
   Future<void> add(ApiAction<T> action) async {
-    await awaitReady();
-
-    if (!api.isSignedIn) {
+    final session = api.state.session;
+    if (session == null) {
       return;
     }
 
@@ -74,11 +81,12 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
   }
 
   Future<void> removeAt(int index, {bool revert = true}) async {
-    await awaitReady();
+    final session = api.state.session;
+    if (session == null) {
+      return;
+    }
 
-    if (!api.isSignedIn ||
-        index >= _actions.length ||
-        (index == 0 && state.submitting)) {
+    if (index >= _actions.length || (index == 0 && state.submitting)) {
       return;
     }
 
@@ -117,10 +125,12 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
   }
 
   void _sendNextRequest() async {
-    await awaitReady();
+    if (api.state.session == null) {
+      return;
+    }
+    final session = api.state.session;
 
-    if (!api.isSignedIn ||
-        _actions.isEmpty ||
+    if (_actions.isEmpty ||
         (state.error?.isNotEmpty ?? false) ||
         state.paused ||
         state.submitting) {
@@ -133,20 +143,12 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
     final request = action.createRequest(api);
 
     final error = await api.sendRequest(request);
+
+    if (session!.sessionId != api.state.session?.sessionId) return;
+
     emit(state.copyWithSubmitting(false, error));
     if (error == null) {
       removeAt(0, revert: false);
-    }
-  }
-
-  Future<void> awaitReady() async {
-    while (!api.state.ready || !state.ready) {
-      while (!api.state.ready) {
-        await api.stream.firstWhere((state) => state.ready);
-      }
-      while (!state.ready) {
-        await stream.firstWhere((state) => state.ready);
-      }
     }
   }
 }

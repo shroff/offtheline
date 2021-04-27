@@ -11,7 +11,7 @@ typedef AuthRequestBuilder = Future<Request?> Function(
     BuildContext, UriBuilder);
 
 class LoginPage<S extends ApiSession, T extends ApiCubit<S>>
-    extends StatelessWidget {
+    extends StatefulWidget {
   final AuthRequestBuilder? buildSessionIdAuthRequest;
   final AuthRequestBuilder? buildEmailAuthRequest;
   final AuthRequestBuilder? buildGoogleAuthRequest;
@@ -23,19 +23,34 @@ class LoginPage<S extends ApiSession, T extends ApiCubit<S>>
     this.buildGoogleAuthRequest,
   }) : super(key: key);
 
+  @override
+  _LoginPageState<S, T> createState() => _LoginPageState<S, T>();
+}
+
+class _LoginPageState<S extends ApiSession, T extends ApiCubit<S>>
+    extends State<LoginPage<S, T>> {
+  Uri apiBase = Uri();
+  bool canChangeApiBase = false;
+
+  bool get apiBaseValid =>
+      kIsWeb || (apiBase.hasScheme && apiBase.hasAuthority);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final api = context.read<T>();
+    apiBase = api.apiBase;
+    canChangeApiBase = api.canChangeApiBase;
+  }
+
   void _performLogin(
     BuildContext context,
     AuthRequestBuilder buildAuthRequest,
   ) async {
     final api = context.read<T>();
-    if (!api.canLogIn) {
-      return;
-    }
-    // * Make sure we are ready
-    while (!api.state.ready) {
-      await api.stream.firstWhere((state) => state.ready);
-    }
-    if (api.isSignedIn) {
+
+    if (api.state is! ApiStateLoggedOut) {
       return;
     }
 
@@ -59,12 +74,13 @@ class LoginPage<S extends ApiSession, T extends ApiCubit<S>>
         ),
       ),
     );
-    final request = await buildAuthRequest(context, api.createUriBuilder(''));
+    final request =
+        await buildAuthRequest(context, UriBuilder.fromUri(apiBase));
     if (request == null) {
       Navigator.of(context).pop();
       return;
     }
-    final response = await api.sendRequest(request, authRequired: false);
+    final response = await api.login(request, apiBase);
     if (response != null) {
       Navigator.of(context).pop();
       showDialog(
@@ -97,61 +113,56 @@ class LoginPage<S extends ApiSession, T extends ApiCubit<S>>
       ),
       body: FixedPageBody(
         child: Center(
-          child: BlocBuilder<T, ApiState>(
-            buildWhen: (oldState, newState) {
-              return oldState.baseApiUrl != newState.baseApiUrl;
-            },
-            builder: (context, state) {
-              final api = context.read<T>();
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  if (api.canChangeBaseApiUrl)
-                    TextButton(
-                      child: Text("Change Server Address"),
-                      onPressed: () async {
-                        final uri = await showUriDialog(
-                          context,
-                          title: "API Server Address",
-                          preset: state.baseApiUrl,
-                          allowHttp: !kReleaseMode,
-                        );
-                        debugPrint(uri.toString());
-                        if (uri != null) {
-                          api.baseApiUrl = uri;
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (canChangeApiBase)
+                TextButton(
+                  child: Text("Change Server Address"),
+                  onPressed: () async {
+                    final uri = await showUriDialog(
+                      context,
+                      title: "API Server Address",
+                      preset: apiBase,
+                      allowHttp: !kReleaseMode,
+                    );
+                    debugPrint(uri.toString());
+                    if (uri != null) {
+                      setState(() {
+                        apiBase = uri;
+                      });
+                    }
+                  },
+                ),
+              if (widget.buildSessionIdAuthRequest != null)
+                ElevatedButton(
+                  child: Text("Log in with Session ID"),
+                  onPressed: apiBaseValid
+                      ? () {
+                          _performLogin(
+                              context, widget.buildSessionIdAuthRequest!);
                         }
-                      },
-                    ),
-                  if (buildSessionIdAuthRequest != null)
-                    ElevatedButton(
-                      child: Text("Log in with Session ID"),
-                      onPressed: api.canLogIn
-                          ? () {
-                              _performLogin(
-                                  context, buildSessionIdAuthRequest!);
-                            }
-                          : null,
-                    ),
-                  if (buildEmailAuthRequest != null)
-                    ElevatedButton(
-                      child: Text("Log in with Email"),
-                      onPressed: api.canLogIn
-                          ? () {
-                              _performLogin(context, buildEmailAuthRequest!);
-                            }
-                          : null,
-                    ),
-                  if (buildGoogleAuthRequest != null)
-                    GoogleAuthButton(
-                      onPressed: api.canLogIn
-                          ? () {
-                              _performLogin(context, buildGoogleAuthRequest!);
-                            }
-                          : null,
-                    ),
-                ],
-              );
-            },
+                      : null,
+                ),
+              if (widget.buildEmailAuthRequest != null)
+                ElevatedButton(
+                  child: Text("Log in with Email"),
+                  onPressed: apiBaseValid
+                      ? () {
+                          _performLogin(context, widget.buildEmailAuthRequest!);
+                        }
+                      : null,
+                ),
+              if (widget.buildGoogleAuthRequest != null)
+                GoogleAuthButton(
+                  onPressed: apiBaseValid
+                      ? () {
+                          _performLogin(
+                              context, widget.buildGoogleAuthRequest!);
+                        }
+                      : null,
+                ),
+            ],
           ),
         ),
       ),

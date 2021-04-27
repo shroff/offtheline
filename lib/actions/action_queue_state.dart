@@ -66,6 +66,6 @@ class ActionQueueState<S extends ApiSession, T extends ApiCubit<S>> {
 
   @override
   String toString() {
-    return 'ActionQueueState(actions: $actions, paused: $paused, submitting: $submitting, error: $error)';
+    return 'ActionQueueState(ready: $ready, actions: $actions, paused: $paused, submitting: $submitting, error: $error)';
   }
 }

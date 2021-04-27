@@ -12,10 +12,19 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
 
   TickerSyncCubit(
     this.api,
-  ) : super(const TickerSyncStateDisconnected());
+  ) : super(const TickerSyncStateDisconnected()) {
+    api.stream.listen((apiState) {
+      if (apiState.session == null) {
+        disconnect('logout');
+      } else {
+        connect();
+      }
+    });
+  }
 
   @override
   Future<void> close() async {
+    debugPrint('[ticker-sync] Closing');
     disconnect('close');
     await super.close();
   }
@@ -24,10 +33,8 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
 
   void connect() async {
     // * Make sure we are ready
-    while (!api.state.ready) {
-      await api.stream.firstWhere((state) => state.ready);
-    }
-    if (!api.isSignedIn || state is! TickerSyncStateDisconnected) {
+    final session = api.state.session;
+    if (session == null || state is! TickerSyncStateDisconnected) {
       return;
     }
 
@@ -47,7 +54,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
       emit(const TickerSyncStateConnected());
 
       return socket.listen((message) {
-        api.parseResponseString(message);
+        api.parseResponseString(message, requestSession: session);
       }, onError: (err) {
         _socketFuture = null;
         debugPrint("[sync] Listen error: $err");

@@ -1,54 +1,39 @@
 part of 'api.dart';
 
-class ApiState<S extends ApiSession> {
-  final bool ready;
-  final Uri baseApiUrl;
-  final S? loginSession;
+class ApiStateInitializing<S extends ApiSession> extends ApiState<S> {
+  const ApiStateInitializing();
+}
 
-  bool get isSignedIn => loginSession != null;
+class ApiStateLoggedOut<S extends ApiSession> extends ApiState<S> {
+  const ApiStateLoggedOut();
+}
 
-  ApiState._({
-    this.ready = false,
-    required this.baseApiUrl,
-    this.loginSession,
-  });
+class ApiStateLoggingOut<S extends ApiSession> extends ApiState<S> {
+  const ApiStateLoggingOut();
+}
 
-  factory ApiState.init() {
-    return ApiState._(
-      ready: false,
-      baseApiUrl: Uri(),
-    );
-  }
+class ApiStateLoggedIn<S extends ApiSession> extends ApiState<S> {
+  final S session;
 
-  ApiState<S> copyWith({
-    bool? ready,
-    Uri? baseApiUrl,
-    S? loginSession,
-  }) {
-    return ApiState._(
-      ready: ready ?? this.ready,
-      baseApiUrl: baseApiUrl ?? this.baseApiUrl,
-      loginSession: loginSession ?? this.loginSession,
-    );
+  ApiStateLoggedIn(this.session);
+
+  @override
+  String toString() => 'ApiStateLoggedIn(session: $session)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is ApiStateLoggedIn<S> && other.session == session;
   }
 
   @override
-  String toString() {
-    return 'ApiState(ready: $ready, baseApiUrl: $baseApiUrl, loginSession: $loginSession';
-  }
+  int get hashCode => session.hashCode;
+}
 
-  @override
-  bool operator ==(Object o) {
-    if (identical(this, o)) return true;
+@immutable
+abstract class ApiState<S extends ApiSession> {
+  S? get session => null;
 
-    return o is ApiState<S> &&
-        o.ready == ready &&
-        o.baseApiUrl == baseApiUrl &&
-        o.loginSession == loginSession;
-  }
-
-  @override
-  int get hashCode {
-    return ready.hashCode ^ baseApiUrl.hashCode ^ loginSession.hashCode;
-  }
+  const ApiState();
 }

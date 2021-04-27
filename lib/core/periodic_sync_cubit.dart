@@ -14,11 +14,7 @@ abstract class PeriodicSyncCubit extends Cubit<PeriodicSyncState> {
   void fetchUpdates() async {
     debugPrint('[api] Fetching Updates');
 
-    // * Make sure we are ready
-    while (!api.state.ready) {
-      await api.stream.firstWhere((state) => state.ready);
-    }
-    if (!api.isSignedIn || state.fetching) {
+    if (api.state.session == null || state.fetching) {
       return;
     }
 
@@ -27,7 +23,7 @@ abstract class PeriodicSyncCubit extends Cubit<PeriodicSyncState> {
     final uriBuilder = createUriBuilder();
     final httpRequest = Request('get', uriBuilder.build());
 
-    final error = await api.sendRequest(httpRequest, authRequired: true);
+    final error = await api.sendRequest(httpRequest);
     emit(PeriodicSyncState(fetching: false, error: error));
   }
 }
