@@ -1,9 +1,11 @@
 import 'package:appcore/api_details/api_status_page.dart';
 import 'package:appcore/actions/actions.dart';
+import 'package:appcore/core/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusBannerFragment extends StatelessWidget {
+class ApiStatusBannerFragment<S extends ApiSession, T extends ApiCubit<S>>
+    extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -13,7 +15,8 @@ class ApiStatusBannerFragment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final qState = context.select((ActionQueueCubit queue) => queue.state);
+    final qState =
+        context.select((ActionQueueCubit<S, T> queue) => queue.state);
     if (qState.actions.isEmpty) return Container();
     final pendingRequests = qState.actions.length == 1
         ? '1 entry pending'

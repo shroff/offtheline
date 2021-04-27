@@ -39,12 +39,11 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
     Hive.openBox(_boxNamePersist).then((box) async {
       _persist = box;
 
-      apiBase = _fixedApiBase ??
-          Uri.tryParse(box.get(_keyLoginSession, defaultValue: '')) ??
-          Uri();
+      apiBase =
+          _fixedApiBase ?? Uri.tryParse(box.get(_keyBaseApiUrl) ?? '') ?? Uri();
 
       final session = await initialize(json
-          .decode(_persist.get(_keyLoginSession, defaultValue: '{}'))
+          .decode(_persist.get(_keyLoginSession) ?? '{}')
           .cast<String, dynamic>());
       if (session != null) {
         emit(ApiStateLoggedIn(session));
@@ -170,10 +169,12 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
       return;
     }
     debugPrint('[api] Logging Out');
-
     emit(const ApiStateLoggingOut());
 
+    final apiBase = this.apiBase;
     await _persist.clear();
+    this.apiBase = apiBase;
+
     await clear();
 
     if (processingResponses.value != 0) {

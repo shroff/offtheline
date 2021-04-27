@@ -34,7 +34,9 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
 
     api.stream.listen((apiState) {
       if (apiState.session == null) {
-        _actions.clear();
+        if (_actions.isOpen) {
+          _actions.clear();
+        }
         emit(ActionQueueState<S, T>(
           ready: true,
           actions: [],

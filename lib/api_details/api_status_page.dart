@@ -1,15 +1,17 @@
 import 'package:appcore/actions/actions.dart';
+import 'package:appcore/core/api.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage extends StatelessWidget {
+class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S>>
+    extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final queue = context.watch<ActionQueueCubit>();
+    final queue = context.watch<ActionQueueCubit<S, T>>();
     final qState = queue.state;
 
     String statusText;
