@@ -11,7 +11,7 @@ class ApiStatusPage<S extends ApiSession, T extends ApiCubit<S>>
   const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final queue = context.watch<ActionQueueCubit<S, T>>();
+    final queue = context.watch<ActionQueueCubit<T>>();
     final qState = queue.state;
 
     String statusText;

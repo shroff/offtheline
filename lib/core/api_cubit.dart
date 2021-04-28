@@ -5,8 +5,8 @@ const _boxNamePersist = 'apiMetadata';
 const _keyBaseApiUrl = 'baseApiUrl';
 const _keyLoginSession = 'loginSession';
 
-typedef ApiActionDeserializer<S extends ApiSession, T extends ApiCubit<S>>
-    = ApiAction<T> Function(Map<String, dynamic> props, dynamic data);
+typedef ApiActionDeserializer<T extends ApiCubit> = ApiAction<T> Function(
+    Map<String, dynamic> props, dynamic data);
 
 typedef ResponseProcessor = FutureOr<void> Function(
     Map<String, dynamic> response);

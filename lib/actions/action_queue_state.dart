@@ -1,6 +1,6 @@
 part of 'actions.dart';
 
-class ActionQueueState<S extends ApiSession, T extends ApiCubit<S>> {
+class ActionQueueState<T extends ApiCubit> {
   final bool ready;
   final Iterable<ApiAction<T>> actions;
   final bool paused;
@@ -15,7 +15,7 @@ class ActionQueueState<S extends ApiSession, T extends ApiCubit<S>> {
     this.error,
   });
 
-  ActionQueueState<S, T> copyWithPaused(bool paused) {
+  ActionQueueState<T> copyWithPaused(bool paused) {
     return ActionQueueState(
       ready: ready,
       actions: actions,
@@ -25,7 +25,7 @@ class ActionQueueState<S extends ApiSession, T extends ApiCubit<S>> {
     );
   }
 
-  ActionQueueState<S, T> copyWithSubmitting(bool submitting, String? error) {
+  ActionQueueState<T> copyWithSubmitting(bool submitting, String? error) {
     return ActionQueueState(
       ready: ready,
       actions: actions,
@@ -35,7 +35,7 @@ class ActionQueueState<S extends ApiSession, T extends ApiCubit<S>> {
     );
   }
 
-  ActionQueueState<S, T> copyWithActions(Iterable<ApiAction<T>> actions) {
+  ActionQueueState<T> copyWithActions(Iterable<ApiAction<T>> actions) {
     return ActionQueueState(
       ready: true,
       actions: actions,
@@ -49,7 +49,7 @@ class ActionQueueState<S extends ApiSession, T extends ApiCubit<S>> {
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is ActionQueueState<S, T> &&
+    return o is ActionQueueState<T> &&
         o.actions == actions &&
         o.paused == paused &&
         o.submitting == submitting &&

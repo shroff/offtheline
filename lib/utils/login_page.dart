@@ -10,8 +10,7 @@ import 'package:uri/uri.dart';
 typedef AuthRequestBuilder = Future<Request?> Function(
     BuildContext, UriBuilder);
 
-class LoginPage<S extends ApiSession, T extends ApiCubit<S>>
-    extends StatefulWidget {
+class LoginPage extends StatefulWidget {
   final AuthRequestBuilder? buildSessionIdAuthRequest;
   final AuthRequestBuilder? buildEmailAuthRequest;
   final AuthRequestBuilder? buildGoogleAuthRequest;
@@ -24,11 +23,10 @@ class LoginPage<S extends ApiSession, T extends ApiCubit<S>>
   }) : super(key: key);
 
   @override
-  _LoginPageState<S, T> createState() => _LoginPageState<S, T>();
+  _LoginPageState createState() => _LoginPageState();
 }
 
-class _LoginPageState<S extends ApiSession, T extends ApiCubit<S>>
-    extends State<LoginPage<S, T>> {
+class _LoginPageState extends State<LoginPage> {
   Uri apiBase = Uri();
   bool canChangeApiBase = false;
 
@@ -39,7 +37,7 @@ class _LoginPageState<S extends ApiSession, T extends ApiCubit<S>>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final api = context.read<T>();
+    final api = context.read<ApiCubit>();
     apiBase = api.apiBase;
     canChangeApiBase = api.canChangeApiBase;
   }
@@ -48,7 +46,7 @@ class _LoginPageState<S extends ApiSession, T extends ApiCubit<S>>
     BuildContext context,
     AuthRequestBuilder buildAuthRequest,
   ) async {
-    final api = context.read<T>();
+    final api = context.read<ApiCubit>();
 
     if (api.state is! ApiStateLoggedOut) {
       return;

@@ -6,14 +6,13 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
-    extends Cubit<ActionQueueState<S, T>> {
+class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   final T api;
-  final Map<String, ApiActionDeserializer<S, T>> deserializers;
+  final Map<String, ApiActionDeserializer<T>> deserializers;
   late final Box<Map> _actions;
 
   ActionQueueCubit(this.api, this.deserializers)
-      : super(ActionQueueState<S, T>()) {
+      : super(ActionQueueState<T>()) {
     _initialize();
   }
 
@@ -37,14 +36,14 @@ class ActionQueueCubit<S extends ApiSession, T extends ApiCubit<S>>
         if (_actions.isOpen) {
           _actions.clear();
         }
-        emit(ActionQueueState<S, T>(
+        emit(ActionQueueState<T>(
           ready: true,
           actions: [],
         ));
       }
     });
 
-    emit(ActionQueueState<S, T>(
+    emit(ActionQueueState<T>(
       ready: true,
       actions: _actions.values.map((data) => _deserializeAction(data)),
     ));
