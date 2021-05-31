@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:appcore/core/api.dart';
@@ -9,6 +10,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   final ApiCubit api;
 
   Future<WebSocket>? _socketFuture;
+  StreamSubscription<dynamic>? socketSubscription;
 
   TickerSyncCubit(
     this.api,
@@ -54,7 +56,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
     );
 
     final session = api.state.session;
-    _socketFuture!.then((socket) {
+    socketSubscription = await _socketFuture!.then((socket) {
       debugPrint('[sync] Connected');
       emit(const TickerSyncStateConnected());
 
@@ -79,6 +81,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
       debugPrint("[sync] Socket connection error: $err");
       _socketFuture = null;
       emit(TickerSyncStateDisconnected());
+      return null;
     });
   }
 
@@ -86,9 +89,15 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
 
   void disconnect(String reason) {
     //TODO: test timeout behavior
-    _socketFuture
-        ?.timeout(Duration.zero)
-        .then((socket) => socket.close(1001, reason));
+    try {
+      _socketFuture
+          ?.timeout(Duration.zero)
+          .then((socket) => socket.close(1001, reason));
+      socketSubscription?.cancel();
+    } on TimeoutException {
+      _socketFuture = null;
+      emit(TickerSyncStateDisconnected());
+    }
   }
 }
 
