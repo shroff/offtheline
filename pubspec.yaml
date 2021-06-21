@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  async: ^2.6.0
   auth_buttons: ^1.0.0
   bloc: ^7.0.0
   connectivity: ^3.0.3
