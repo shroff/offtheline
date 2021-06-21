@@ -10,6 +10,9 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   final T api;
   final Map<String, ApiActionDeserializer<T>> deserializers;
   late final Box<Map> _actions;
+  late final void Function(dynamic) _successfulResponseProcessor = (response) {
+    _sendNextRequest();
+  };
 
   ActionQueueCubit(this.api, this.deserializers)
       : super(ActionQueueState<T>()) {
@@ -24,6 +27,7 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
       _actions.clear();
     }
 
+    // Automatically dispatch actions when added to queue
     _actions.watch().listen((event) {
       emit(state.copyWithActions(
         _actions.values.map((data) => _deserializeAction(data)),
@@ -31,6 +35,7 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
       _sendNextRequest();
     });
 
+    // Logout
     api.stream.listen((apiState) {
       if (apiState.session == null) {
         if (_actions.isOpen) {
@@ -43,6 +48,9 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
       }
     });
 
+    // Try sending the next action when a successful resopnse is parsed
+    api.addResponseProcessor(_successfulResponseProcessor);
+
     emit(ActionQueueState<T>(
       ready: true,
       actions: _actions.values.map((data) => _deserializeAction(data)),
@@ -53,6 +61,7 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   @override
   Future<void> close() async {
     debugPrint('[action-queue] Closing');
+    api.removeResponseProcessor(_successfulResponseProcessor);
     await _actions.close();
     await super.close();
   }

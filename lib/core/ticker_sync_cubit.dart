@@ -27,6 +27,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   TickerSyncCubit(
     this.api,
   ) : super(const TickerSyncStateDisconnected(0)) {
+    // Logout
     api.stream.listen((apiState) {
       if (apiState.session == null) {
         debugPrint('[sync] Logging Out');
@@ -36,11 +37,14 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
       }
     });
 
+    // Exponential backoff
     stream.listen((TickerSyncState state) {
       if (state is TickerSyncStateDisconnected && state.attempt > 0) {
         _connect(state.attempt);
       }
     });
+
+    // Try connecting when a successful response is parsed
     api.addResponseProcessor(_successfulResponseProcessor);
 
     connect();
