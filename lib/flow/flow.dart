@@ -47,7 +47,7 @@ class FlowStep<T> {
   final Widget Function(BuildContext, GlobalKey<State>?) buildPage;
   final Function(T, BuildContext) setStateOnStart;
   final String Function(T, BuildContext)? generateNextStepName;
-  final String Function(T, BuildContext)? generateNextButtonText;
+  final String? Function(T, BuildContext)? generateNextButtonText;
   final bool Function(T, BuildContext)? nextEnabled;
   final FutureOr<bool> Function(T, BuildContext) onFinish;
 
