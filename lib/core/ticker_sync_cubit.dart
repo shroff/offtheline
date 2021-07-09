@@ -67,7 +67,6 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
 
   void disconnect(String reason) {
     debugPrint('[sync] Disconnect');
-    //TODO: test timeout behavior
     _delayOperation?.cancel();
     _connectOperation?.cancel();
     _socketSubscription?.cancel();
