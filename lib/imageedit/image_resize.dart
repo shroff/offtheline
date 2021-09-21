@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:exif/exif.dart';
@@ -12,14 +13,14 @@ import 'item_processor_stub.dart'
 const _jpegQuality = 80;
 
 class ImageProcessingData {
-  final List<int> bytes;
+  final Uint8List bytes;
   final Rect viewport;
   final int targetSize;
 
   ImageProcessingData(this.bytes, this.viewport, this.targetSize);
 }
 
-Future<List<int>> processImage<K>(
+Future<Uint8List> processImage<K>(
   bool useIsolateIfAvailable,
   ImageProcessingData image,
 ) {
@@ -30,14 +31,14 @@ Future<List<int>> processImage<K>(
       .then((result) => result[0]!);
 }
 
-Future<Map<K, List<int>>> processImages<K>(
+Future<Map<K, Uint8List>> processImages<K>(
   bool useIsolateIfAvailable,
   Map<K, ImageProcessingData> images,
 ) {
   return processItems(_processImage, useIsolateIfAvailable, images);
 }
 
-Future<List<int>> _processImage(ImageProcessingData data) async {
+Future<Uint8List> _processImage(ImageProcessingData data) async {
   image.Image? src;
 // Decode
   debugPrint('Decoding Image');
@@ -82,7 +83,7 @@ Future<List<int>> _processImage(ImageProcessingData data) async {
   debugPrint('Cropping Image');
   src = image.copyCrop(src, viewportLeft.toInt(), viewportTop.toInt(),
       viewportWidth.toInt(), viewportHeight.toInt());
-  List<int> result = image.encodeJpg(src, quality: _jpegQuality);
+  Uint8List result = image.encodeJpg(src, quality: _jpegQuality) as Uint8List;
   debugPrint('Image Size: ${result.length}');
 
 // Scale more as needed
@@ -94,7 +95,7 @@ Future<List<int>> _processImage(ImageProcessingData data) async {
     image.Image rescaled = (src.width < targetWidth)
         ? src
         : image.copyResize(src, width: targetWidth);
-    result = image.encodeJpg(rescaled, quality: _jpegQuality);
+    result = image.encodeJpg(rescaled, quality: _jpegQuality) as Uint8List;
     debugPrint('Resized to ${result.length} of $data.targetSize');
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:appcore/imageedit/imageedit.dart';
 import 'package:file_picker/file_picker.dart';
@@ -11,7 +12,7 @@ const _imageQuality = 80;
 
 class UploadFileData {
   final String fileName;
-  final List<int>? contents;
+  final Uint8List contents;
 
   String get fileNameBase => path.basenameWithoutExtension(fileName);
   String get fileNameExt => path.extension(fileName);
@@ -28,12 +29,12 @@ class ImageConstraints {
   ImageConstraints(this.maxSize, this.imageSquare, this.imageTargetSize);
 }
 
-
 Future<UploadFileData?> pickFile(
   BuildContext context,
   ImagePicker picker,
-  ImageConstraints constraints,
-) async {
+  ImageConstraints constraints, {
+  bool allowImagesOnly = false,
+}) async {
   Completer result = Completer<UploadFileData?>();
   showModalBottomSheet(
     context: context,
@@ -45,7 +46,8 @@ Future<UploadFileData?> pickFile(
           title: Text('Capture Image'),
           onTap: () async {
             Navigator.of(ctx).pop();
-            result.complete(_pickAndEditImage(context, picker, ImageSource.camera, constraints));
+            result.complete(_pickAndEditImage(
+                context, picker, ImageSource.camera, constraints));
           },
         ),
         ListTile(
@@ -62,11 +64,17 @@ Future<UploadFileData?> pickFile(
           title: Text('Pick File'),
           onTap: () async {
             Navigator.of(ctx).pop();
-            final picked = await FilePicker.platform.pickFiles(withData: true);
-            if (picked == null || !picked.isSinglePick) {
+            final picked = await FilePicker.platform.pickFiles(
+              type: allowImagesOnly ? FileType.image : FileType.any,
+              withData: true,
+            );
+            if (picked == null ||
+                !picked.isSinglePick ||
+                picked.files[0].bytes!.length > 1000000) {
               result.complete(null);
             } else {
-              result.complete(UploadFileData(picked.files[0].path!, picked.files[0].bytes));
+              result.complete(UploadFileData(
+                  picked.files[0].path!, picked.files[0].bytes!));
             }
           },
         ),

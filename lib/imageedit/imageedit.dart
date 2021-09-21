@@ -13,9 +13,9 @@ class ImageEditPage extends StatefulWidget {
   _ImageEditArgs args(BuildContext context) =>
       ModalRoute.of(context)!.settings.arguments as _ImageEditArgs;
 
-  static Future<List<int>?> navigateTo(BuildContext context,
-      List<int> imageBytes, ImageConstraints constraints) {
-    return Navigator.of(context).push<List<int>>(MaterialPageRoute(
+  static Future<Uint8List?> navigateTo(BuildContext context,
+      Uint8List imageBytes, ImageConstraints constraints) {
+    return Navigator.of(context).push<Uint8List>(MaterialPageRoute(
         builder: (context) => ImageEditPage(),
         settings: RouteSettings(
           arguments: _ImageEditArgs(imageBytes, constraints),
@@ -27,7 +27,7 @@ class ImageEditPage extends StatefulWidget {
 }
 
 class _ImageEditArgs {
-  final List<int> imageBytes;
+  final Uint8List imageBytes;
   final ImageConstraints constraints;
 
   _ImageEditArgs(this.imageBytes, this.constraints);
@@ -44,7 +44,7 @@ class _ImageEditState extends State<ImageEditPage> {
       initialized = true;
       final args = widget.args(context);
       ui
-          .instantiateImageCodec(args.imageBytes as Uint8List)
+          .instantiateImageCodec(args.imageBytes)
           .then((codec) => codec.getNextFrame())
           .then((frame) => frame.image)
           .then((image) {
@@ -76,7 +76,7 @@ class _ImageEditState extends State<ImageEditPage> {
                   imageData!.viewport,
                   args.constraints.imageTargetSize,
                 );
-                List<int> result;
+                Uint8List result;
                 showProgressDialog(
                   context,
                   message: "Processing...",
