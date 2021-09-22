@@ -9,6 +9,7 @@ import 'package:path/path.dart' as path;
 
 const _imageMaxDimension = 800.0;
 const _imageQuality = 80;
+const _imageExtensions = ["jpg", "jpeg", "png", "webp"];
 
 class UploadFileData {
   final String fileName;
@@ -68,14 +69,33 @@ Future<UploadFileData?> pickFile(
               type: allowImagesOnly ? FileType.image : FileType.any,
               withData: true,
             );
-            if (picked == null ||
-                !picked.isSinglePick ||
-                picked.files[0].bytes!.length > 1000000) {
+            if (picked == null || !picked.isSinglePick) {
               result.complete(null);
-            } else {
-              result.complete(UploadFileData(
-                  picked.files[0].path!, picked.files[0].bytes!));
+              return;
             }
+
+            final file = picked.files[0];
+            Uint8List contents = file.bytes!;
+            UploadFileData? uploadData = UploadFileData(file.path!, contents);
+
+            if (file.extension != null &&
+                _imageExtensions.contains(file.extension!.toLowerCase())) {
+              final editedImageData = await ImageEditPage.navigateTo(
+                context,
+                file.bytes!,
+                constraints,
+              );
+              if (editedImageData == null) {
+                uploadData = null;
+              } else {
+                uploadData = UploadFileData("image.jpg", editedImageData);
+              }
+            }
+            if ((uploadData?.contents.length ?? 0) > 1000000) {
+              uploadData = null;
+            }
+
+            result.complete(uploadData);
           },
         ),
       ],
