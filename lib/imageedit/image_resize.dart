@@ -66,8 +66,8 @@ Future<Uint8List> _processImage(ImageProcessingData data) async {
   debugPrint('Scaled: ${src.width}x${src.height}');
 
 // Apply orientation
-  src = _applyExifOrientation(src, orientation);
-  debugPrint('Rotated image: ${src.width}x${src.height}');
+  // src = _applyExifOrientation(src, orientation);
+  // debugPrint('Rotated image: ${src.width}x${src.height}');
 
 // Scale Viewport
   debugPrint('Scaling viewport');
