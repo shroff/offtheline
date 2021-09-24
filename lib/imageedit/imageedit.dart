@@ -1,238 +1,170 @@
-library imageedit;
-
-import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'image_resize.dart';
+import 'package:extended_image/extended_image.dart';
+import 'package:image_editor/image_editor.dart';
 
 class ImageEditPage extends StatefulWidget {
-  _ImageEditArgs args(BuildContext context) =>
-      ModalRoute.of(context)!.settings.arguments as _ImageEditArgs;
+  final String path;
+  final int maxUploadSize;
+  final bool square;
+  final int maxPixelArea;
 
-  static Future<Uint8List?> navigateTo(BuildContext context,
-      Uint8List imageBytes, ImageConstraints constraints) {
-    return Navigator.of(context).push<Uint8List>(MaterialPageRoute(
-        builder: (context) => ImageEditPage(),
-        settings: RouteSettings(
-          arguments: _ImageEditArgs(imageBytes, constraints),
-        )));
-  }
-
-  @override
-  State<ImageEditPage> createState() => _ImageEditState();
-}
-
-class _ImageEditArgs {
-  final Uint8List imageBytes;
-  final ImageConstraints constraints;
-
-  _ImageEditArgs(this.imageBytes, this.constraints);
-}
-
-class _ImageEditState extends State<ImageEditPage> {
-  bool initialized = false;
-  ImageData? imageData;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!initialized) {
-      initialized = true;
-      final args = widget.args(context);
-      ui
-          .instantiateImageCodec(args.imageBytes)
-          .then((codec) => codec.getNextFrame())
-          .then((frame) => frame.image)
-          .then((image) {
-        setState(() {
-          imageData = ImageData.create(image, args.constraints.imageSquare);
-        });
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: Text('Crop'),
-          leading: IconButton(
-            icon: Icon(Icons.close),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          actions: <Widget>[
-            IconButton(
-              icon: Icon(Icons.check),
-              onPressed: () async {
-                if (imageData == null) return;
-                final args = widget.args(context);
-                final data = ImageProcessingData(
-                  args.imageBytes,
-                  imageData!.viewport,
-                  args.constraints.imageTargetSize,
-                );
-                Uint8List result;
-                showProgressDialog(
-                  context,
-                  message: "Processing...",
-                ).then((value) =>
-                    value != null ? Navigator.of(context).pop(value) : null);
-
-                try {
-                  result = await processImage(true, data);
-                  Navigator.of(context).pop(result);
-                } catch (e) {
-                  Navigator.of(context).pop(null);
-                  showAlertDialog(
-                    context,
-                    title: "Error processing image",
-                    message: e.toString(),
-                  );
-                }
-              },
-            )
-          ],
-        ),
-        body: imageData != null
-            ? ImageViewportTransformer(
-                imageData: imageData!,
-                onUpdateViewport: (Rect viewport) {
-                  setState(() {
-                    imageData = imageData!.withViewport(viewport);
-                  });
-                },
-              )
-            : Center(
-                child: CircularProgressIndicator(),
-              ),
-      );
-}
-
-class ImageViewportTransformer extends StatefulWidget {
-  final ImageData imageData;
-  final Function(Rect) onUpdateViewport;
-
-  const ImageViewportTransformer({
+  ImageEditPage({
     Key? key,
-    required this.imageData,
-    required this.onUpdateViewport,
+    required this.path,
+    required this.maxUploadSize,
+    required this.square,
+    required this.maxPixelArea,
   }) : super(key: key);
 
   @override
-  State<ImageViewportTransformer> createState() =>
-      _ImageViewportTransformerState();
+  _ImageEditPageState createState() => _ImageEditPageState();
+
+  static Future<Uint8List?> start(
+    BuildContext context,
+    String path,
+    ImageConstraints constraints,
+  ) {
+    return Navigator.of(context).push<Uint8List>(MaterialPageRoute(
+      builder: (context) => ImageEditPage(
+        path: path,
+        square: constraints.imageSquare,
+        maxUploadSize: constraints.maxSize,
+        maxPixelArea: constraints.maxPixelArea,
+      ),
+      settings: RouteSettings(
+        name: 'editImage',
+      ),
+    ));
+  }
 }
 
-class _ImageViewportTransformerState extends State<ImageViewportTransformer> {
-  late double imageWidth;
-  late double imageHeight;
-  late Rect viewport;
-  late Offset startOffset;
-  double viewportCanvasRatio = 1;
-
+class _ImageEditPageState extends State<ImageEditPage> {
+  final GlobalKey<ExtendedImageEditorState> editorKey = GlobalKey();
+  late final ImageProvider provider;
   @override
   void initState() {
     super.initState();
-    imageWidth = widget.imageData.image.width.toDouble();
-    imageHeight = widget.imageData.image.height.toDouble();
-    viewport = widget.imageData.viewport;
+    provider = ExtendedFileImageProvider(File(widget.path), cacheRawData: true);
   }
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: GestureDetector(
-          onScaleStart: (ScaleStartDetails details) {
-            viewportCanvasRatio =
-                widget.imageData.viewport.width / context.size!.width;
-            startOffset = details.focalPoint;
-          },
-          onScaleUpdate: (ScaleUpdateDetails details) {
-            final viewport = widget.imageData.viewport;
-            final newWidth = viewport.width / details.scale;
-            final scale = (newWidth) > imageWidth
-                ? viewport.width / imageWidth
-                : (newWidth < 200)
-                    ? viewport.width / 200
-                    : details.scale;
-            final width = viewport.width / scale;
-            final height = viewport.height / scale;
-            final effectiveScale = viewportCanvasRatio / scale;
-            final left = viewport.left +
-                (startOffset.dx - details.focalPoint.dx) * effectiveScale +
-                ((viewport.width - width) / 2);
-            final top = viewport.top +
-                (startOffset.dy - details.focalPoint.dy) * effectiveScale +
-                ((viewport.height - height) / 2);
-            setState(() {
-              this.viewport = Rect.fromLTWH(
-                  max(0, min(left, imageWidth - width)),
-                  max(0, min(top, imageHeight - height)),
-                  width,
-                  height);
-            });
-          },
-          onScaleEnd: (ScaleEndDetails details) {
-            widget.onUpdateViewport(viewport);
-          },
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: 200, maxWidth: 400),
-            child: AspectRatio(
-              aspectRatio: widget.imageData.viewport.width /
-                  widget.imageData.viewport.height,
-              child: CustomPaint(
-                painter: ImageDataPainter(
-                    imageData: widget.imageData.withViewport(viewport)),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit Image'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.check),
+            onPressed: () async {
+              final result = await performEdits();
+              if (result != null) {
+                Navigator.of(context).pop(result);
+              }
+            },
+          ),
+        ],
+      ),
+      body: Container(
+        height: double.infinity,
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: ExtendedImage(
+                image: provider,
+                extendedImageEditorKey: editorKey,
+                mode: ExtendedImageMode.editor,
+                fit: BoxFit.contain,
+                initEditorConfigHandler: (_) => EditorConfig(
+                  maxScale: 8.0,
+                  cropRectPadding: const EdgeInsets.all(20.0),
+                  hitTestSize: 20.0,
+                  cropAspectRatio: widget.square ? 1.0 : null,
+                ),
               ),
             ),
-          ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  onPressed: () {
+                    editorKey.currentState?.rotate(right: false);
+                  },
+                  icon: Icon(Icons.rotate_left),
+                ),
+                IconButton(
+                  onPressed: () {
+                    editorKey.currentState?.flip();
+                  },
+                  icon: Icon(Icons.flip),
+                ),
+                IconButton(
+                  onPressed: () {
+                    editorKey.currentState?.rotate(right: true);
+                  },
+                  icon: Icon(Icons.rotate_right),
+                ),
+              ],
+            ),
+          ],
         ),
-      );
-}
-
-class ImageData {
-  final ui.Image image;
-  final Rect viewport;
-
-  const ImageData._(this.image, this.viewport);
-
-  static ImageData create(ui.Image image, bool square) {
-    final imageWidth = image.width.toDouble();
-    final imageHeight = image.height.toDouble();
-    final minDimension = min(imageWidth, imageHeight);
-    final viewport = square
-        ? Rect.fromLTWH(max(0, imageWidth - imageHeight) / 2,
-            max(0, imageHeight - imageWidth) / 2, minDimension, minDimension)
-        : Rect.fromLTWH(0, 0, imageWidth, imageHeight);
-    return ImageData._(image, viewport);
+      ),
+    );
   }
 
-  ImageData withViewport(Rect viewport) {
-    return ImageData._(image, viewport);
-  }
-}
+  Future<Uint8List?> performEdits() async {
+    final ExtendedImageEditorState? state = editorKey.currentState;
+    if (state == null) {
+      return null;
+    }
+    final Rect? rect = state.getCropRect();
+    if (rect == null) {
+      return null;
+    }
 
-class ImageDataPainter extends CustomPainter {
-  final ImageData imageData;
-  final Paint defaultPaint = Paint();
+    final EditActionDetails action = state.editAction!;
+    final double radian = action.rotateAngle;
 
-  ImageDataPainter({required this.imageData});
+    final bool flipHorizontal = action.flipY;
+    final bool flipVertical = action.flipX;
+    final Uint8List? img = state.rawImageData;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    Rect whole = Rect.fromLTWH(0, 0, size.width, size.height);
-    canvas.drawImageRect(
-        imageData.image, imageData.viewport, whole, defaultPaint);
-    canvas.restore();
-  }
+    if (img == null) {
+      return null;
+    }
 
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
+    final ImageEditorOption option = ImageEditorOption();
+
+    option.addOption(ClipOption.fromRect(rect));
+    option.addOption(
+        FlipOption(horizontal: flipHorizontal, vertical: flipVertical));
+    if (action.hasRotateAngle) {
+      option.addOption(RotateOption(radian.toInt()));
+    }
+
+    final px = rect.size.width * rect.size.height;
+    if (px > widget.maxPixelArea) {
+      double scale = sqrt(px / widget.maxPixelArea);
+      option.addOption(ScaleOption((rect.size.width * scale).toInt(),
+          (rect.size.height * scale).toInt()));
+    }
+
+    option.outputFormat = const OutputFormat.jpeg(80);
+
+    final DateTime start = DateTime.now();
+    final Uint8List? result = await ImageEditor.editImage(
+      image: img,
+      imageEditorOption: option,
+    );
+
+    final Duration diff = DateTime.now().difference(start);
+
+    print('Processing time: $diff');
+    print('Output size: ${result?.length} bytes');
+
+    return result;
   }
 }

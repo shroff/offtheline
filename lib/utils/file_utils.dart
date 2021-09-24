@@ -25,9 +25,9 @@ class UploadFileData {
 class ImageConstraints {
   final int maxSize;
   final bool imageSquare;
-  final int imageTargetSize;
+  final int maxPixelArea;
 
-  ImageConstraints(this.maxSize, this.imageSquare, this.imageTargetSize);
+  ImageConstraints(this.maxSize, this.imageSquare, this.maxPixelArea);
 }
 
 Future<UploadFileData?> pickFile(
@@ -80,9 +80,9 @@ Future<UploadFileData?> pickFile(
 
             if (file.extension != null &&
                 _imageExtensions.contains(file.extension!.toLowerCase())) {
-              final editedImageData = await ImageEditPage.navigateTo(
+              final editedImageData = await ImageEditPage.start(
                 context,
-                file.bytes!,
+                file.path!,
                 constraints,
               );
               if (editedImageData == null) {
@@ -110,7 +110,7 @@ Future<UploadFileData?> _pickAndEditImage(
   ImageSource source,
   ImageConstraints constraints,
 ) async {
-  final image = await picker.getImage(
+  final image = await picker.pickImage(
     source: source,
     maxWidth: _imageMaxDimension,
     maxHeight: _imageMaxDimension,
@@ -118,12 +118,12 @@ Future<UploadFileData?> _pickAndEditImage(
   );
   if (image == null) return null;
 
-  final editedImageData = await ImageEditPage.navigateTo(
+  final editedImage = await ImageEditPage.start(
     context,
-    await image.readAsBytes(),
+    image.path,
     constraints,
   );
 
-  if (editedImageData == null) return null;
-  return UploadFileData(image.path, editedImageData);
+  if (editedImage == null) return null;
+  return UploadFileData(image.path, editedImage);
 }

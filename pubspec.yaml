@@ -21,7 +21,9 @@ dependencies:
   hive_flutter: ^1.0.0
   http: ^0.13.0
   image: ^3.0.2
-  image_picker: ^0.7.3
+  image_picker: ^0.8.4
+  image_editor: ^1.0.1
+  extended_image: ^4.2.1
   intl: ^0.17.0
   localstorage: ^4.0.0
   uri:
