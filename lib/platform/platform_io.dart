@@ -5,15 +5,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart';
 import 'package:http/io_client.dart';
 
-import 'storage.dart';
+import 'proxied_storage.dart';
+import 'proxied_local_storage.dart';
 
 BaseClient createHttpClient() => IOClient();
 
-Storage createStorage() => Platform.isAndroid || Platform.isIOS
+ProxiedStorage createStorage() => Platform.isAndroid || Platform.isIOS
     ? _ProxiedSecureStorage()
     : ProxiedLocalStorage('core');
 
-class _ProxiedSecureStorage extends Storage {
+class _ProxiedSecureStorage extends ProxiedStorage {
   final storage = FlutterSecureStorage();
 
   @override

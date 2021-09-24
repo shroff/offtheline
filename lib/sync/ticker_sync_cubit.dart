@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:appcore/core/api.dart';
+import '../api/api.dart';
 import 'package:async/async.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';

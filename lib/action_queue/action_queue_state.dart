@@ -1,4 +1,4 @@
-part of 'actions.dart';
+part of 'action_queue.dart';
 
 class ActionQueueState<T extends ApiCubit> {
   final bool ready;

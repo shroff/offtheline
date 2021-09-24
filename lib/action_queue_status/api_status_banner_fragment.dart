@@ -1,7 +1,8 @@
-import 'package:appcore/api_details/api_status_page.dart';
-import 'package:appcore/actions/actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'api_status_page.dart';
+import '../action_queue/action_queue.dart';
 
 class ApiStatusBannerFragment<T extends ActionQueueCubit>
     extends StatelessWidget {

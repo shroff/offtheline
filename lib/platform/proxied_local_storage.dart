@@ -2,19 +2,9 @@ import 'dart:async';
 
 import 'package:localstorage/localstorage.dart';
 
-abstract class Storage {
-  FutureOr<bool> initialize();
+import 'proxied_storage.dart';
 
-  Future<String?> read({required String key});
-
-  Future<void> write({required String key, required String value});
-
-  Future<void> delete({required String key});
-
-  Future<void> deleteAll();
-}
-
-class ProxiedLocalStorage extends Storage {
+class ProxiedLocalStorage extends ProxiedStorage {
   final LocalStorage storage;
 
   ProxiedLocalStorage(String filename)
