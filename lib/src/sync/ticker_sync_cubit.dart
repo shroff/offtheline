@@ -5,7 +5,7 @@ import 'dart:math';
 import '../api/api.dart';
 import 'package:async/async.dart';
 import 'package:bloc/bloc.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uri/uri.dart';
 
 const _delays = [0, 2, 4, 8, 16, 32, 64];

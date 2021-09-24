@@ -1,4 +1,4 @@
-import '../api/api.dart';
+import 'package:appcore/appcore.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

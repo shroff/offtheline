@@ -1,4 +1,4 @@
-import 'package:appcore/action_queue/action_queue.dart';
+import 'package:appcore/src/action_queue/action_queue.dart';
 import 'package:appcore/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -73,10 +73,24 @@ class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
                         IconButton(
                           icon: Icon(Icons.info_outline),
                           onPressed: () {
-                            showAlertDialog(
-                              context,
-                              title: queue.generateDescription(request),
-                              message: queue.generatePayloadDetails(request),
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => AlertDialog(
+                                title: Text(queue.generateDescription(request)),
+                                content: Text(
+                                  queue.generatePayloadDetails(request),
+                                  softWrap: true,
+                                ),
+                                actions: <Widget>[
+                                  ElevatedButton(
+                                    child: const Text('OK'),
+                                    onPressed: () {
+                                      Navigator.of(context).pop(true);
+                                    },
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         ),
