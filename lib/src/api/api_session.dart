@@ -1,4 +1,4 @@
-import 'dart:convert';
+part of 'api.dart';
 
 abstract class ApiSession {
   String get sessionId;

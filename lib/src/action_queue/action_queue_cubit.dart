@@ -6,6 +6,9 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
+typedef ApiActionDeserializer<T extends ApiCubit> = ApiAction<T> Function(
+    Map<String, dynamic> props, dynamic data);
+
 class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   final T api;
   final Map<String, ApiActionDeserializer<T>> deserializers;

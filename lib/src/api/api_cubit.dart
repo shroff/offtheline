@@ -5,14 +5,11 @@ const _boxNamePersist = 'apiMetadata';
 const _keyBaseApiUrl = 'baseApiUrl';
 const _keyLoginSession = 'loginSession';
 
-typedef ApiActionDeserializer<T extends ApiCubit> = ApiAction<T> Function(
-    Map<String, dynamic> props, dynamic data);
-
 typedef ResponseProcessor = FutureOr<void> Function(
     Map<String, dynamic> response);
 
 abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
-  final BaseClient _client = createHttpClient();
+  final Client _client = Client();
   final processingResponses = ValueNotifier<int>(0);
   final List<ResponseProcessor> _responseProcessors = [];
   final Uri? _fixedApiBase;
