@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'api_status_page.dart';
-import '../action_queue/action_queue.dart';
+import '/src/api/api.dart';
 
-class ApiStatusBannerFragment<T extends ActionQueueCubit>
-    extends StatelessWidget {
+class ApiStatusBannerFragment<T extends DomainApi> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -15,7 +14,7 @@ class ApiStatusBannerFragment<T extends ActionQueueCubit>
 
   @override
   Widget build(BuildContext context) {
-    final qState = context.select((T queue) => queue.state);
+    final qState = context.watch<T>();
     if (qState.actions.isEmpty) return Container();
     final pendingRequests = qState.actions.length == 1
         ? '1 entry pending'
@@ -23,10 +22,7 @@ class ApiStatusBannerFragment<T extends ActionQueueCubit>
 
     IconData icon;
     String statusText;
-    if (!qState.ready) {
-      icon = Icons.sync;
-      statusText = 'Initializing';
-    } else if (qState.submitting) {
+    if (qState.submitting) {
       icon = Icons.sync;
       statusText = 'Submitting';
     } else if (qState.paused) {

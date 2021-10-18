@@ -73,7 +73,7 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
 
     emit(const ApiStateLoggingIn());
     try {
-      final response = await sendRequest(request);
+      final response = await _sendRequest(request);
       final error = await processLoginResponse(response);
       if (error == null) {
         this.apiBase = apiBase;
@@ -93,7 +93,7 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
         (value) => processingResponses.value = processingResponses.value - 1);
   }
 
-  Future<StreamedResponse> sendRequest(BaseRequest request) async {
+  Future<StreamedResponse> _sendRequest(BaseRequest request) async {
     debugPrint('[api] Sending request to ${request.url}');
     final session = state.session;
     populateHeaders(request.headers, session);

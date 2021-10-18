@@ -1,30 +1,27 @@
-import 'package:appcore/src/action_queue/action_queue.dart';
+import 'package:appcore/src/api/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
+class ApiStatusPage<T extends DomainApi> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final queue = context.watch<T>();
-    final qState = queue.state;
+    final api = context.watch<T>();
 
     String statusText;
-    if (!qState.ready) {
-      statusText = 'Initializing';
-    } else if (qState.submitting) {
+    if (api.submitting) {
       statusText = 'Submitting';
-    } else if (qState.paused) {
+    } else if (api.paused) {
       statusText = 'Paused';
-    } else if (qState.error?.isNotEmpty ?? false) {
+    } else if (api.error?.isNotEmpty ?? false) {
       statusText = 'Error';
     } else {
       statusText = 'Ready';
     }
 
-    final actions = qState.actions.toList(growable: false);
+    final actions = api.actions.toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -37,23 +34,21 @@ class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
               [
                 ListTile(
                   title: Text("Status: $statusText"),
-                  subtitle: qState.error?.isNotEmpty ?? false
-                      ? Text(qState.error!)
-                      : null,
-                  trailing:
-                      (qState.paused || (qState.error?.isNotEmpty ?? false))
+                  subtitle:
+                      api.error?.isNotEmpty ?? false ? Text(api.error!) : null,
+                  trailing: (api.paused || (api.error?.isNotEmpty ?? false))
+                      ? IconButton(
+                          icon: Icon(Icons.play_arrow),
+                          onPressed: () {
+                            api.resumeActionQueue();
+                          })
+                      : (allowPause && !api.paused)
                           ? IconButton(
-                              icon: Icon(Icons.play_arrow),
+                              icon: Icon(Icons.pause),
                               onPressed: () {
-                                queue.resume();
+                                api.pauseActionQueue();
                               })
-                          : (allowPause && !qState.paused)
-                              ? IconButton(
-                                  icon: Icon(Icons.pause),
-                                  onPressed: () {
-                                    queue.pause();
-                                  })
-                              : null,
+                          : null,
                 ),
                 Divider(),
               ],
@@ -64,7 +59,7 @@ class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
               (context, i) {
                 final request = actions[i];
                 return ListTile(
-                  title: Text(queue.generateDescription(request)),
+                  title: Text(request.generateDescription(api)),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -75,9 +70,9 @@ class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
                             context: context,
                             barrierDismissible: false,
                             builder: (context) => AlertDialog(
-                              title: Text(queue.generateDescription(request)),
+                              title: Text(request.generateDescription(api)),
                               content: Text(
-                                queue.generatePayloadDetails(request),
+                                request.generatePayloadDetails(api),
                                 softWrap: true,
                               ),
                               actions: <Widget>[
@@ -94,7 +89,7 @@ class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
                       ),
                       IconButton(
                         icon: Icon(Icons.delete_outline),
-                        onPressed: (i == 0 && qState.submitting)
+                        onPressed: (i == 0 && api.submitting)
                             ? null
                             : () async {
                                 final confirm = await showDialog(
@@ -103,7 +98,7 @@ class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
                                     title: Text('Delete Record'),
                                     content: Text(
                                         'You are about to delete the following record:\n\n'
-                                        '${queue.generateDescription(request)}\n\n'
+                                        '${request.generateDescription(api)}\n\n'
                                         'It will not be submitted to the server, and you will not be able to recover it.\n\n'
                                         'Are you sure you want to do this?'),
                                     actions: <Widget>[
@@ -123,7 +118,7 @@ class ApiStatusPage<T extends ActionQueueCubit> extends StatelessWidget {
                                   ),
                                 );
                                 if (confirm ?? false) {
-                                  queue.removeAt(i);
+                                  api.removeActionAt(i);
                                 }
                               },
                       ),
