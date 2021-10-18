@@ -6,10 +6,10 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-typedef ApiActionDeserializer<T extends ApiCubit> = ApiAction<T> Function(
+typedef ApiActionDeserializer<T extends DomainApi> = ApiAction<T> Function(
     Map<String, dynamic> props, dynamic data);
 
-class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
+class ActionQueueCubit<T extends DomainApi> extends Cubit<ActionQueueState<T>> {
   final T api;
   final Map<String, ApiActionDeserializer<T>> deserializers;
   late final Box<Map> _actions;
@@ -25,30 +25,12 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   void _initialize() async {
     _actions = await Hive.openBox(_boxNameActionQueue);
 
-    final session = api.state.session;
-    if (session == null) {
-      _actions.clear();
-    }
-
     // Automatically dispatch actions when added to queue
     _actions.watch().listen((event) {
       emit(state.copyWithActions(
         _actions.values.map((data) => _deserializeAction(data)),
       ));
       _sendNextRequest();
-    });
-
-    // Logout
-    api.stream.listen((apiState) {
-      if (apiState.session == null) {
-        if (_actions.isOpen) {
-          _actions.clear();
-        }
-        emit(ActionQueueState<T>(
-          ready: true,
-          actions: [],
-        ));
-      }
     });
 
     // Try sending the next action when a successful resopnse is parsed
@@ -61,9 +43,19 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
     _sendNextRequest();
   }
 
+  Future<void> clear() async {
+    if (_actions.isOpen) {
+      await _actions.clear();
+    }
+    emit(ActionQueueState<T>(
+      ready: true,
+      actions: [],
+    ));
+  }
+
   @override
   Future<void> close() async {
-    debugPrint('[action-queue] Closing');
+    debugPrint('[actions] Closing');
     api.removeResponseProcessor(_successfulResponseProcessor);
     await _actions.close();
     await super.close();
@@ -79,13 +71,9 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   }
 
   Future<void> add(ApiAction<T> action) async {
-    final session = api.state.session;
-    if (session == null) {
-      return;
-    }
-
     await action.applyOptimisticUpdate(api);
-    debugPrint('[api] Request enqueued: ${action.generateDescription(api)}');
+    debugPrint(
+        '[actions] Request enqueued: ${action.generateDescription(api)}');
     await _actions.add({
       _keyActionName: action.name,
       _keyActionProps: action.toMap(),
@@ -94,11 +82,6 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   }
 
   Future<void> removeAt(int index, {bool revert = true}) async {
-    final session = api.state.session;
-    if (session == null) {
-      return;
-    }
-
     if (index >= _actions.length || (index == 0 && state.submitting)) {
       return;
     }
@@ -109,7 +92,8 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
     }
 
     if (kDebugMode) {
-      debugPrint('[api] Deleting request: ${action.generateDescription(api)}');
+      debugPrint(
+          '[aapipi] Deleting request: ${action.generateDescription(api)}');
     }
     if (index == 0 && state.error != null) {
       // Cannot be submitting request at index 0
@@ -119,12 +103,12 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   }
 
   void pause() {
-    debugPrint('[api] Pausing');
+    debugPrint('[aapipi] Pausing');
     emit(state.copyWithPaused(true));
   }
 
   void resume() {
-    debugPrint('[api] Resuming');
+    debugPrint('[aapipi] Resuming');
     emit(state.copyWithPaused(false));
     _sendNextRequest();
   }
@@ -138,11 +122,6 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
   }
 
   void _sendNextRequest() async {
-    if (api.state.session == null) {
-      return;
-    }
-    final session = api.state.session;
-
     if (_actions.isEmpty ||
         (state.error?.isNotEmpty ?? false) ||
         state.paused ||
@@ -156,8 +135,6 @@ class ActionQueueCubit<T extends ApiCubit> extends Cubit<ActionQueueState<T>> {
     final request = action.createRequest(api);
 
     final error = await api.sendRequest(request);
-
-    if (session!.sessionId != api.state.session?.sessionId) return;
 
     emit(state.copyWithSubmitting(false, error));
     if (error == null) {

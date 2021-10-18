@@ -11,7 +11,7 @@ import 'package:uri/uri.dart';
 const _delays = [0, 2, 4, 8, 16, 32, 64];
 
 abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
-  final ApiCubit api;
+  final DomainApi api;
 
   late final void Function(dynamic) _successfulResponseProcessor = (response) {
     if (state is TickerSyncStateDisconnected) {
@@ -27,16 +27,6 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   TickerSyncCubit(
     this.api,
   ) : super(const TickerSyncStateDisconnected(0)) {
-    // Logout
-    api.stream.listen((apiState) {
-      if (apiState.session == null) {
-        debugPrint('[sync] Logging Out');
-        disconnect('logout');
-      } else {
-        connect();
-      }
-    });
-
     // Exponential backoff
     stream.listen((TickerSyncState state) {
       if (state is TickerSyncStateDisconnected && state.attempt > 0) {
@@ -94,8 +84,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
       debugPrint('Delay finished: $delaySeconds');
     }
 
-    if (api.state is! ApiStateLoggedIn ||
-        state is! TickerSyncStateDisconnected) {
+    if (state is! TickerSyncStateDisconnected) {
       return;
     }
 
@@ -105,7 +94,6 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
     debugPrint('[sync] Connecting');
     emit(const TickerSyncStateConnecting());
 
-    final session = api.state.session;
     final operation = CancelableOperation.fromFuture(WebSocket.connect(
       uriBuilder.toString(),
       headers: api.headers,
@@ -116,7 +104,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
       _socket = await operation.valueOrCancellation();
 
       _socketSubscription = _socket?.listen((message) {
-        api.parseResponseString(message, requestSession: session);
+        api.parseResponseString(message);
       }, onError: (err) {
         final socket = _socket;
         _socket = null;

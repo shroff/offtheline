@@ -1,6 +1,6 @@
 part of 'action_queue.dart';
 
-class ActionQueueState<T extends ApiCubit> {
+class ActionQueueState<T extends DomainApi> {
   final bool ready;
   final Iterable<ApiAction<T>> actions;
   final bool paused;

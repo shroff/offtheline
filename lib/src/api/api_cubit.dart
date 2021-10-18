@@ -1,18 +1,14 @@
 part of 'api.dart';
 
-const _boxNamePersist = 'apiMetadata';
+const _boxNamePersist = 'api';
 
 const _keyBaseApiUrl = 'baseApiUrl';
 const _keyLoginSession = 'loginSession';
 
-typedef ResponseProcessor = FutureOr<void> Function(
-    Map<String, dynamic> response);
-
 abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
   final Client _client = Client();
-  final processingResponses = ValueNotifier<int>(0);
-  final List<ResponseProcessor> _responseProcessors = [];
   final Uri? _fixedApiBase;
+  final processingResponses = ValueNotifier<int>(0);
   late final Box _persist;
 
   Uri _apiBase = Uri();
@@ -59,22 +55,6 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
     headers = Map.unmodifiable(populateHeaders({}, change.nextState.session));
   }
 
-  E? getMetadata<E>(String key, {E? defaultValue}) {
-    return _persist.get(key, defaultValue: defaultValue);
-  }
-
-  Future<void> putMetadata<E>(String key, E value) {
-    return _persist.put(key, value);
-  }
-
-  void addResponseProcessor(ResponseProcessor processor) {
-    _responseProcessors.add(processor);
-  }
-
-  void removeResponseProcessor(ResponseProcessor processor) {
-    _responseProcessors.remove(processor);
-  }
-
   String createUrl(String path) {
     return createUriBuilder(path).toString();
   }
@@ -85,80 +65,45 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
     return builder;
   }
 
+  @nonVirtual
   Future<String?> login(BaseRequest request, Uri apiBase) async {
     if (state is! ApiStateLoggedOut) {
       return "Not Logged Out";
     }
 
     emit(const ApiStateLoggingIn());
-    final error = await sendRequest(request);
-    if (error == null) {
-      this.apiBase = apiBase;
+    try {
+      final response = await sendRequest(request);
+      final error = await processLoginResponse(response);
+      if (error == null) {
+        this.apiBase = apiBase;
+      }
+      return error;
+    } finally {
+      // Failsafe, in case there was an error in parseResponseString
+      if (state is ApiStateLoggingIn) {
+        emit(const ApiStateLoggedOut());
+      }
     }
-
-    // Failsafe, in case there was an error in parseResponseString
-    if (state is ApiStateLoggingIn) {
-      emit(const ApiStateLoggedOut());
-    }
-
-    return error;
   }
 
-  Future<String?> sendRequest(BaseRequest request) async {
+  void registerOngoingOperation(Completer completer) {
+    processingResponses.value = processingResponses.value + 1;
+    completer.future.then(
+        (value) => processingResponses.value = processingResponses.value - 1);
+  }
+
+  Future<StreamedResponse> sendRequest(BaseRequest request) async {
     debugPrint('[api] Sending request to ${request.url}');
     final session = state.session;
     populateHeaders(request.headers, session);
-    try {
-      final response = await _client.send(request);
-      String responseString = await response.stream.bytesToString();
+    final response = await _client.send(request);
 
-      // Show request result
-      if (response.statusCode == 200) {
-        await parseResponseString(
-          responseString,
-          requestSession: session,
-        );
-        return null;
-      } else {
-        return responseString;
-      }
-    } catch (e) {
-      if (e is SocketException) {
-        return 'Server Unreachable';
-      } else {
-        return e.toString();
-      }
-    }
-  }
+    final sessionId = state.session?.sessionId;
+    if (state is ApiStateLoggingOut || sessionId != session?.sessionId)
+      throw Exception("Invalid Session");
 
-  Future<void> parseResponseString(
-    String responseString, {
-    required S? requestSession,
-  }) async {
-    if (responseString.isNotEmpty) {
-      final sessionId = state.session?.sessionId;
-      if (state is ApiStateLoggingOut || sessionId != requestSession?.sessionId)
-        return;
-
-      processingResponses.value = processingResponses.value + 1;
-
-      try {
-        final responseMap = json.decode(responseString) as Map<String, dynamic>;
-        debugPrint('[api] Parsing response');
-        S? parsedSession = await processResponse(responseMap);
-        for (final processResponse in _responseProcessors) {
-          await processResponse(responseMap);
-        }
-        if (parsedSession != null) {
-          emit(ApiStateLoggedIn(parsedSession));
-        } else {
-          logout();
-        }
-      } finally {
-        processingResponses.value = processingResponses.value - 1;
-        debugPrint('[api] Response parsed');
-      }
-    }
+    return response;
   }
 
   Future<void> logout() async {
@@ -196,7 +141,7 @@ abstract class ApiCubit<S extends ApiSession> extends Cubit<ApiState<S>> {
   Map<String, String> populateHeaders(Map<String, String> headers, S? session);
 
   @protected
-  FutureOr<S?> processResponse(Map<String, dynamic> responseMap);
+  FutureOr<String?> processLoginResponse(StreamedResponse response);
 
   @protected
   Future<void> clear();

@@ -1,7 +1,6 @@
 part of 'actions.dart';
 
-mixin FileUploadApiAction<S extends ApiSession, T extends ApiCubit<S>>
-    on ApiAction<T> {
+mixin FileUploadApiAction<T extends DomainApi> on ApiAction<T> {
   @override
   dynamic get binaryData => fileContents;
 

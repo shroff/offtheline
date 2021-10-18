@@ -2,8 +2,7 @@ part of 'actions.dart';
 
 const _contentType = 'application/json';
 
-mixin JsonApiAction<S extends ApiSession, T extends ApiCubit<S>>
-    on ApiAction<T> {
+mixin JsonApiAction<T extends DomainApi> on ApiAction<T> {
   String get method;
   String get endpoint;
 

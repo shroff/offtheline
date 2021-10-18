@@ -1,6 +1,6 @@
 part of 'actions.dart';
 
-abstract class ApiAction<T extends ApiCubit> {
+abstract class ApiAction<T extends DomainApi> {
   String get name;
 
   dynamic get binaryData => null;
