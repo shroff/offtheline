@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 
 import 'api_status_page.dart';
-import '/src/api/api.dart';
+import '/src/api_client/api_client.dart';
 
-class ApiStatusBannerFragment<A extends ApiClient> extends StatelessWidget {
+class ApiStatusBannerFragment extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -14,23 +14,23 @@ class ApiStatusBannerFragment<A extends ApiClient> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final api = context.watch<A>();
-    if (api.actions.isEmpty) return Container();
-    final pendingRequests = api.actions.length == 1
+    final queue = context.watch<ApiActionQueue>();
+    if (queue.actions.isEmpty) return Container();
+    final pendingRequests = queue.actions.length == 1
         ? '1 entry pending'
-        : '${api.actions.length} entries pending';
+        : '${queue.actions.length} entries pending';
 
     IconData icon;
     String statusText;
-    if (api.submitting) {
+    if (queue.submitting) {
       icon = Icons.sync;
       statusText = 'Submitting';
-    } else if (api.paused) {
+    } else if (queue.paused) {
       icon = Icons.pause_circle_outline;
       statusText = 'Paused';
-    } else if (api.error?.isNotEmpty ?? false) {
+    } else if (queue.error?.isNotEmpty ?? false) {
       icon = Icons.error_outline;
-      statusText = 'Error: ${api.error}';
+      statusText = 'Error: ${queue.error}';
     } else {
       icon = Icons.check_circle_outline;
       statusText = 'Ready';
@@ -39,7 +39,7 @@ class ApiStatusBannerFragment<A extends ApiClient> extends StatelessWidget {
     return InkWell(
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => ApiStatusPage<A>(allowPause: allowPause),
+          builder: (context) => ApiStatusPage(allowPause: allowPause),
         ));
       },
       child: Container(

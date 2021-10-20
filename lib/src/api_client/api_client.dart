@@ -1,12 +1,16 @@
-part of 'api.dart';
+library apiclient;
 
-const _keyActions = 'actions';
-const _keyActionName = 'name';
-const _keyActionProps = 'props';
-const _keyActionData = 'data';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
-typedef ApiActionDeserializer<A extends ApiClient> = ApiAction<A> Function(
-    Map<String, dynamic> props, dynamic data);
+import 'package:appcore/appcore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+import 'package:http/http.dart';
+import 'package:uri/uri.dart';
+
+part 'action_queue.dart';
 
 typedef ResponseProcessor = FutureOr<void> Function(
     Map<String, dynamic> response);
@@ -16,47 +20,27 @@ abstract class ApiClient with ChangeNotifier {
   final Client _client = Client();
   final Uri _apiBase;
   final List<ResponseProcessor> _responseProcessors = [];
+  @protected
+  final String name;
+  late final ApiActionQueue actionQueue = ApiActionQueue(this);
 
   Map<String, String> get requestHeaders;
   bool _closed = false;
   @protected
   bool get closed => _closed;
 
-  List<ApiAction> _actions;
-  Iterable<ApiAction> get actions => List.unmodifiable(_actions);
-
-  bool _paused = false;
-  bool get paused => _paused;
-
-  bool _submitting = false;
-  bool get submitting => _submitting;
-
-  String? _error;
-  String? get error => _error;
-
   ApiClient({
     required Uri apiBaseUrl,
-    required List<ApiAction> actions,
+    required this.name,
   })  : this._apiBase = apiBaseUrl,
-        this._actions = actions,
         super() {
-    _sendNextAction();
+    initialize();
   }
 
-  // ApiAction<T> _deserializeAction(Map<dynamic, dynamic> actionMap) {
-  //   final name = actionMap[_keyActionName];
-  //   assert(_deserializers.containsKey(name));
-  //   final props = actionMap[_keyActionProps] as Map;
-  //   final data = actionMap[_keyActionData];
-  //   final action = _deserializers[name]!(props.cast<String, dynamic>(), data);
-  //   return action;
-  // }
-
-  // _actions.map((action) => {
-  //       _keyActionName: action.name,
-  //       _keyActionProps: action.toMap(),
-  //       _keyActionData: action.binaryData,
-  //     })
+  @mustCallSuper
+  Future<void> initialize() async {
+    actionQueue.initialize(name);
+  }
 
   void registerOngoingOperation(Future future) {
     ongoingOperations.value = ongoingOperations.value + 1;
@@ -71,7 +55,7 @@ abstract class ApiClient with ChangeNotifier {
     if (closed) return;
     _closed = true;
 
-    _actions.clear();
+    actionQueue.close();
 
     // Wait for pending operations
     if (ongoingOperations.value != 0) {
@@ -141,6 +125,10 @@ abstract class ApiClient with ChangeNotifier {
     }
   }
 
+  Future<void> addAction(ApiAction action) async {
+    return actionQueue.addAction(action);
+  }
+
   Future<void> parseResponseString(String responseString) async {
     final completer = Completer<void>();
     try {
@@ -151,7 +139,7 @@ abstract class ApiClient with ChangeNotifier {
         for (final processResponse in _responseProcessors) {
           await processResponse(responseMap);
         }
-        _sendNextAction();
+        actionQueue._sendNextAction();
       }
     } finally {
       completer.complete();
@@ -164,70 +152,4 @@ abstract class ApiClient with ChangeNotifier {
 
   @protected
   FutureOr<String> processErrorResponse(String errorString) => errorString;
-
-  Future<void> addAction(ApiAction action) async {
-    if (closed) return;
-    await action.applyOptimisticUpdate(this);
-    debugPrint(
-        '[actions] Request enqueued: ${action.generateDescription(this)}');
-    _actions.add(action);
-  }
-
-  Future<void> removeActionAt(int index, {bool revert = true}) async {
-    if (closed) return;
-    if (index >= _actions.length || (index == 0 && submitting)) {
-      return;
-    }
-
-    final action = _actions.removeAt(index);
-    if (revert) {
-      await action.revertOptimisticUpdate(this);
-    }
-
-    if (kDebugMode) {
-      debugPrint(
-          '[actions] Deleting request: ${action.generateDescription(this)}');
-    }
-    if (index == 0 && error != null) {
-      _error = null;
-    }
-    notifyListeners();
-  }
-
-  void pauseActionQueue() {
-    debugPrint('[actions] Pausing');
-    _paused = true;
-    notifyListeners();
-  }
-
-  void resumeActionQueue() {
-    debugPrint('[actions] Resuming');
-    _paused = false;
-    _sendNextAction();
-    notifyListeners();
-  }
-
-  void _sendNextAction() async {
-    if (closed ||
-        _actions.isEmpty ||
-        (this.error?.isNotEmpty ?? false) ||
-        paused ||
-        submitting) {
-      return;
-    }
-
-    _submitting = true;
-    notifyListeners();
-
-    final action = _actions[0];
-    final request = action.createRequest(this);
-
-    _error = await sendRequest(request);
-    _submitting = false;
-    notifyListeners();
-
-    if (error == null) {
-      removeActionAt(0, revert: false);
-    }
-  }
 }
