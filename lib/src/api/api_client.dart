@@ -5,19 +5,25 @@ const _keyActionName = 'name';
 const _keyActionProps = 'props';
 const _keyActionData = 'data';
 
-typedef ApiActionDeserializer<T extends ApiCubit> = ApiAction<T> Function(
+typedef ApiActionDeserializer<A extends ApiClient> = ApiAction<A> Function(
     Map<String, dynamic> props, dynamic data);
 
 typedef ResponseProcessor = FutureOr<void> Function(
     Map<String, dynamic> response);
 
-abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
-  final T _api;
+abstract class ApiClient with ChangeNotifier {
+  final ongoingOperations = ValueNotifier<int>(0);
+  final Client _client = Client();
+  final Uri _apiBase;
   final List<ResponseProcessor> _responseProcessors = [];
-  Map<String, String> get headers => _api.headers;
 
-  List<ApiAction<T>> _actions;
-  Iterable<ApiAction<T>> get actions => List.unmodifiable(_actions);
+  Map<String, String> get requestHeaders;
+  bool _closed = false;
+  @protected
+  bool get closed => _closed;
+
+  List<ApiAction> _actions;
+  Iterable<ApiAction> get actions => List.unmodifiable(_actions);
 
   bool _paused = false;
   bool get paused => _paused;
@@ -28,7 +34,12 @@ abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
   String? _error;
   String? get error => _error;
 
-  DomainApi._(this._api, this._actions) : super() {
+  ApiClient({
+    required Uri apiBaseUrl,
+    required List<ApiAction> actions,
+  })  : this._apiBase = apiBaseUrl,
+        this._actions = actions,
+        super() {
     _sendNextAction();
   }
 
@@ -47,16 +58,50 @@ abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
   //       _keyActionData: action.binaryData,
   //     })
 
-  Future<void> clear() async {
-    _actions.clear();
-    notifyListeners();
+  void registerOngoingOperation(Future future) {
+    ongoingOperations.value = ongoingOperations.value + 1;
+    future
+        .then((value) => ongoingOperations.value = ongoingOperations.value - 1);
   }
+
+  @nonVirtual
+  Future<void> logout() async {
+    debugPrint('[api] Logging Out');
+
+    if (closed) return;
+    _closed = true;
+
+    _actions.clear();
+
+    // Wait for pending operations
+    if (ongoingOperations.value != 0) {
+      final completer = Completer();
+      final callback = () {
+        if (ongoingOperations.value == 0) {
+          completer.complete();
+        }
+      };
+      ongoingOperations.addListener(callback);
+      await completer.future;
+      ongoingOperations.removeListener(callback);
+    }
+
+    await clear();
+  }
+
+  @protected
+  @mustCallSuper
+  Future<void> clear();
 
   String createUrl(String path) {
     return createUriBuilder(path).toString();
   }
 
-  UriBuilder createUriBuilder(String path);
+  UriBuilder createUriBuilder(String path) {
+    final builder = UriBuilder.fromUri(_apiBase);
+    builder.path += path;
+    return builder;
+  }
 
   E? getMetadata<E>(String key, {E? defaultValue});
 
@@ -71,8 +116,14 @@ abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
   }
 
   Future<String?> sendRequest(BaseRequest request) async {
+    if (closed) return "Closed";
+    final completer = Completer();
+    registerOngoingOperation(completer.future);
     try {
-      final response = await _api._sendRequest(request);
+      debugPrint('[api] Sending request to ${request.url}');
+      request.headers.addAll(requestHeaders);
+      final response = await _client.send(request);
+
       final responseString = await response.stream.bytesToString();
       // Show request result
       if (response.statusCode == 200) {
@@ -85,6 +136,8 @@ abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
       return "Server Unreachable";
     } catch (e) {
       return e.toString();
+    } finally {
+      completer.complete();
     }
   }
 
@@ -112,7 +165,8 @@ abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
   @protected
   FutureOr<String> processErrorResponse(String errorString) => errorString;
 
-  Future<void> addAction(ApiAction<T> action) async {
+  Future<void> addAction(ApiAction action) async {
+    if (closed) return;
     await action.applyOptimisticUpdate(this);
     debugPrint(
         '[actions] Request enqueued: ${action.generateDescription(this)}');
@@ -120,6 +174,7 @@ abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
+    if (closed) return;
     if (index >= _actions.length || (index == 0 && submitting)) {
       return;
     }
@@ -153,7 +208,8 @@ abstract class DomainApi<T extends ApiCubit> with ChangeNotifier {
   }
 
   void _sendNextAction() async {
-    if (_actions.isEmpty ||
+    if (closed ||
+        _actions.isEmpty ||
         (this.error?.isNotEmpty ?? false) ||
         paused ||
         submitting) {

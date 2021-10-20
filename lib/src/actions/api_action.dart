@@ -1,19 +1,19 @@
 part of 'actions.dart';
 
-abstract class ApiAction<T extends ApiCubit> {
+abstract class ApiAction<A extends ApiClient> {
   String get name;
 
   dynamic get binaryData => null;
 
-  String generateDescription(DomainApi<T> api);
+  String generateDescription(A api);
 
-  String generatePayloadDetails(DomainApi<T> api);
+  String generatePayloadDetails(A api);
 
-  BaseRequest createRequest(DomainApi<T> api);
+  BaseRequest createRequest(A api);
 
-  FutureOr<void> applyOptimisticUpdate(DomainApi<T> api);
+  FutureOr<void> applyOptimisticUpdate(A api);
 
-  FutureOr<void> revertOptimisticUpdate(DomainApi<T> api);
+  FutureOr<void> revertOptimisticUpdate(A api);
 
   Map<String, dynamic> toMap();
 }

@@ -11,7 +11,7 @@ import 'package:uri/uri.dart';
 const _delays = [0, 2, 4, 8, 16, 32, 64];
 
 abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
-  final DomainApi api;
+  final ApiClient api;
 
   late final void Function(dynamic) _successfulResponseProcessor = (response) {
     if (state is TickerSyncStateDisconnected) {
@@ -96,7 +96,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
 
     final operation = CancelableOperation.fromFuture(WebSocket.connect(
       uriBuilder.toString(),
-      headers: api.headers,
+      headers: api.requestHeaders,
     ));
 
     try {

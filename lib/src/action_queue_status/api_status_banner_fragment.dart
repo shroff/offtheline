@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'api_status_page.dart';
 import '/src/api/api.dart';
 
-class ApiStatusBannerFragment<T extends DomainApi> extends StatelessWidget {
+class ApiStatusBannerFragment<A extends ApiClient> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusBannerFragment({
@@ -14,23 +14,23 @@ class ApiStatusBannerFragment<T extends DomainApi> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final qState = context.watch<T>();
-    if (qState.actions.isEmpty) return Container();
-    final pendingRequests = qState.actions.length == 1
+    final api = context.watch<A>();
+    if (api.actions.isEmpty) return Container();
+    final pendingRequests = api.actions.length == 1
         ? '1 entry pending'
-        : '${qState.actions.length} entries pending';
+        : '${api.actions.length} entries pending';
 
     IconData icon;
     String statusText;
-    if (qState.submitting) {
+    if (api.submitting) {
       icon = Icons.sync;
       statusText = 'Submitting';
-    } else if (qState.paused) {
+    } else if (api.paused) {
       icon = Icons.pause_circle_outline;
       statusText = 'Paused';
-    } else if (qState.error?.isNotEmpty ?? false) {
+    } else if (api.error?.isNotEmpty ?? false) {
       icon = Icons.error_outline;
-      statusText = 'Error: ${qState.error}';
+      statusText = 'Error: ${api.error}';
     } else {
       icon = Icons.check_circle_outline;
       statusText = 'Ready';
@@ -39,7 +39,7 @@ class ApiStatusBannerFragment<T extends DomainApi> extends StatelessWidget {
     return InkWell(
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => ApiStatusPage<T>(allowPause: allowPause),
+          builder: (context) => ApiStatusPage<A>(allowPause: allowPause),
         ));
       },
       child: Container(

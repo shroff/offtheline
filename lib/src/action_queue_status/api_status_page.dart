@@ -2,13 +2,13 @@ import 'package:appcore/src/api/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ApiStatusPage<T extends DomainApi> extends StatelessWidget {
+class ApiStatusPage<A extends ApiClient> extends StatelessWidget {
   final bool allowPause;
 
   const ApiStatusPage({Key? key, this.allowPause = false}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final api = context.watch<T>();
+    final api = context.watch<A>();
 
     String statusText;
     if (api.submitting) {
