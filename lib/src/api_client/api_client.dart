@@ -21,6 +21,8 @@ abstract class ApiClient<R, E> with ChangeNotifier {
   @protected
   final String name;
   late final ApiActionQueue actionQueue = ApiActionQueue(this);
+
+  List<Future> _initializers = [];
   final Completer _initializationCompleter = Completer();
   Future<void> get initialized => _initializationCompleter.future;
 
@@ -34,15 +36,18 @@ abstract class ApiClient<R, E> with ChangeNotifier {
     required this.name,
   })  : this._apiBase = apiBaseUrl,
         super() {
-    initialize();
+    _initializers.add(actionQueue.initialize(name));
+    Future(() => Future.wait(_initializers)
+        .then((value) => _initializationCompleter.complete()));
   }
 
-  @mustCallSuper
-  Future<void> initialize() async {
-    actionQueue.initialize(name);
-    _initializationCompleter.complete();
+  @protected
+  @nonVirtual
+  void addInitializer(Future initializer) {
+    _initializers.add(initializer);
   }
 
+  @nonVirtual
   void registerOngoingOperation(Future future) {
     ongoingOperations.value = ongoingOperations.value + 1;
     future
