@@ -13,12 +13,14 @@ part 'action_queue.dart';
 
 typedef ResponseProcessor<R> = FutureOr<void> Function(R response);
 
+const _metadataKeyApiBaseUrl = "apiBaseUrl";
+
 abstract class ApiClient<R, E> with ChangeNotifier {
-  final ongoingOperations = ValueNotifier<int>(0);
   final Client _client = Client();
-  final Uri _apiBase;
-  final List<ResponseProcessor<R>> _responseProcessors = [];
   final String id;
+  Uri get _apiBase => _metadataBox.get(_metadataKeyApiBaseUrl);
+  final List<ResponseProcessor<R>> _responseProcessors = [];
+  final ongoingOperations = ValueNotifier<int>(0);
   late final Box _metadataBox;
   late final ApiActionQueue actionQueue = ApiActionQueue(this);
 
@@ -31,14 +33,14 @@ abstract class ApiClient<R, E> with ChangeNotifier {
   @protected
   bool get closed => _closed;
 
-  ApiClient({
-    required Uri apiBaseUrl,
-    required this.id,
-  })  : this._apiBase = apiBaseUrl,
-        super() {
+  ApiClient({required this.id, Uri? apiBaseUrl}) {
     _initializers
         .add((() async => _metadataBox = await Hive.openBox(id)).call());
     _initializers.add(actionQueue.initialize());
+    if (apiBaseUrl != null) {
+      _initializers.add(
+          (() => _metadataBox.put(_metadataKeyApiBaseUrl, apiBaseUrl)).call());
+    }
     Future(() => Future.wait(_initializers)
         .then((value) => _initializationCompleter.complete()));
   }
