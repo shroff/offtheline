@@ -1,11 +1,13 @@
 part of 'api_client.dart';
 
+const _boxKeyActions = "__actions";
+
 class ApiActionQueue with ChangeNotifier {
   final ApiClient api;
-  late final Box<ApiAction> _actions;
+  late final List<ApiAction> _actions;
   bool _closed = false;
 
-  Iterable<ApiAction> get actions => List.unmodifiable(_actions.values);
+  Iterable<ApiAction> get actions => List.unmodifiable(_actions);
   bool get closed => _closed;
 
   bool _paused = false;
@@ -19,10 +21,10 @@ class ApiActionQueue with ChangeNotifier {
 
   ApiActionQueue(this.api);
 
-  Future<void> initialize(String name) async {
-    this._actions = await Hive.openBox(name);
-    _actions.watch().listen((event) {
+  Future<void> initialize() async {
+    api._metadataBox.watch(key: _boxKeyActions).listen((event) {
       notifyListeners();
+      _sendNextAction();
     });
     _sendNextAction();
   }
@@ -30,9 +32,6 @@ class ApiActionQueue with ChangeNotifier {
   Future<void> close() async {
     if (closed) return;
     _closed = true;
-    _actions.clear();
-    _actions.close();
-    _actions.deleteFromDisk();
   }
 
   Future<void> addAction(ApiAction action) async {
@@ -41,6 +40,7 @@ class ApiActionQueue with ChangeNotifier {
     debugPrint(
         '[actions] Request enqueued: ${action.generateDescription(api)}');
     _actions.add(action);
+    api._metadataBox.put(_boxKeyActions, _actions);
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
@@ -49,8 +49,7 @@ class ApiActionQueue with ChangeNotifier {
       return;
     }
 
-    final action = _actions.getAt(index)!;
-    _actions.deleteAt(index);
+    final action = _actions.removeAt(index);
     if (revert) {
       await action.revertOptimisticUpdate(api);
     }
@@ -62,7 +61,7 @@ class ApiActionQueue with ChangeNotifier {
     if (index == 0 && error != null) {
       _error = null;
     }
-    notifyListeners();
+    api._metadataBox.put(_boxKeyActions, _actions);
   }
 
   void pauseActionQueue() {
@@ -90,7 +89,7 @@ class ApiActionQueue with ChangeNotifier {
     _submitting = true;
     notifyListeners();
 
-    final action = _actions.getAt(0)!;
+    final action = _actions[0];
     final request = action.createRequest(api);
 
     _error = await api.sendRequest(request);

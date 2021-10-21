@@ -18,8 +18,8 @@ abstract class ApiClient<R, E> with ChangeNotifier {
   final Client _client = Client();
   final Uri _apiBase;
   final List<ResponseProcessor<R>> _responseProcessors = [];
-  @protected
-  final String name;
+  final String id;
+  late final Box _metadataBox;
   late final ApiActionQueue actionQueue = ApiActionQueue(this);
 
   List<Future> _initializers = [];
@@ -33,10 +33,12 @@ abstract class ApiClient<R, E> with ChangeNotifier {
 
   ApiClient({
     required Uri apiBaseUrl,
-    required this.name,
+    required this.id,
   })  : this._apiBase = apiBaseUrl,
         super() {
-    _initializers.add(actionQueue.initialize(name));
+    _initializers
+        .add((() async => _metadataBox = await Hive.openBox(id)).call());
+    _initializers.add(actionQueue.initialize());
     Future(() => Future.wait(_initializers)
         .then((value) => _initializationCompleter.complete()));
   }
@@ -81,7 +83,11 @@ abstract class ApiClient<R, E> with ChangeNotifier {
 
   @protected
   @mustCallSuper
-  Future<void> clear();
+  FutureOr<void> clear() {
+    _metadataBox.clear();
+    _metadataBox.close();
+    _metadataBox.deleteFromDisk();
+  }
 
   String createUrl(String path) {
     return createUriBuilder(path).toString();
@@ -93,9 +99,13 @@ abstract class ApiClient<R, E> with ChangeNotifier {
     return builder;
   }
 
-  E? getMetadata<E>(String key, {E? defaultValue});
+  E? getMetadata<E>(String key, {E? defaultValue}) {
+    return _metadataBox.get(key) ?? defaultValue;
+  }
 
-  FutureOr<void> putMetadata<E>(String key, E value);
+  void putMetadata<E>(String key, E value) {
+    _metadataBox.put(key, value);
+  }
 
   void addResponseProcessor(ResponseProcessor<R> processor) {
     _responseProcessors.add(processor);
