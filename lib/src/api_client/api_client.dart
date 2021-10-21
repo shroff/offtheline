@@ -1,7 +1,6 @@
 library apiclient;
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:appcore/appcore.dart';
@@ -12,17 +11,18 @@ import 'package:uri/uri.dart';
 
 part 'action_queue.dart';
 
-typedef ResponseProcessor = FutureOr<void> Function(
-    Map<String, dynamic> response);
+typedef ResponseProcessor<R> = FutureOr<void> Function(R response);
 
-abstract class ApiClient with ChangeNotifier {
+abstract class ApiClient<R, E> with ChangeNotifier {
   final ongoingOperations = ValueNotifier<int>(0);
   final Client _client = Client();
   final Uri _apiBase;
-  final List<ResponseProcessor> _responseProcessors = [];
+  final List<ResponseProcessor<R>> _responseProcessors = [];
   @protected
   final String name;
   late final ApiActionQueue actionQueue = ApiActionQueue(this);
+  final Completer _initializationCompleter = Completer();
+  Future<void> get initialized => _initializationCompleter.future;
 
   Map<String, String> get requestHeaders;
   bool _closed = false;
@@ -40,6 +40,7 @@ abstract class ApiClient with ChangeNotifier {
   @mustCallSuper
   Future<void> initialize() async {
     actionQueue.initialize(name);
+    _initializationCompleter.complete();
   }
 
   void registerOngoingOperation(Future future) {
@@ -89,13 +90,13 @@ abstract class ApiClient with ChangeNotifier {
 
   E? getMetadata<E>(String key, {E? defaultValue});
 
-  Future<void> putMetadata<E>(String key, E value);
+  FutureOr<void> putMetadata<E>(String key, E value);
 
-  void addResponseProcessor(ResponseProcessor processor) {
+  void addResponseProcessor(ResponseProcessor<R> processor) {
     _responseProcessors.add(processor);
   }
 
-  void removeResponseProcessor(ResponseProcessor processor) {
+  void removeResponseProcessor(ResponseProcessor<R> processor) {
     _responseProcessors.remove(processor);
   }
 
@@ -109,12 +110,14 @@ abstract class ApiClient with ChangeNotifier {
       final response = await _client.send(request);
 
       final responseString = await response.stream.bytesToString();
+      actionQueue._sendNextAction();
       // Show request result
       if (response.statusCode == 200) {
         await parseResponseString(responseString);
         return null;
       } else {
-        return processErrorResponse(responseString);
+        return processErrorResponse(
+            await transformErrorResponse(responseString));
       }
     } on SocketException {
       return "Server Unreachable";
@@ -130,16 +133,20 @@ abstract class ApiClient with ChangeNotifier {
   }
 
   Future<void> parseResponseString(String responseString) async {
+    if (responseString.isNotEmpty) {
+      final response = await transformResponse(responseString);
+      processResponse(response);
+    }
+  }
+
+  @nonVirtual
+  Future<void> processResponse(R response) async {
     final completer = Completer<void>();
     try {
       debugPrint('[api] Parsing response');
-      if (responseString.isNotEmpty) {
-        final responseMap = json.decode(responseString) as Map<String, dynamic>;
-        await processResponse(responseMap);
-        for (final processResponse in _responseProcessors) {
-          await processResponse(responseMap);
-        }
-        actionQueue._sendNextAction();
+      await processResponseInternal(response);
+      for (final processResponse in _responseProcessors) {
+        await processResponse(response);
       }
     } finally {
       completer.complete();
@@ -147,9 +154,15 @@ abstract class ApiClient with ChangeNotifier {
     }
   }
 
-  @protected
-  FutureOr<void> processResponse(Map<String, dynamic> responseMap);
+  FutureOr<R> transformResponse(String resopnse);
 
   @protected
-  FutureOr<String> processErrorResponse(String errorString) => errorString;
+  FutureOr<E> transformErrorResponse(String resopnse);
+
+  @protected
+  FutureOr<void> processResponseInternal(R response);
+
+  @protected
+  FutureOr<String> processErrorResponse(E errorResponse) =>
+      errorResponse.toString();
 }
