@@ -71,8 +71,6 @@ class Domain<R> {
       _ongoingOperations.removeListener(callback);
     }
 
-    await _metadataBox.clear();
-    await _metadataBox.close();
     await _metadataBox.deleteFromDisk();
   }
 

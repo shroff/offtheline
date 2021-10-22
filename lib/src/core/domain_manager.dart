@@ -23,7 +23,7 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
 
   String? get currentDomain => _persist.get(_persistKeyCurrentDomain);
   set currentDomain(String? value) {
-    if (!_domainMap.containsKey(value)) return;
+    if (value != null && !_domainMap.containsKey(value)) return;
     _persist.put(_persistKeyCurrentDomain, value);
     notifyListeners();
   }
@@ -34,8 +34,17 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
     _persist = await Hive.openBox(_boxName);
     final List<String> domainIds =
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
-    await Future.wait(
-        domainIds.map((domainId) async => await addDomain(domainId)));
+    await Future.wait(domainIds.map((domainId) async {
+      debugPrint("Restoring domain $domainId");
+      final domain = await addDomain(domainId);
+      if (!domainInstanceValid(domain)) {
+        debugPrint("Domain is invalid. Deleting $domainId");
+        await clearDomain(domainId);
+      }
+    }));
+    if (!_domainMap.containsKey(currentDomain)) {
+      currentDomain = domainIdList.isEmpty ? null : domainIdList[0];
+    }
   }
 
   Future<D> addDomain(String domainId) async {
@@ -53,6 +62,9 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
 
   @protected
   Future<D> createDomainInstance(String domainId);
+
+  @protected
+  bool domainInstanceValid(D domain);
 
   FutureOr<void> clearDomain(String domainId) {
     final domain = _domainMap[domainId];
