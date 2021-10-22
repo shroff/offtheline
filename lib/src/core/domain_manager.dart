@@ -32,28 +32,27 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
 
   Future<void> initialize() async {
     _persist = await Hive.openBox(_boxName);
-    final domainIds =
+    final List<String> domainIds =
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
-    domainIdList = domainIds;
-    final domains = await Future.wait(
-        domainIdList.map((domainId) => createDomain(domainId)));
-    addDomains(domains.where((domain) => domain != null).cast<D>());
+    await Future.wait(
+        domainIds.map((domainId) async => await addDomain(domainId)));
   }
 
-  Future<D?> createDomain(String domainId);
-
-  void addDomains(Iterable<D> domains) {
-    domains.forEach((domain) {
+  Future<D> addDomain(String domainId) async {
+    if (!domainIdList.contains(domainId)) {
+      domainIdList = List.from(domainIdList)..add(domainId);
+      final domain = await createDomainInstance(domainId);
       domain.api.userAgent = userAgent;
-      if (!_domainMap.containsKey(domain.id)) {
-        domainIdList = List.from(domainIdList)..add(domain.id);
-        _domainMap[domain.id] = domain;
-      }
-    });
-    if (currentDomain == null)
-      currentDomain = domainIdList.isEmpty ? null : domainIdList[0];
-    notifyListeners();
+      _domainMap[domain.id] = domain;
+      if (currentDomain == null)
+        currentDomain = domainIdList.isEmpty ? null : domainIdList[0];
+      notifyListeners();
+    }
+    return _domainMap[domainId]!;
   }
+
+  @protected
+  Future<D> createDomainInstance(String domainId);
 
   FutureOr<void> clearDomain(String domainId) {
     final domain = _domainMap[domainId];
