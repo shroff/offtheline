@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:uri/uri.dart';
 
+import 'domain.dart';
 import 'domain_hooks.dart';
 
 const _metadataKeyApiBaseUrl = "apiBaseUrl";
@@ -17,12 +18,23 @@ class ApiClient<R> with DomainHooks<R> {
   final ResponseTransformer<R> transformResponse;
   final List<ResponseProcessor<R>> _responseProcessors = [];
 
-  Uri get apiBaseUrl => domain.getMetadata(_metadataKeyApiBaseUrl);
-  set apiBaseUrl(Uri url) => domain.putMetadata(_metadataKeyApiBaseUrl, url);
+  Uri _apiBaseUrl = Uri();
+  Uri get apiBaseUrl => _apiBaseUrl;
+  set apiBaseUrl(Uri url) {
+    _apiBaseUrl = url;
+    domain.putMetadata(_metadataKeyApiBaseUrl, url.toString());
+  }
 
   ApiClient({
     required this.transformResponse,
   });
+
+  Future<void> initialize(Domain<R> domain) async {
+    await super.initialize(domain);
+    _apiBaseUrl = Uri.tryParse(
+            domain.getMetadata(_metadataKeyApiBaseUrl, defaultValue: "")!) ??
+        Uri();
+  }
 
   Map<String, String> _requestHeaders = Map.unmodifiable({});
   Map<String, String> get requestHeaders => _requestHeaders;

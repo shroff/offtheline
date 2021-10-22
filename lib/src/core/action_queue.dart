@@ -29,7 +29,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   Future<void> initialize(Domain<R> domain) async {
     super.initialize(domain);
 
-    _actions = domain.getMetadata(_boxKeyActions);
+    _actions = domain.getMetadata(_boxKeyActions) ?? [];
     domain.watchMetadata(key: _boxKeyActions).listen((event) {
       notifyListeners();
       _sendNextAction();
