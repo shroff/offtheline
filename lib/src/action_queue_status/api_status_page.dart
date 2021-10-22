@@ -59,8 +59,9 @@ class ApiStatusPage extends StatelessWidget {
             delegate: SliverChildBuilderDelegate(
               (context, i) {
                 final request = actions[i];
+                final description = queue.generateDescription(request);
                 return ListTile(
-                  title: Text(request.generateDescription(queue.api)),
+                  title: Text(description),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -71,10 +72,9 @@ class ApiStatusPage extends StatelessWidget {
                             context: context,
                             barrierDismissible: false,
                             builder: (context) => AlertDialog(
-                              title:
-                                  Text(request.generateDescription(queue.api)),
+                              title: Text(description),
                               content: Text(
-                                request.generatePayloadDetails(queue.api),
+                                request.generatePayloadDetails(),
                                 softWrap: true,
                               ),
                               actions: <Widget>[
@@ -100,7 +100,7 @@ class ApiStatusPage extends StatelessWidget {
                                     title: Text('Delete Record'),
                                     content: Text(
                                         'You are about to delete the following record:\n\n'
-                                        '${request.generateDescription(queue.api)}\n\n'
+                                        '$description\n\n'
                                         'It will not be submitted to the server, and you will not be able to recover it.\n\n'
                                         'Are you sure you want to do this?'),
                                     actions: <Widget>[

@@ -10,85 +10,40 @@ import 'package:http/http.dart';
 import 'package:uri/uri.dart';
 
 part 'action_queue.dart';
-
-typedef ResponseProcessor<R> = FutureOr<void> Function(R response);
+part 'domain.dart';
+part 'domain_hooks.dart';
 
 const _metadataKeyApiBaseUrl = "apiBaseUrl";
 
-abstract class ApiClient<R, E> with ChangeNotifier {
+typedef ResponseTransformer<R> = FutureOr<R> Function(String);
+typedef ResponseProcessor<R> = FutureOr<void> Function(R response);
+
+class ApiClient<R> with DomainHooks<R> {
   final Client _client = Client();
-  final String id;
-  Uri get _apiBase => _metadataBox.get(_metadataKeyApiBaseUrl);
+  final ResponseTransformer<R> transformResponse;
   final List<ResponseProcessor<R>> _responseProcessors = [];
-  final ongoingOperations = ValueNotifier<int>(0);
-  late final Box _metadataBox;
-  late final ApiActionQueue actionQueue = ApiActionQueue(this);
 
-  List<Future> _initializers = [];
-  final Completer _initializationCompleter = Completer();
-  Future<void> get initialized => _initializationCompleter.future;
+  Uri get apiBaseUrl => _domain.getMetadata(_metadataKeyApiBaseUrl);
+  set apiBaseUrl(Uri url) => _domain.putMetadata(_metadataKeyApiBaseUrl, url);
 
-  Map<String, String> get requestHeaders;
-  bool _closed = false;
-  @protected
-  bool get closed => _closed;
+  ApiClient({
+    required this.transformResponse,
+  });
 
-  ApiClient({required this.id, Uri? apiBaseUrl}) {
-    _initializers
-        .add((() async => _metadataBox = await Hive.openBox(id)).call());
-    _initializers.add(actionQueue.initialize());
-    if (apiBaseUrl != null) {
-      _initializers.add(
-          (() => _metadataBox.put(_metadataKeyApiBaseUrl, apiBaseUrl)).call());
+  Map<String, String> _requestHeaders = Map.unmodifiable({});
+  Map<String, String> get requestHeaders => _requestHeaders;
+  void setHeader(String key, String? value) {
+    final headers = Map.from(_requestHeaders);
+    if (value == null) {
+      headers.remove(key);
+    } else {
+      headers[key] = value;
     }
-    Future(() => Future.wait(_initializers)
-        .then((value) => _initializationCompleter.complete()));
+    _requestHeaders = Map.unmodifiable(headers);
   }
 
-  @protected
-  @nonVirtual
-  void addInitializer(Future initializer) {
-    _initializers.add(initializer);
-  }
-
-  @nonVirtual
-  void registerOngoingOperation(Future future) {
-    ongoingOperations.value = ongoingOperations.value + 1;
-    future
-        .then((value) => ongoingOperations.value = ongoingOperations.value - 1);
-  }
-
-  @nonVirtual
-  Future<void> logout() async {
-    debugPrint('[api] Logging Out');
-
-    if (closed) return;
-    _closed = true;
-
-    actionQueue.close();
-
-    // Wait for pending operations
-    if (ongoingOperations.value != 0) {
-      final completer = Completer();
-      final callback = () {
-        if (ongoingOperations.value == 0) {
-          completer.complete();
-        }
-      };
-      ongoingOperations.addListener(callback);
-      await completer.future;
-      ongoingOperations.removeListener(callback);
-    }
-
-    await clear();
-  }
-
-  @protected
-  @mustCallSuper
-  FutureOr<void> clear() {
-    _metadataBox.clear();
-    _metadataBox.close();
-    _metadataBox.deleteFromDisk();
+  set userAgent(String? userAgent) {
+    setHeader('User-Agent', userAgent);
   }
 
   String createUrl(String path) {
@@ -96,17 +51,9 @@ abstract class ApiClient<R, E> with ChangeNotifier {
   }
 
   UriBuilder createUriBuilder(String path) {
-    final builder = UriBuilder.fromUri(_apiBase);
+    final builder = UriBuilder.fromUri(apiBaseUrl);
     builder.path += path;
     return builder;
-  }
-
-  E? getMetadata<E>(String key, {E? defaultValue}) {
-    return _metadataBox.get(key) ?? defaultValue;
-  }
-
-  void putMetadata<E>(String key, E value) {
-    _metadataBox.put(key, value);
   }
 
   void addResponseProcessor(ResponseProcessor<R> processor) {
@@ -118,23 +65,21 @@ abstract class ApiClient<R, E> with ChangeNotifier {
   }
 
   Future<String?> sendRequest(BaseRequest request) async {
-    if (closed) return "Closed";
+    if (_closed) return "Client Closed";
     final completer = Completer();
-    registerOngoingOperation(completer.future);
+    _domain.registerOngoingOperation(completer.future);
     try {
       debugPrint('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);
       final response = await _client.send(request);
 
       final responseString = await response.stream.bytesToString();
-      actionQueue._sendNextAction();
       // Show request result
-      if (response.statusCode == 200) {
-        await parseResponseString(responseString);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        await processResponseString(responseString);
         return null;
       } else {
-        return processErrorResponse(
-            await transformErrorResponse(responseString));
+        return responseString;
       }
     } on SocketException {
       return "Server Unreachable";
@@ -145,11 +90,7 @@ abstract class ApiClient<R, E> with ChangeNotifier {
     }
   }
 
-  Future<void> addAction(ApiAction action) async {
-    return actionQueue.addAction(action);
-  }
-
-  Future<void> parseResponseString(String responseString) async {
+  Future<void> processResponseString(String responseString) async {
     if (responseString.isNotEmpty) {
       final response = await transformResponse(responseString);
       processResponse(response);
@@ -161,7 +102,6 @@ abstract class ApiClient<R, E> with ChangeNotifier {
     final completer = Completer<void>();
     try {
       debugPrint('[api] Parsing response');
-      await processResponseInternal(response);
       for (final processResponse in _responseProcessors) {
         await processResponse(response);
       }
@@ -171,15 +111,7 @@ abstract class ApiClient<R, E> with ChangeNotifier {
     }
   }
 
-  FutureOr<R> transformResponse(String resopnse);
-
   @protected
-  FutureOr<E> transformErrorResponse(String resopnse);
-
-  @protected
-  FutureOr<void> processResponseInternal(R response);
-
-  @protected
-  FutureOr<String> processErrorResponse(E errorResponse) =>
+  FutureOr<String> processErrorResponse(R errorResponse) =>
       errorResponse.toString();
 }

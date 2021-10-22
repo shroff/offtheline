@@ -10,9 +10,8 @@ import 'package:uri/uri.dart';
 
 const _delays = [0, 2, 4, 8, 16, 32, 64];
 
-abstract class TickerSyncCubit<A extends ApiClient>
-    extends Cubit<TickerSyncState> {
-  final A api;
+abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
+  final ApiClient api;
 
   late final void Function(dynamic) _successfulResponseProcessor = (response) {
     if (state is TickerSyncStateDisconnected) {
@@ -105,7 +104,7 @@ abstract class TickerSyncCubit<A extends ApiClient>
       _socket = await operation.valueOrCancellation();
 
       _socketSubscription = _socket?.listen((message) {
-        api.parseResponseString(message);
+        api.processResponseString(message);
       }, onError: (err) {
         final socket = _socket;
         _socket = null;

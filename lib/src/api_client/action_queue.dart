@@ -2,13 +2,11 @@ part of 'api_client.dart';
 
 const _boxKeyActions = "__actions";
 
-class ApiActionQueue with ChangeNotifier {
-  final ApiClient api;
+class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   late final List<ApiAction> _actions;
-  bool _closed = false;
-
   Iterable<ApiAction> get actions => List.unmodifiable(_actions);
-  bool get closed => _closed;
+
+  bool _closed = false;
 
   bool _paused = false;
   bool get paused => _paused;
@@ -19,49 +17,52 @@ class ApiActionQueue with ChangeNotifier {
   String? _error;
   String? get error => _error;
 
-  ApiActionQueue(this.api);
+  ApiActionQueue();
 
-  Future<void> initialize() async {
-    api._metadataBox.watch(key: _boxKeyActions).listen((event) {
+  @protected
+  Future<void> initialize(Domain<R> domain) async {
+    super.initialize(domain);
+
+    _actions = domain.getMetadata(_boxKeyActions);
+    domain._metadataBox.watch(key: _boxKeyActions).listen((event) {
       notifyListeners();
       _sendNextAction();
     });
     _sendNextAction();
   }
 
-  Future<void> close() async {
-    if (closed) return;
-    _closed = true;
+  String generateDescription(ApiAction<Domain<R>> action) {
+    return action.generateDescription(domain);
   }
 
   Future<void> addAction(ApiAction action) async {
-    if (closed) return;
-    await action.applyOptimisticUpdate(api);
+    if (_closed) return;
+    await action.applyOptimisticUpdate(_domain);
     debugPrint(
-        '[actions] Request enqueued: ${action.generateDescription(api)}');
+        '[actions] Request enqueued: ${action.generateDescription(_domain)}');
     _actions.add(action);
-    api._metadataBox.put(_boxKeyActions, _actions);
+    _domain._metadataBox.put(_boxKeyActions, _actions);
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
-    if (closed) return;
+    if (_closed) return;
     if (index >= _actions.length || (index == 0 && submitting)) {
       return;
     }
 
     final action = _actions.removeAt(index);
     if (revert) {
-      await action.revertOptimisticUpdate(api);
+      await action.revertOptimisticUpdate(_domain);
     }
 
     if (kDebugMode) {
       debugPrint(
-          '[actions] Deleting request: ${action.generateDescription(api)}');
+          '[actions] Deleting request: ${action.generateDescription(_domain)}');
     }
     if (index == 0 && error != null) {
       _error = null;
     }
-    api._metadataBox.put(_boxKeyActions, _actions);
+    _domain.putMetadata(_boxKeyActions, _actions);
   }
 
   void pauseActionQueue() {
@@ -78,7 +79,7 @@ class ApiActionQueue with ChangeNotifier {
   }
 
   void _sendNextAction() async {
-    if (closed ||
+    if (_closed ||
         _actions.isEmpty ||
         (this.error?.isNotEmpty ?? false) ||
         paused ||
@@ -90,9 +91,9 @@ class ApiActionQueue with ChangeNotifier {
     notifyListeners();
 
     final action = _actions[0];
-    final request = action.createRequest(api);
+    final request = action.createRequest(_domain.api);
 
-    _error = await api.sendRequest(request);
+    _error = await _domain.api.sendRequest(request);
     _submitting = false;
     notifyListeners();
 

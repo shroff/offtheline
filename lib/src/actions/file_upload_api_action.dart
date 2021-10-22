@@ -1,6 +1,6 @@
 part of 'actions.dart';
 
-mixin FileUploadApiAction<D extends ApiClient> on ApiAction<D> {
+mixin FileUploadApiAction<D extends Domain> on ApiAction<D> {
   @override
   dynamic get binaryData => fileContents;
 
@@ -12,10 +12,10 @@ mixin FileUploadApiAction<D extends ApiClient> on ApiAction<D> {
   Uint8List get fileContents;
 
   @override
-  BaseRequest createRequest(D api) {
+  BaseRequest createRequest(ApiClient api) {
     final uri = api.createUriBuilder(endpoint).build();
     final request = MultipartRequest(method, uri);
-    request.fields.addAll(generateFormFields(api));
+    request.fields.addAll(generateFormFields());
     final filePart = MultipartFile.fromBytes(
       fileFieldName,
       fileContents,
@@ -27,14 +27,14 @@ mixin FileUploadApiAction<D extends ApiClient> on ApiAction<D> {
   }
 
   @override
-  String generatePayloadDetails(D api) => json.encode({
+  String generatePayloadDetails() => json.encode({
         'file': {
           'fieldName': fileFieldName,
           'name': fileName,
           'size': fileContents.length,
         },
-        'fields': generateFormFields(api),
+        'fields': generateFormFields(),
       });
 
-  Map<String, String> generateFormFields(D api);
+  Map<String, String> generateFormFields();
 }

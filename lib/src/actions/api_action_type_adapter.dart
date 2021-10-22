@@ -4,16 +4,16 @@ const _fieldName = 0;
 const _fieldProps = 1;
 const _fieldBinaryData = 2;
 
-typedef ApiActionDeserializer<A extends ApiClient> = ApiAction<A> Function(
+typedef ApiActionDeserializer<D extends Domain> = ApiAction<D> Function(
     Map<String, dynamic> props, dynamic data);
 
-class ApiActionTypeAdapter extends TypeAdapter<ApiAction> {
-  final Map<String, ApiActionDeserializer> deserializers;
+class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
+  final Map<String, ApiActionDeserializer<D>> deserializers;
 
   ApiActionTypeAdapter(this.deserializers);
 
   @override
-  ApiAction<ApiClient> read(BinaryReader reader) {
+  ApiAction<D> read(BinaryReader reader) {
     int n = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < n; i++) reader.readByte(): reader.read(),
@@ -30,7 +30,7 @@ class ApiActionTypeAdapter extends TypeAdapter<ApiAction> {
   int get typeId => 0;
 
   @override
-  void write(BinaryWriter writer, ApiAction<ApiClient> action) {
+  void write(BinaryWriter writer, ApiAction<D> action) {
     writer.writeByte(3);
     writer.writeByte(_fieldName);
     writer.write(action.name);

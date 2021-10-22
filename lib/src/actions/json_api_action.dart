@@ -2,24 +2,24 @@ part of 'actions.dart';
 
 const _contentType = 'application/json';
 
-mixin JsonApiAction<A extends ApiClient> on ApiAction<A> {
+mixin JsonApiAction<D extends Domain> on ApiAction<D> {
   String get method;
   String get endpoint;
 
   @override
-  BaseRequest createRequest(A api) {
+  BaseRequest createRequest(ApiClient api) {
     final request = Request(method, api.createUriBuilder(endpoint).build());
     request.headers['content-type'] = _contentType;
-    final body = generateRequestBody(api);
+    final body = generateRequestBody();
     if (body != null) {
-      request.body = json.encode(generateRequestBody(api));
+      request.body = json.encode(generateRequestBody());
     }
 
     return request;
   }
 
   @override
-  String generatePayloadDetails(A api) => json.encode(generateRequestBody(api));
+  String generatePayloadDetails() => json.encode(generateRequestBody());
 
-  Map<String, dynamic>? generateRequestBody(A api);
+  Map<String, dynamic>? generateRequestBody();
 }

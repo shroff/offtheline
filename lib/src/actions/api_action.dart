@@ -1,19 +1,19 @@
 part of 'actions.dart';
 
-abstract class ApiAction<A extends ApiClient> {
+abstract class ApiAction<D extends Domain> {
   String get name;
 
   dynamic get binaryData => null;
 
-  String generateDescription(A api);
+  String generateDescription(D api);
 
-  String generatePayloadDetails(A api);
+  String generatePayloadDetails();
 
-  BaseRequest createRequest(A api);
+  BaseRequest createRequest(ApiClient api);
 
-  FutureOr<void> applyOptimisticUpdate(A api);
+  FutureOr<void> applyOptimisticUpdate(D api);
 
-  FutureOr<void> revertOptimisticUpdate(A api);
+  FutureOr<void> revertOptimisticUpdate(D api);
 
   Map<String, dynamic> toMap();
 }
