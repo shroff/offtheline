@@ -1,4 +1,10 @@
-part of 'api_client.dart';
+import 'dart:async';
+
+import 'package:appcore/appcore.dart';
+import 'package:flutter/foundation.dart';
+
+import 'domain.dart';
+import 'domain_hooks.dart';
 
 const _boxKeyActions = "__actions";
 
@@ -24,7 +30,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     super.initialize(domain);
 
     _actions = domain.getMetadata(_boxKeyActions);
-    domain._metadataBox.watch(key: _boxKeyActions).listen((event) {
+    domain.watchMetadata(key: _boxKeyActions).listen((event) {
       notifyListeners();
       _sendNextAction();
     });
@@ -37,11 +43,11 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
 
   Future<void> addAction(ApiAction action) async {
     if (_closed) return;
-    await action.applyOptimisticUpdate(_domain);
+    await action.applyOptimisticUpdate(domain);
     debugPrint(
-        '[actions] Request enqueued: ${action.generateDescription(_domain)}');
+        '[actions] Request enqueued: ${action.generateDescription(domain)}');
     _actions.add(action);
-    _domain._metadataBox.put(_boxKeyActions, _actions);
+    domain.putMetadata(_boxKeyActions, _actions);
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
@@ -52,17 +58,17 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
 
     final action = _actions.removeAt(index);
     if (revert) {
-      await action.revertOptimisticUpdate(_domain);
+      await action.revertOptimisticUpdate(domain);
     }
 
     if (kDebugMode) {
       debugPrint(
-          '[actions] Deleting request: ${action.generateDescription(_domain)}');
+          '[actions] Deleting request: ${action.generateDescription(domain)}');
     }
     if (index == 0 && error != null) {
       _error = null;
     }
-    _domain.putMetadata(_boxKeyActions, _actions);
+    domain.putMetadata(_boxKeyActions, _actions);
   }
 
   void pauseActionQueue() {
@@ -91,9 +97,9 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     notifyListeners();
 
     final action = _actions[0];
-    final request = action.createRequest(_domain.api);
+    final request = action.createRequest(domain.api);
 
-    _error = await _domain.api.sendRequest(request);
+    _error = await domain.api.sendRequest(request);
     _submitting = false;
     notifyListeners();
 

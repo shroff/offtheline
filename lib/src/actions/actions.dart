@@ -7,7 +7,8 @@ import 'dart:typed_data';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 
-import '../api_client/api_client.dart';
+import '../core/domain.dart';
+import '../core/api_client.dart';
 
 part 'api_action.dart';
 part 'api_action_type_adapter.dart';

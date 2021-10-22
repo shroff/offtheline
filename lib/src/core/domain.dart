@@ -1,4 +1,12 @@
-part of 'api_client.dart';
+import 'dart:async';
+
+import 'package:appcore/appcore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+
+import 'action_queue.dart';
+import 'api_client.dart';
+import 'domain_hooks.dart';
 
 class Domain<R> {
   final String id;
@@ -78,5 +86,9 @@ class Domain<R> {
 
   void putMetadata<E>(String key, E value) {
     _metadataBox.put(key, value);
+  }
+
+  Stream<BoxEvent> watchMetadata({dynamic key}) {
+    return _metadataBox.watch(key: key);
   }
 }

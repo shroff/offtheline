@@ -1,17 +1,11 @@
-library apiclient;
-
 import 'dart:async';
 import 'dart:io';
 
-import 'package:appcore/appcore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 import 'package:uri/uri.dart';
 
-part 'action_queue.dart';
-part 'domain.dart';
-part 'domain_hooks.dart';
+import 'domain_hooks.dart';
 
 const _metadataKeyApiBaseUrl = "apiBaseUrl";
 
@@ -23,8 +17,8 @@ class ApiClient<R> with DomainHooks<R> {
   final ResponseTransformer<R> transformResponse;
   final List<ResponseProcessor<R>> _responseProcessors = [];
 
-  Uri get apiBaseUrl => _domain.getMetadata(_metadataKeyApiBaseUrl);
-  set apiBaseUrl(Uri url) => _domain.putMetadata(_metadataKeyApiBaseUrl, url);
+  Uri get apiBaseUrl => domain.getMetadata(_metadataKeyApiBaseUrl);
+  set apiBaseUrl(Uri url) => domain.putMetadata(_metadataKeyApiBaseUrl, url);
 
   ApiClient({
     required this.transformResponse,
@@ -65,9 +59,9 @@ class ApiClient<R> with DomainHooks<R> {
   }
 
   Future<String?> sendRequest(BaseRequest request) async {
-    if (_closed) return "Client Closed";
+    if (closed) return "Client Closed";
     final completer = Completer();
-    _domain.registerOngoingOperation(completer.future);
+    domain.registerOngoingOperation(completer.future);
     try {
       debugPrint('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);

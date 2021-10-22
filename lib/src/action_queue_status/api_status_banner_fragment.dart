@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'api_status_page.dart';
-import '/src/api_client/api_client.dart';
+import '/src/core/action_queue.dart';
 
 class ApiStatusBannerFragment extends StatelessWidget {
   final bool allowPause;
