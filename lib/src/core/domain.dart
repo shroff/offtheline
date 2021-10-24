@@ -16,19 +16,27 @@ class Domain<R> {
   final _ongoingOperations = ValueNotifier<int>(0);
   final List<DomainHooks<R>> _hooks = [];
 
+  final Completer _initializationCompleter = Completer();
+  Future get initialized => _initializationCompleter.future;
+
   bool _closed = false;
 
   Domain({
     required this.id,
     required this.api,
-  });
-
-  @nonVirtual
-  Future<void> initialize() async {
-    _metadataBox = await Hive.openBox(id);
-    await registerHooks(api);
-    await registerHooks(actionQueue);
+  }) {
+    Hive.openBox(id).then((box) async {
+      _metadataBox = box;
+      await registerHooks(api);
+      await registerHooks(actionQueue);
+      await initialize();
+      _initializationCompleter.complete();
+    });
   }
+
+  @protected
+  @mustCallSuper
+  Future<void> initialize() async {}
 
   @nonVirtual
   FutureOr<void> registerHooks(DomainHooks<R> hooks) {
@@ -83,7 +91,11 @@ class Domain<R> {
   }
 
   void putMetadata<E>(String key, E value) {
-    _metadataBox.put(key, value);
+    if (value == null) {
+      _metadataBox.delete(key);
+    } else {
+      _metadataBox.put(key, value);
+    }
   }
 
   Stream<BoxEvent> watchMetadata({dynamic key}) {
