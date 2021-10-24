@@ -1,6 +1,6 @@
 name: appcore
 description: Basic Application Core using Hive and other common components
-version: 0.8.0
+version: 0.9.0
 homepage: https://kudosoft.net
 
 environment:
