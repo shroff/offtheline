@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:appcore/appcore.dart';
 import 'package:flutter/foundation.dart';
+
+import 'package:appcore/appcore.dart';
 
 import 'domain.dart';
 import 'domain_hooks.dart';
@@ -11,8 +12,6 @@ const _boxKeyActions = "__actions";
 class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   late final List<ApiAction> _actions;
   Iterable<ApiAction> get actions => List.unmodifiable(_actions);
-
-  bool _closed = false;
 
   bool _paused = false;
   bool get paused => _paused;
@@ -30,7 +29,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     super.initialize(domain);
 
     _actions =
-        domain.getMetadata(_boxKeyActions)?.cast<ApiAction>() ?? <ApiAction>[];
+        domain.getPersisted(_boxKeyActions)?.cast<ApiAction>() ?? <ApiAction>[];
     domain.watchMetadata(key: _boxKeyActions).listen((event) {
       notifyListeners();
       _sendNextAction();
@@ -43,16 +42,16 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   }
 
   Future<void> addAction(ApiAction action) async {
-    if (_closed) return;
+    if (closed) return;
     await action.applyOptimisticUpdate(domain);
     debugPrint(
         '[actions] Request enqueued: ${action.generateDescription(domain)}');
     _actions.add(action);
-    domain.putMetadata(_boxKeyActions, _actions);
+    domain.persist(_boxKeyActions, _actions);
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
-    if (_closed) return;
+    if (closed) return;
     if (index >= _actions.length || (index == 0 && submitting)) {
       return;
     }
@@ -69,7 +68,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     if (index == 0 && error != null) {
       _error = null;
     }
-    domain.putMetadata(_boxKeyActions, _actions);
+    domain.persist(_boxKeyActions, _actions);
   }
 
   void pauseActionQueue() {
@@ -80,13 +79,14 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
 
   void resumeActionQueue() {
     debugPrint('[actions] Resuming');
+    _error = null;
     _paused = false;
     _sendNextAction();
     notifyListeners();
   }
 
   void _sendNextAction() async {
-    if (_closed ||
+    if (closed ||
         _actions.isEmpty ||
         (this.error?.isNotEmpty ?? false) ||
         paused ||
@@ -107,5 +107,10 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     if (error == null) {
       removeActionAt(0, revert: false);
     }
+  }
+
+  @override
+  String toString() {
+    return 'ApiActionQueue(_paused: $_paused, _submitting: $_submitting, _error: $_error, closed: $closed)';
   }
 }

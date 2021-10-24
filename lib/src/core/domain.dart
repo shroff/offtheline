@@ -12,7 +12,7 @@ class Domain<R> {
   final String id;
   final ApiActionQueue<R> actionQueue = ApiActionQueue();
   final ApiClient<R> api;
-  late final Box _metadataBox;
+  late final Box _persist;
   final _ongoingOperations = ValueNotifier<int>(0);
   final List<DomainHooks<R>> _hooks = [];
 
@@ -26,7 +26,7 @@ class Domain<R> {
     required this.api,
   }) {
     Hive.openBox(id).then((box) async {
-      _metadataBox = box;
+      _persist = box;
       await registerHooks(api);
       await registerHooks(actionQueue);
       await initialize();
@@ -79,26 +79,26 @@ class Domain<R> {
       _ongoingOperations.removeListener(callback);
     }
 
-    await _metadataBox.deleteFromDisk();
+    await _persist.deleteFromDisk();
   }
 
   Future<void> addAction(ApiAction action) async {
     return actionQueue.addAction(action);
   }
 
-  E? getMetadata<E>(String key, {E? defaultValue}) {
-    return _metadataBox.get(key) ?? defaultValue;
+  E? getPersisted<E>(String key) {
+    return _persist.get(key);
   }
 
-  void putMetadata<E>(String key, E value) {
+  void persist<E>(String key, E value) {
     if (value == null) {
-      _metadataBox.delete(key);
+      _persist.delete(key);
     } else {
-      _metadataBox.put(key, value);
+      _persist.put(key, value);
     }
   }
 
   Stream<BoxEvent> watchMetadata({dynamic key}) {
-    return _metadataBox.watch(key: key);
+    return _persist.watch(key: key);
   }
 }

@@ -64,7 +64,7 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
   Future<D> createDomainInstance(String domainId);
 
   @protected
-  bool domainInstanceValid(D domain);
+  bool domainInstanceValid(D domain) => domain.api.valid;
 
   FutureOr<void> clearDomain(String domainId) {
     final domain = _domainMap[domainId];

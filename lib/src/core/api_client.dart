@@ -8,21 +8,21 @@ import 'package:uri/uri.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
 
-const _metadataKeyApiBaseUrl = "apiBaseUrl";
+const _persistKeyApiBaseUrl = "apiBaseUrl";
 
-typedef ResponseTransformer<R> = FutureOr<R> Function(String);
+typedef ResponseTransformer<R> = FutureOr<R?> Function(String);
 typedef ResponseProcessor<R> = FutureOr<void> Function(R response);
 
 class ApiClient<R> with DomainHooks<R> {
   final Client _client = Client();
-  final ResponseTransformer<R> transformResponse;
+  final ResponseTransformer<R?> transformResponse;
   final List<ResponseProcessor<R>> _responseProcessors = [];
 
   Uri _apiBaseUrl = Uri();
   Uri get apiBaseUrl => _apiBaseUrl;
   set apiBaseUrl(Uri url) {
     _apiBaseUrl = url;
-    domain.putMetadata(_metadataKeyApiBaseUrl, url.toString());
+    domain.persist(_persistKeyApiBaseUrl, url.toString());
   }
 
   ApiClient({
@@ -31,10 +31,11 @@ class ApiClient<R> with DomainHooks<R> {
 
   Future<void> initialize(Domain<R> domain) async {
     await super.initialize(domain);
-    _apiBaseUrl = Uri.tryParse(
-            domain.getMetadata(_metadataKeyApiBaseUrl, defaultValue: "")!) ??
-        Uri();
+    _apiBaseUrl =
+        Uri.tryParse(domain.getPersisted(_persistKeyApiBaseUrl) ?? "") ?? Uri();
   }
+
+  bool get valid => true;
 
   Map<String, String> _requestHeaders = Map.unmodifiable({});
   Map<String, String> get requestHeaders => _requestHeaders;
@@ -99,7 +100,9 @@ class ApiClient<R> with DomainHooks<R> {
   Future<void> processResponseString(String responseString) async {
     if (responseString.isNotEmpty) {
       final response = await transformResponse(responseString);
-      processResponse(response);
+      if (response != null) {
+        processResponse(response);
+      }
     }
   }
 
