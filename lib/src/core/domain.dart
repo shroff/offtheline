@@ -16,7 +16,8 @@ class Domain<R> {
   final _ongoingOperations = ValueNotifier<int>(0);
   final List<DomainHooks<R>> _hooks = [];
 
-  final Completer _initializationCompleter = Completer();
+  final _boxOpenedCompleter = Completer();
+  final _initializationCompleter = Completer();
   Future get initialized => _initializationCompleter.future;
 
   bool _closed = false;
@@ -27,6 +28,7 @@ class Domain<R> {
   }) {
     Hive.openBox(id).then((box) async {
       _persist = box;
+      _boxOpenedCompleter.complete();
       await registerHooks(api);
       await registerHooks(actionQueue);
       await initialize();
@@ -39,8 +41,9 @@ class Domain<R> {
   Future<void> initialize() async {}
 
   @nonVirtual
-  FutureOr<void> registerHooks(DomainHooks<R> hooks) {
+  FutureOr<void> registerHooks(DomainHooks<R> hooks) async {
     if (_closed) return null;
+    await _boxOpenedCompleter.future;
     _hooks.add(hooks);
     return hooks.initialize(this);
   }
