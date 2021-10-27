@@ -13,7 +13,8 @@ const _delays = [0, 2, 4, 8, 16, 32, 64];
 abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   final ApiClient api;
 
-  late final void Function(dynamic) _successfulResponseProcessor = (response) {
+  late final void Function(dynamic, dynamic) _successfulResponseProcessor =
+      (response, tag) {
     if (state is TickerSyncStateDisconnected) {
       connect();
     }

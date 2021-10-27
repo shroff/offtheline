@@ -11,7 +11,10 @@ import 'domain_hooks.dart';
 const _persistKeyApiBaseUrl = "apiBaseUrl";
 
 typedef ResponseTransformer<R> = FutureOr<R?> Function(String);
-typedef ResponseProcessor<R> = FutureOr<void> Function(R response);
+typedef ResponseProcessor<R> = FutureOr<void> Function(
+  R? response,
+  dynamic tag,
+);
 
 class ApiClient<R> with DomainHooks<R> {
   final Client _client = Client();
@@ -71,7 +74,11 @@ class ApiClient<R> with DomainHooks<R> {
     _responseProcessors.remove(processor);
   }
 
-  Future<String?> sendRequest(BaseRequest request) async {
+  Future<String?> sendRequest(
+    BaseRequest request, {
+    bool Function(R?)? callback,
+    dynamic tag,
+  }) async {
     if (closed) return "Client Closed";
     final completer = Completer();
     domain.registerOngoingOperation(completer.future);
@@ -83,7 +90,7 @@ class ApiClient<R> with DomainHooks<R> {
       final responseString = await response.stream.bytesToString();
       // Show request result
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        await processResponseString(responseString);
+        await processResponseString(responseString, callback: callback);
         return null;
       } else {
         return responseString;
@@ -97,26 +104,35 @@ class ApiClient<R> with DomainHooks<R> {
     }
   }
 
-  Future<void> processResponseString(String responseString) async {
-    if (responseString.isNotEmpty) {
-      final response = await transformResponse(responseString);
-      if (response != null) {
-        processResponse(response);
-      }
-    }
+  Future<void> processResponseString(
+    String responseString, {
+    bool Function(R?)? callback,
+    dynamic tag,
+  }) async {
+    processResponse(
+      await transformResponse(responseString),
+      callback: callback,
+      tag: tag,
+    );
   }
 
   @nonVirtual
-  Future<void> processResponse(R response) async {
+  Future<void> processResponse(
+    R? response, {
+    bool Function(R?)? callback,
+    dynamic tag,
+  }) async {
     final completer = Completer<void>();
+    domain.registerOngoingOperation(completer.future);
     try {
-      debugPrint('[api] Parsing response');
+      debugPrint('[api] Processing response');
+      if (callback != null && !callback(response)) return;
       for (final processResponse in _responseProcessors) {
-        await processResponse(response);
+        await processResponse(response, tag);
       }
     } finally {
       completer.complete();
-      debugPrint('[api] Response parsed');
+      debugPrint('[api] Response processed');
     }
   }
 
