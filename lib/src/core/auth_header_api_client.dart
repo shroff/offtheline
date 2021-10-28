@@ -13,7 +13,8 @@ class AuthHeaderApiClient<R> extends ApiClient<R> {
   }
 
   @override
-  bool get valid => domain.getPersisted(_persistKeyAuthorization) != null;
+  bool get valid =>
+      super.valid && domain.getPersisted(_persistKeyAuthorization) != null;
 
   set authorization(String? authorization) {
     domain.persist(_persistKeyAuthorization, authorization);

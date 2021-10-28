@@ -38,7 +38,8 @@ class ApiClient<R> with DomainHooks<R> {
         Uri.tryParse(domain.getPersisted(_persistKeyApiBaseUrl) ?? "") ?? Uri();
   }
 
-  bool get valid => true;
+  bool get valid =>
+      kIsWeb || (_apiBaseUrl.hasAuthority && _apiBaseUrl.hasScheme);
 
   Map<String, String> _requestHeaders = Map.unmodifiable({});
   Map<String, String> get requestHeaders => _requestHeaders;

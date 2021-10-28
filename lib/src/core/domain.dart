@@ -93,11 +93,11 @@ class Domain<R> {
     return _persist.get(key);
   }
 
-  void persist<E>(String key, E value) {
+  Future<void> persist<E>(String key, E value) {
     if (value == null) {
-      _persist.delete(key);
+      return _persist.delete(key);
     } else {
-      _persist.put(key, value);
+      return _persist.put(key, value);
     }
   }
 
