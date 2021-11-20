@@ -36,8 +36,10 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
     await Future.wait(domainIds.map((domainId) async {
       debugPrint("Restoring domain $domainId");
-      final domain = await addDomain(domainId);
-      if (!domainInstanceValid(domain)) {
+      final domain = await restoreDomainInstance(domainId);
+      if (domainInstanceValid(domain)) {
+        addDomain(domain);
+      } else {
         debugPrint("Domain is invalid. Deleting $domainId");
         await clearDomain(domainId);
       }
@@ -47,21 +49,19 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
     }
   }
 
-  Future<D> addDomain(String domainId) async {
-    if (!domainIdList.contains(domainId)) {
-      domainIdList = List.from(domainIdList)..add(domainId);
-      final domain = await createDomainInstance(domainId);
+  void addDomain(D domain) async {
+    if (!domainIdList.contains(domain.id)) {
+      domainIdList = List.from(domainIdList)..add(domain.id);
       domain.api.userAgent = userAgent;
       _domainMap[domain.id] = domain;
       if (currentDomain == null)
         currentDomain = domainIdList.isEmpty ? null : domainIdList[0];
       notifyListeners();
     }
-    return _domainMap[domainId]!;
   }
 
   @protected
-  Future<D> createDomainInstance(String domainId);
+  Future<D> restoreDomainInstance(String domainId);
 
   @protected
   bool domainInstanceValid(D domain) => domain.api.valid;

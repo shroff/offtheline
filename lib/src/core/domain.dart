@@ -4,10 +4,6 @@ import 'package:appcore/appcore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
-import 'action_queue.dart';
-import 'api_client.dart';
-import 'domain_hooks.dart';
-
 class Domain<R> {
   final String id;
   final ApiActionQueue<R> actionQueue = ApiActionQueue();
@@ -25,8 +21,13 @@ class Domain<R> {
   Domain({
     required this.id,
     required this.api,
+    bool clear = false,
   }) {
     Hive.openBox(id).then((box) async {
+      if (clear) {
+        debugPrint('Clearing ${box.values.length} stale entries');
+        await box.clear();
+      }
       _persist = box;
       _boxOpenedCompleter.complete();
       await registerHooks(api);
