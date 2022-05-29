@@ -4,12 +4,11 @@ import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../core/api_client.dart';
-import 'package:async/async.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uri/uri.dart';
 
-const _delays = [0, 2, 4, 8, 16, 32, 64];
+const _delays = [5, 10, 15, 30, 60, 120];
 
 abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   final ApiClient api;
@@ -21,7 +20,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
     }
   };
 
-  CancelableOperation<bool>? _delayOperation;
+  CancellableDelay? _delayOperation;
 
   TickerSyncCubit(
     this.api,
@@ -71,12 +70,11 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
     _delayOperation?.cancel();
     if (attempt > 0) {
       // Exponential backoff delay
-      int delaySeconds = _delays[min(attempt, _delays.length - 1)];
-      debugPrint('Waiting for $delaySeconds seconds');
-      final delay = CancelableOperation.fromFuture(
-          Future.delayed(Duration(seconds: delaySeconds), () => true));
+      int delaySeconds = _delays[min(attempt - 1, _delays.length - 1)];
+      debugPrint('[sync] Waiting for $delaySeconds seconds');
+      final delay = CancellableDelay(Duration(seconds: delaySeconds));
       _delayOperation = delay;
-      final delaySuccess = await delay.valueOrCancellation(false) ?? false;
+      final delaySuccess = await delay.wait();
       if (!delaySuccess) {
         debugPrint('Delay canceled: $delaySeconds');
         return;
@@ -138,4 +136,24 @@ class TickerSyncStateConnecting extends TickerSyncState {
 class TickerSyncStateConnected extends TickerSyncState {
   final WebSocketChannel channel;
   const TickerSyncStateConnected(this.channel);
+}
+
+class CancellableDelay {
+  final Completer<bool> _completer = Completer();
+
+  CancellableDelay(Duration duration) {
+    Future.delayed(duration, () {
+      if (!_completer.isCompleted) {
+        _completer.complete(true);
+      }
+    });
+  }
+
+  Future<bool> wait() {
+    return _completer.future;
+  }
+
+  void cancel() {
+    _completer.complete(false);
+  }
 }

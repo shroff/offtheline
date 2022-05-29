@@ -9,7 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  async: ^2.6.0
   bloc: ^8.0.0
   connectivity: ^3.0.3
   flutter_bloc: ^8.0.0
