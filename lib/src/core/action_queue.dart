@@ -4,9 +4,6 @@ import 'package:flutter/foundation.dart';
 
 import 'package:appcore/appcore.dart';
 
-import 'domain.dart';
-import 'domain_hooks.dart';
-
 const _boxKeyActions = "__actions";
 
 class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {

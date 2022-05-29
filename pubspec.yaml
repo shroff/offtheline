@@ -16,6 +16,7 @@ dependencies:
   hive: ^2.0.0
   http: ^0.13.0
   uri:
+  web_socket_channel:
 
 dev_dependencies:
 #   flutter_test:

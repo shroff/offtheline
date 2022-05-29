@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
+
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../core/api_client.dart';
 import 'package:async/async.dart';
@@ -21,9 +22,6 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   };
 
   CancelableOperation<bool>? _delayOperation;
-  CancelableOperation<WebSocket>? _connectOperation;
-  WebSocket? _socket;
-  StreamSubscription<dynamic>? _socketSubscription;
 
   TickerSyncCubit(
     this.api,
@@ -59,9 +57,11 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   void disconnect(String reason) {
     debugPrint('[sync] Disconnect');
     _delayOperation?.cancel();
-    _connectOperation?.cancel();
-    _socketSubscription?.cancel();
-    _socket?.close(1001, reason);
+
+    final state = this.state;
+    if (state is TickerSyncStateConnected) {
+      state.channel.sink.close(1001, reason);
+    }
     emit(const TickerSyncStateDisconnected(-1));
   }
 
@@ -95,42 +95,30 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
     debugPrint('[sync] Connecting');
     emit(const TickerSyncStateConnecting());
 
-    final operation = CancelableOperation.fromFuture(WebSocket.connect(
-      uriBuilder.toString(),
-      headers: api.requestHeaders,
-    ));
+    final channel = WebSocketChannel.connect(uriBuilder.build());
+    initiateConnection(channel.sink);
 
-    try {
-      _connectOperation = operation;
-      _socket = await operation.valueOrCancellation();
-
-      _socketSubscription = _socket?.listen((message) {
-        api.processResponseString(message);
-      }, onError: (err) {
-        final socket = _socket;
-        _socket = null;
-        socket?.close(
-          1002,
-        );
-        debugPrint("[sync] Listen error: $err");
-        emit(const TickerSyncStateDisconnected(1));
-      }, onDone: () {
-        // debugPrint('[sync] Closed: ${socket.closeCode}, ${socket.closeReason}');
-        emit(TickerSyncStateDisconnected(-1));
-      });
-
-      debugPrint('[sync] Connected');
-      emit(const TickerSyncStateConnected());
-    } catch (err) {
-      _socket = null;
-      debugPrint("[sync] Connection error: $err");
+    channel.stream.listen((message) {
+      if (state is! TickerSyncStateConnected) {
+        debugPrint('[sync] Connected');
+        emit(TickerSyncStateConnected(channel));
+        attempt = 1;
+      }
+      processResponseString(message);
+    }, onDone: () {
+      emit(TickerSyncStateDisconnected(5));
+    }, onError: (err) {
       emit(TickerSyncStateDisconnected(attempt + 1));
-    } finally {
-      _connectOperation = null;
-    }
+    }, cancelOnError: true);
   }
 
-  UriBuilder addParams(UriBuilder builder) => builder;
+  @protected
+  void initiateConnection(Sink sink) {}
+
+  @protected
+  void processResponseString(String response) {
+    api.processResponseString(response);
+  }
 }
 
 abstract class TickerSyncState {
@@ -148,5 +136,6 @@ class TickerSyncStateConnecting extends TickerSyncState {
 }
 
 class TickerSyncStateConnected extends TickerSyncState {
-  const TickerSyncStateConnected();
+  final WebSocketChannel channel;
+  const TickerSyncStateConnected(this.channel);
 }
