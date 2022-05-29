@@ -9,10 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  bloc: ^8.0.0
-  flutter_bloc: ^8.0.0
   hive: ^2.0.0
   http: ^0.13.0
+  provider:
   uri:
   web_socket_channel:
 

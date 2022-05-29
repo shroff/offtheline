@@ -4,18 +4,18 @@ import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../core/api_client.dart';
-import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uri/uri.dart';
 
 const _delays = [5, 10, 15, 30, 60, 120];
 
-abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
+abstract class TickerSyncCubit extends ChangeNotifier {
   final ApiClient api;
+  TickerSyncState _state = TickerSyncStateDisconnected();
 
   late final void Function(dynamic, dynamic) _successfulResponseProcessor =
       (response, tag) {
-    if (state is TickerSyncStateDisconnected) {
+    if (_state is TickerSyncStateDisconnected) {
       connect();
     }
   };
@@ -24,14 +24,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
 
   TickerSyncCubit(
     this.api,
-  ) : super(const TickerSyncStateDisconnected(0)) {
-    // Exponential backoff
-    stream.listen((TickerSyncState state) {
-      if (state is TickerSyncStateDisconnected && state.attempt > 0) {
-        _connect(state.attempt);
-      }
-    });
-
+  ) {
     // Try connecting when a successful response is parsed
     api.addResponseProcessor(_successfulResponseProcessor);
 
@@ -39,11 +32,10 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
   }
 
   @override
-  Future<void> close() async {
-    debugPrint('[sync] BLoC close');
+  void dispose() async {
+    super.dispose();
     api.removeResponseProcessor(_successfulResponseProcessor);
     disconnect('close');
-    await super.close();
   }
 
   UriBuilder createUriBuilder();
@@ -57,11 +49,11 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
     debugPrint('[sync] Disconnect');
     _delayOperation?.cancel();
 
-    final state = this.state;
+    final state = _state;
     if (state is TickerSyncStateConnected) {
       state.channel.sink.close(1001, reason);
     }
-    emit(const TickerSyncStateDisconnected(-1));
+    _state = TickerSyncStateDisconnected();
   }
 
   void _connect(int attempt) async {
@@ -83,7 +75,7 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
       debugPrint('Delay finished: $delaySeconds');
     }
 
-    if (state is! TickerSyncStateDisconnected) {
+    if (_state is! TickerSyncStateDisconnected) {
       return;
     }
 
@@ -91,23 +83,33 @@ abstract class TickerSyncCubit extends Cubit<TickerSyncState> {
     uriBuilder.scheme = uriBuilder.scheme == "https" ? "wss" : "ws";
 
     debugPrint('[sync] Connecting');
-    emit(const TickerSyncStateConnecting());
+    _state = TickerSyncStateConnecting();
 
     final channel = WebSocketChannel.connect(uriBuilder.build());
     initiateConnection(channel.sink);
 
-    channel.stream.listen((message) {
-      if (state is! TickerSyncStateConnected) {
-        debugPrint('[sync] Connected');
-        emit(TickerSyncStateConnected(channel));
-        attempt = 1;
-      }
-      processResponseString(message);
-    }, onDone: () {
-      emit(TickerSyncStateDisconnected(5));
-    }, onError: (err) {
-      emit(TickerSyncStateDisconnected(attempt + 1));
-    }, cancelOnError: true);
+    channel.stream.listen(
+      (message) {
+        if (_state is! TickerSyncStateConnected) {
+          debugPrint('[sync] Connected');
+          _state = TickerSyncStateConnected(channel);
+          attempt = 0;
+        }
+        processResponseString(message);
+      },
+      // Auto-reconnect with exponential backoff
+      onDone: () {
+        debugPrint('[sync] Stream Done');
+        _state = TickerSyncStateDisconnected();
+        _connect(attempt + 1);
+      },
+      onError: (err) {
+        debugPrint('[sync] Stream Error');
+        _state = TickerSyncStateDisconnected();
+        _connect(attempt + 1);
+      },
+      cancelOnError: true,
+    );
   }
 
   @protected
@@ -124,9 +126,7 @@ abstract class TickerSyncState {
 }
 
 class TickerSyncStateDisconnected extends TickerSyncState {
-  final int attempt;
-
-  const TickerSyncStateDisconnected(this.attempt);
+  const TickerSyncStateDisconnected();
 }
 
 class TickerSyncStateConnecting extends TickerSyncState {
