@@ -25,7 +25,7 @@ class Domain<R> {
   }) {
     Hive.openBox(id).then((box) async {
       if (clear) {
-        debugPrint('Clearing ${box.values.length} stale entries');
+        debugPrint('[api] Clearing ${box.values.length} stale entries');
         await box.clear();
       }
       _persist = box;
