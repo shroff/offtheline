@@ -86,7 +86,7 @@ class Domain<R> {
     await _persist.deleteFromDisk();
   }
 
-  Future<void> addAction(ApiAction action) async {
+  Future<void> addAction(ApiAction<Domain<R>> action) async {
     return actionQueue.addAction(action);
   }
 
@@ -100,6 +100,10 @@ class Domain<R> {
     } else {
       return _persist.put(key, value);
     }
+  }
+
+  Future<Box<T>> openBox<T>(String name) {
+    return Hive.openBox('$id-$name');
   }
 
   Stream<BoxEvent> watchMetadata({dynamic key}) {

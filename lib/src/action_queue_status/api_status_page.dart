@@ -41,13 +41,13 @@ class ApiStatusPage extends StatelessWidget {
                       ? IconButton(
                           icon: Icon(Icons.play_arrow),
                           onPressed: () {
-                            queue.resumeActionQueue();
+                            queue.resume();
                           })
                       : (allowPause && !queue.paused)
                           ? IconButton(
                               icon: Icon(Icons.pause),
                               onPressed: () {
-                                queue.pauseActionQueue();
+                                queue.pause();
                               })
                           : null,
                 ),

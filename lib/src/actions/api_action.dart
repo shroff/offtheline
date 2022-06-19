@@ -1,6 +1,8 @@
 part of 'actions.dart';
 
-abstract class ApiAction<D extends Domain> {
+abstract class ApiAction<D extends Domain> with HiveObjectMixin {
+  int get id => super.key;
+
   String get name;
 
   dynamic get binaryData => null;

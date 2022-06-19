@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:appcore/appcore.dart';
-
-const _boxKeyActions = "__actions";
+import 'package:hive/hive.dart';
 
 class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
+  late final Box<ApiAction<Domain<R>>> _actionsBox;
   late final List<ApiAction> _actions;
   Iterable<ApiAction> get actions => List.unmodifiable(_actions);
 
@@ -22,29 +22,39 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   ApiActionQueue();
 
   @protected
+  @override
   Future<void> initialize(Domain<R> domain) async {
     super.initialize(domain);
 
-    _actions =
-        domain.getPersisted(_boxKeyActions)?.cast<ApiAction>() ?? <ApiAction>[];
-    domain.watchMetadata(key: _boxKeyActions).listen((event) {
+    _actionsBox = await domain.openBox('actions');
+    _actions = _actionsBox.values.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+
+    _actionsBox.watch().listen((event) {
       notifyListeners();
       _sendNextAction();
     });
     _sendNextAction();
   }
 
+  @protected
+  @override
+  Future<void> close() async {
+    super.close();
+    _actionsBox.close();
+  }
+
   String generateDescription(ApiAction<Domain<R>> action) {
     return action.generateDescription(domain);
   }
 
-  Future<void> addAction(ApiAction action) async {
+  Future<void> addAction(ApiAction<Domain<R>> action) async {
     if (closed) return;
     await action.applyOptimisticUpdate(domain);
     debugPrint(
         '[actions] Request enqueued: ${action.generateDescription(domain)}');
+    _actionsBox.add(action);
     _actions.add(action);
-    domain.persist(_boxKeyActions, _actions);
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
@@ -62,19 +72,19 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
       debugPrint(
           '[actions] Deleting request: ${action.generateDescription(domain)}');
     }
-    if (index == 0 && error != null) {
+    if (index == 0) {
       _error = null;
     }
-    domain.persist(_boxKeyActions, _actions);
+    _actionsBox.deleteAt(index);
   }
 
-  void pauseActionQueue() {
+  void pause() {
     debugPrint('[actions] Pausing');
     _paused = true;
     notifyListeners();
   }
 
-  void resumeActionQueue() {
+  void resume() {
     debugPrint('[actions] Resuming');
     _error = null;
     _paused = false;
