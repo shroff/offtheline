@@ -96,9 +96,9 @@ class Domain<R> {
 
   Future<void> persist<E>(String key, E value) {
     if (value == null) {
-      return _persist.delete(key);
+      return _persist.delete(key).then((value) => _persist.flush());
     } else {
-      return _persist.put(key, value);
+      return _persist.put(key, value).then((value) => _persist.flush());
     }
   }
 

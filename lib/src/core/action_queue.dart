@@ -53,8 +53,9 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     await action.applyOptimisticUpdate(domain);
     debugPrint(
         '[actions] Request enqueued: ${action.generateDescription(domain)}');
-    _actionsBox.add(action);
     _actions.add(action);
+    _actionsBox.add(action);
+    _actionsBox.flush();
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
@@ -76,6 +77,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
       _error = null;
     }
     _actionsBox.deleteAt(index);
+    _actionsBox.flush();
   }
 
   void pause() {
