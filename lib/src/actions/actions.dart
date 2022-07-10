@@ -14,3 +14,4 @@ part 'api_action.dart';
 part 'api_action_type_adapter.dart';
 part 'json_api_action.dart';
 part 'file_upload_api_action.dart';
+part 'unknown_action.dart';

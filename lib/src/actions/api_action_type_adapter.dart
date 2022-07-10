@@ -20,10 +20,16 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
     };
     final name = fields[_fieldName];
     final deserializer = deserializers[name];
-    final props = fields[_fieldProps] as Map;
+    final props = (fields[_fieldProps] as Map).cast<String, dynamic>();
     final data = fields[_fieldBinaryData];
-    assert(deserializer != null);
-    return deserializer!.call(props.cast<String, dynamic>(), data);
+    if (deserializer == null) {
+      UnknownAction(
+        name: name,
+        props: props,
+        binaryData: data,
+      );
+    }
+    return deserializer!.call(props, data);
   }
 
   @override
