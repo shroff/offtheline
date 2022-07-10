@@ -8,6 +8,7 @@ class Domain<R> {
   final String id;
   final ApiActionQueue<R> actionQueue = ApiActionQueue();
   final ApiClient<R> api;
+  final List<Box> openBoxes = [];
   late final Box _persist;
   final _ongoingOperations = ValueNotifier<int>(0);
   final List<DomainHooks<R>> _hooks = [];
@@ -23,9 +24,9 @@ class Domain<R> {
     required this.api,
     bool clear = false,
   }) {
-    Hive.openBox(id).then((box) async {
+    openBox('persist').then((box) async {
       if (clear) {
-        debugPrint('[api] Clearing ${box.values.length} stale entries');
+        debugPrint('[domain][$id] Clearing ${box.values.length} stale entries');
         await box.clear();
       }
       _persist = box;
@@ -64,7 +65,7 @@ class Domain<R> {
     if (_closed) return;
     _closed = true;
 
-    debugPrint('[api] Logging Out');
+    debugPrint('[domain][$id] Logging Out');
 
     _hooks.forEach((hooks) {
       hooks.close();
@@ -83,7 +84,11 @@ class Domain<R> {
       _ongoingOperations.removeListener(callback);
     }
 
-    await _persist.deleteFromDisk();
+    for (final box in openBoxes) {
+      debugPrint('[domain][$id] Deleting ${box.name}');
+      await box.close();
+      await Hive.deleteBoxFromDisk(box.name);
+    }
   }
 
   Future<void> addAction(ApiAction<Domain<R>> action) async {
@@ -102,8 +107,10 @@ class Domain<R> {
     }
   }
 
-  Future<Box<T>> openBox<T>(String name) {
-    return Hive.openBox('$id-$name');
+  Future<Box<T>> openBox<T>(String name) async {
+    final box = await Hive.openBox<T>('$id-$name');
+    openBoxes.add(box);
+    return box;
   }
 
   Stream<BoxEvent> watchMetadata({dynamic key}) {

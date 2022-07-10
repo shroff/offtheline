@@ -19,11 +19,11 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
       for (int i = 0; i < n; i++) reader.readByte(): reader.read(),
     };
     final name = fields[_fieldName];
-    assert(deserializers.containsKey(name));
+    final deserializer = deserializers[name];
     final props = fields[_fieldProps] as Map;
     final data = fields[_fieldBinaryData];
-    return deserializers[fields[_fieldName]!]!(
-        props.cast<String, dynamic>(), data);
+    assert(deserializer != null);
+    return deserializer!.call(props.cast<String, dynamic>(), data);
   }
 
   @override
