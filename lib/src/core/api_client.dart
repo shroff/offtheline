@@ -94,7 +94,7 @@ class ApiClient<R> with DomainHooks<R> {
         await processResponseString(responseString, callback: callback);
         return null;
       } else {
-        return responseString;
+        return responseString.isEmpty ? 'Unknown Server Error' : responseString;
       }
     } on SocketException {
       return "Server Unreachable";

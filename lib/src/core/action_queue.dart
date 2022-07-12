@@ -34,7 +34,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
       notifyListeners();
       _sendNextAction();
     });
-    _sendNextAction();
+    domain.initialized.then((value) => _sendNextAction());
   }
 
   @protected
@@ -107,6 +107,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     notifyListeners();
 
     final action = _actions[0];
+    debugPrint('[actions] Submitting ${action.generateDescription(domain)}');
     final request = action.createRequest(domain.api);
 
     _error = await domain.api.sendRequest(request);
