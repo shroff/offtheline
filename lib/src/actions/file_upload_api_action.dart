@@ -1,4 +1,11 @@
-part of 'actions.dart';
+import 'dart:typed_data';
+import 'dart:convert';
+
+import 'package:http/http.dart';
+
+import '../core/api_action.dart';
+import '../core/api_client.dart';
+import '../core/domain.dart';
 
 mixin FileUploadApiAction<D extends Domain> on ApiAction<D> {
   @override

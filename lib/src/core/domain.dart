@@ -1,8 +1,13 @@
 import 'dart:async';
 
-import 'package:appcore/appcore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+
+import 'action_queue.dart';
+import 'api_action.dart';
+import 'api_client.dart';
+import 'domain_hooks.dart';
+import 'logger.dart';
 
 class Domain<R> {
   final String id;
@@ -26,7 +31,7 @@ class Domain<R> {
   }) {
     openBox('persist').then((box) async {
       if (clear) {
-        debugPrint('[domain][$id] Clearing ${box.values.length} stale entries');
+        logger?.i('[domain][$id] Clearing ${box.values.length} stale entries');
         await box.clear();
       }
       _persist = box;
@@ -65,7 +70,7 @@ class Domain<R> {
     if (_closed) return;
     _closed = true;
 
-    debugPrint('[domain][$id] Logging Out');
+    logger?.i('[domain][$id] Logging Out');
 
     _hooks.forEach((hooks) {
       hooks.close();
@@ -85,7 +90,6 @@ class Domain<R> {
     }
 
     for (final box in openBoxes) {
-      debugPrint('[domain][$id] Deleting ${box.name}');
       await box.close();
       await Hive.deleteBoxFromDisk(box.name);
     }

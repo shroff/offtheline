@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
+import 'package:meta/meta.dart';
 import 'package:uri/uri.dart';
 
+import 'logger.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
 
@@ -38,8 +39,7 @@ class ApiClient<R> with DomainHooks<R> {
         Uri.tryParse(domain.getPersisted(_persistKeyApiBaseUrl) ?? "") ?? Uri();
   }
 
-  bool get valid =>
-      kIsWeb || (_apiBaseUrl.hasAuthority && _apiBaseUrl.hasScheme);
+  bool get valid => true;
 
   Map<String, String> _requestHeaders = Map.unmodifiable({});
   Map<String, String> get requestHeaders => _requestHeaders;
@@ -84,7 +84,7 @@ class ApiClient<R> with DomainHooks<R> {
     final completer = Completer();
     domain.registerOngoingOperation(completer.future);
     try {
-      debugPrint('[api] Sending request to ${request.url}');
+      logger?.d('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);
       final response = await _client.send(request);
 
@@ -126,14 +126,14 @@ class ApiClient<R> with DomainHooks<R> {
     final completer = Completer<void>();
     domain.registerOngoingOperation(completer.future);
     try {
-      debugPrint('[api] Processing response');
+      logger?.d('[api] Processing response');
       if (callback != null && !callback(response)) return;
       for (final processResponse in _responseProcessors) {
         await processResponse(response, tag);
       }
     } finally {
       completer.complete();
-      debugPrint('[api] Response processed');
+      logger?.d('[api] Response processed');
     }
   }
 

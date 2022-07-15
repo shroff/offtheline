@@ -2,8 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import 'package:appcore/appcore.dart';
 import 'package:hive/hive.dart';
+
+import 'api_action.dart';
+import 'domain.dart';
+import 'domain_hooks.dart';
+import 'logger.dart';
 
 class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   late final Box<ApiAction<Domain<R>>> _actionsBox;
@@ -24,6 +28,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   @protected
   @override
   Future<void> initialize(Domain<R> domain) async {
+    logger?.d('[actions][${domain.id}] Initializing');
     super.initialize(domain);
 
     _actionsBox = await domain.openBox('actions');
@@ -40,6 +45,7 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   @protected
   @override
   Future<void> close() async {
+    logger?.d('[actions][${domain.id}] Closing');
     super.close();
     _actionsBox.close();
   }
@@ -50,9 +56,9 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
 
   Future<void> addAction(ApiAction<Domain<R>> action) async {
     if (closed) return;
+    logger?.i(
+        '[actions][${domain.id}] Adding action: ${action.generateDescription(domain)}');
     await action.applyOptimisticUpdate(domain);
-    debugPrint(
-        '[actions] Request enqueued: ${action.generateDescription(domain)}');
     _actions.add(action);
     _actionsBox.add(action);
     _actionsBox.flush();
@@ -69,10 +75,8 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
       await action.revertOptimisticUpdate(domain);
     }
 
-    if (kDebugMode) {
-      debugPrint(
-          '[actions] Deleting request: ${action.generateDescription(domain)}');
-    }
+    logger?.i(
+        '[actions][${domain.id}] Removing action: ${action.generateDescription(domain)}');
     if (index == 0) {
       _error = null;
     }
@@ -81,13 +85,13 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
   }
 
   void pause() {
-    debugPrint('[actions] Pausing');
+    logger?.d('[actions][${domain.id}] Pausing');
     _paused = true;
     notifyListeners();
   }
 
   void resume() {
-    debugPrint('[actions] Resuming');
+    logger?.d('[actions][${domain.id}] Resuming');
     _error = null;
     _paused = false;
     _sendNextAction();
@@ -107,7 +111,8 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
     notifyListeners();
 
     final action = _actions[0];
-    debugPrint('[actions] Submitting ${action.generateDescription(domain)}');
+    logger?.i(
+        '[actions][${domain.id}] Submitting ${action.generateDescription(domain)}');
     final request = action.createRequest(domain.api);
 
     _error = await domain.api.sendRequest(request);
@@ -121,6 +126,6 @@ class ApiActionQueue<R> with ChangeNotifier, DomainHooks<R> {
 
   @override
   String toString() {
-    return 'ApiActionQueue(_paused: $_paused, _submitting: $_submitting, _error: $_error, closed: $closed)';
+    return 'ApiActionQueue(domain: ${domain.id}, _paused: $_paused, _submitting: $_submitting, _error: $_error, closed: $closed)';
   }
 }

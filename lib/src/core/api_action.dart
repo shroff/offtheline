@@ -1,4 +1,10 @@
-part of 'actions.dart';
+import 'dart:async';
+
+import 'package:hive/hive.dart';
+import 'package:http/http.dart';
+
+import 'api_client.dart';
+import 'domain.dart';
 
 abstract class ApiAction<D extends Domain> with HiveObjectMixin {
   int get id => super.key;
