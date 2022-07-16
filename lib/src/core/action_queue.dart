@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-
 import 'package:hive/hive.dart';
+import 'package:meta/meta.dart';
 import 'package:state_notifier/state_notifier.dart';
 
 import '../actions/api_action.dart';
