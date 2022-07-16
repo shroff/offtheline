@@ -1,4 +1,4 @@
-export 'src/actions/actions.dart';
+export 'actions.dart';
 export 'src/core/action_queue.dart';
 export 'src/core/api_client.dart';
 export 'src/core/auth_header_api_client.dart';

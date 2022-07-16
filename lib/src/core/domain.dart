@@ -1,13 +1,24 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:meta/meta.dart';
+import 'package:state_notifier/state_notifier.dart';
 
 import 'action_queue.dart';
-import 'api_action.dart';
+import '../actions/api_action.dart';
 import 'api_client.dart';
 import 'domain_hooks.dart';
 import 'logger.dart';
+
+class _Counter extends StateNotifier<int> {
+  _Counter() : super(0);
+
+  int get value => state;
+
+  void increment() => state = state + 1;
+
+  void decrement() => state = state - 1;
+}
 
 class Domain<R> {
   final String id;
@@ -15,7 +26,7 @@ class Domain<R> {
   final ApiClient<R> api;
   final List<Box> openBoxes = [];
   late final Box _persist;
-  final _ongoingOperations = ValueNotifier<int>(0);
+  final _ongoingOperations = _Counter();
   final List<DomainHooks<R>> _hooks = [];
 
   final _boxOpenedCompleter = Completer();
@@ -58,10 +69,10 @@ class Domain<R> {
   @nonVirtual
   void registerOngoingOperation(Future future) {
     if (_closed) return;
-    _ongoingOperations.value = _ongoingOperations.value + 1;
+    _ongoingOperations.increment();
     future.then(
-      (value) => _ongoingOperations.value = _ongoingOperations.value - 1,
-      onError: (err) => _ongoingOperations.value = _ongoingOperations.value - 1,
+      (value) => _ongoingOperations.decrement(),
+      onError: (err) => _ongoingOperations.decrement(),
     );
   }
 
@@ -77,17 +88,14 @@ class Domain<R> {
     });
 
     // Wait for pending operations
-    if (_ongoingOperations.value != 0) {
-      final completer = Completer();
-      final callback = () {
-        if (_ongoingOperations.value == 0) {
-          completer.complete();
-        }
-      };
-      _ongoingOperations.addListener(callback);
-      await completer.future;
-      _ongoingOperations.removeListener(callback);
-    }
+    final completer = Completer();
+    final removeListener = _ongoingOperations.addListener((value) {
+      if (value == 0) {
+        completer.complete();
+      }
+    }, fireImmediately: true);
+    await completer.future;
+    removeListener();
 
     for (final box in openBoxes) {
       await box.close();

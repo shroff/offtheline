@@ -1,7 +1,7 @@
 import 'package:hive/hive.dart';
 
 import 'unknown_action.dart';
-import '../core/api_action.dart';
+import 'api_action.dart';
 import '../core/domain.dart';
 
 const _fieldName = 0;

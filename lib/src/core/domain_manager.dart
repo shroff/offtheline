@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:meta/meta.dart';
+import 'package:state_notifier/state_notifier.dart';
 
 import 'domain.dart';
 import 'logger.dart';
@@ -10,7 +11,15 @@ const _boxName = "domains";
 const _persistKeyCurrentDomain = "currentDomain";
 const _persistKeyDomainIds = "domains";
 
-abstract class DomainManager<D extends Domain> with ChangeNotifier {
+class DomainManagerState<D extends Domain> {
+  final Map<String, D> domainMap;
+  final D? currentDomain;
+
+  const DomainManagerState(this.domainMap, this.currentDomain);
+}
+
+abstract class DomainManager<D extends Domain>
+    extends StateNotifier<DomainManagerState<D>> with LocatorMixin {
   late final Box _persist;
   final Map<String, D> _domainMap = {};
   final String? userAgent;
@@ -22,14 +31,16 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
     _persist.put(_persistKeyDomainIds, domainIds);
   }
 
-  String? get currentDomain => _persist.get(_persistKeyCurrentDomain);
-  set currentDomain(String? value) {
-    if (value != null && !_domainMap.containsKey(value)) return;
+  Domain? get currentDomain => state.currentDomain;
+
+  String? get currentDomainId => _persist.get(_persistKeyCurrentDomain);
+  set currentDomainId(String? value) {
+    final domain = _domainMap[value];
     _persist.put(_persistKeyCurrentDomain, value);
-    notifyListeners();
+    state = DomainManagerState(state.domainMap, domain);
   }
 
-  DomainManager(this.userAgent);
+  DomainManager(this.userAgent) : super(const DomainManagerState({}, null));
 
   Future<void> initialize() async {
     _persist = await Hive.openBox(_boxName);
@@ -45,8 +56,8 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
         await clearDomain(domainId);
       }
     }));
-    if (!_domainMap.containsKey(currentDomain)) {
-      currentDomain = domainIdList.isEmpty ? null : domainIdList[0];
+    if (!_domainMap.containsKey(currentDomainId)) {
+      currentDomainId = domainIdList.isEmpty ? null : domainIdList[0];
     }
   }
 
@@ -55,9 +66,8 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
       domainIdList = List.from(domainIdList)..add(domain.id);
       domain.api.userAgent = userAgent;
       _domainMap[domain.id] = domain;
-      if (currentDomain == null)
-        currentDomain = domainIdList.isEmpty ? null : domainIdList[0];
-      notifyListeners();
+      if (currentDomainId == null)
+        currentDomainId = domainIdList.isEmpty ? null : domainIdList[0];
     }
   }
 
@@ -71,9 +81,8 @@ abstract class DomainManager<D extends Domain> with ChangeNotifier {
     final domain = _domainMap[domainId];
     _domainMap.remove(domainId);
     domainIdList = List.from(domainIdList)..remove(domainId);
-    if (currentDomain == domainId)
-      currentDomain = domainIdList.isEmpty ? null : domainIdList[0];
-    notifyListeners();
+    if (currentDomainId == domainId)
+      currentDomainId = domainIdList.isEmpty ? null : domainIdList[0];
     return domain?.delete();
   }
 
