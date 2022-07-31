@@ -1,7 +1,7 @@
-name: appcore
-description: Offline App Core written in pure Dart.
-version: 0.11.0
-homepage: https://kudosoft.net
+name: offtheline
+description: Add offline functionality to your Dart/Flutter client app.
+version: 0.12.0
+homepage: https://github.com/shroff/offtheline
 
 environment:
   sdk: '>=2.12.0 <3.0.0'
