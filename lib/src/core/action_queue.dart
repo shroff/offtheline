@@ -125,7 +125,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
         '[actions][${domain.id}] Submitting ${action.generateDescription(domain)}');
     final request = action.createRequest(domain.api);
 
-    final error = await domain.api.sendRequest(request);
+    final error = await domain.api.sendRequest(request, tag: action.tag);
     final actions = (error == null) ? state.actions.sublist(1) : state.actions;
     if (error == null) {
       logger?.d('[actions][${domain.id}] Success');

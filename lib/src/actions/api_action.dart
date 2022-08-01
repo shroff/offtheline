@@ -13,6 +13,8 @@ abstract class ApiAction<D extends Domain> with HiveObjectMixin {
 
   dynamic get binaryData => null;
 
+  dynamic get tag => null;
+
   String generateDescription(D domain);
 
   String generatePayloadDetails();
