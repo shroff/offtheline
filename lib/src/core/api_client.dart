@@ -41,8 +41,6 @@ class ApiClient<R> with DomainHooks<R> {
         Uri.tryParse(domain.getPersisted(_persistKeyApiBaseUrl) ?? "") ?? Uri();
   }
 
-  bool get valid => true;
-
   Map<String, String> _requestHeaders = Map.unmodifiable({});
   Map<String, String> get requestHeaders => _requestHeaders;
   void setHeader(String key, String? value) {
@@ -53,10 +51,6 @@ class ApiClient<R> with DomainHooks<R> {
       headers[key] = value;
     }
     _requestHeaders = Map.unmodifiable(headers);
-  }
-
-  set userAgent(String? userAgent) {
-    setHeader('User-Agent', userAgent);
   }
 
   String createUrl(String path) {

@@ -22,7 +22,6 @@ abstract class DomainManager<D extends Domain>
     extends StateNotifier<DomainManagerState<D>> with LocatorMixin {
   late final Box _persist;
   final Map<String, D> _domainMap = {};
-  final String? userAgent;
 
   List<String> _domainIdList = List.unmodifiable([]);
   List<String> get domainIdList => _domainIdList;
@@ -40,7 +39,7 @@ abstract class DomainManager<D extends Domain>
     state = DomainManagerState(state.domainMap, domain);
   }
 
-  DomainManager(this.userAgent) : super(const DomainManagerState({}, null));
+  DomainManager() : super(const DomainManagerState({}, null));
 
   Future<void> initialize() async {
     _persist = await Hive.openBox(_boxName);
@@ -48,12 +47,12 @@ abstract class DomainManager<D extends Domain>
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
     await Future.wait(domainIds.map((domainId) async {
       logger?.d("[domain-manager] Restoring domain $domainId");
-      final domain = await restoreDomainInstance(domainId);
-      if (domainInstanceValid(domain)) {
-        addDomain(domain);
-      } else {
+      final domain = await restoreDomain(domainId);
+      if (domain == null) {
         logger?.e("Domain is invalid. Deleting $domainId");
         await clearDomain(domainId);
+      } else {
+        await addDomain(domain);
       }
     }));
     if (!_domainMap.containsKey(currentDomainId)) {
@@ -61,20 +60,20 @@ abstract class DomainManager<D extends Domain>
     }
   }
 
-  void addDomain(D domain) async {
+  Future<void> addDomain(D domain) async {
     if (!domainIdList.contains(domain.id)) {
       domainIdList = List.from(domainIdList)..add(domain.id);
-      domain.api.userAgent = userAgent;
       _domainMap[domain.id] = domain;
+      await initializeDomain(domain);
       currentDomainId ??= domainIdList.isEmpty ? null : domainIdList[0];
     }
   }
 
   @protected
-  Future<D> restoreDomainInstance(String domainId);
+  FutureOr<D?> restoreDomain(String id);
 
   @protected
-  bool domainInstanceValid(D domain) => domain.api.valid;
+  FutureOr<void> initializeDomain(D domain) {}
 
   FutureOr<void> clearDomain(String domainId) {
     final domain = _domainMap[domainId];

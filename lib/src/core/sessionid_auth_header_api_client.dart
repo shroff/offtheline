@@ -15,10 +15,6 @@ class SessionIdAuthHeaderApiClient<R> extends ApiClient<R> {
         "SessionId ${domain.getPersisted(_persistKeySessionId)}");
   }
 
-  @override
-  bool get valid =>
-      super.valid && domain.getPersisted(_persistKeySessionId) != null;
-
   String? get sessionId => domain.getPersisted(_persistKeySessionId);
   set sessionId(String? value) {
     domain.persist(_persistKeySessionId, value);
