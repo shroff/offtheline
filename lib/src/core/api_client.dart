@@ -7,6 +7,7 @@ import 'package:uri/uri.dart';
 
 import 'api_error_response.dart';
 import 'logger.dart';
+import 'dispatcher.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
 
@@ -19,7 +20,7 @@ typedef ResponseProcessor<R> = FutureOr<void> Function(
 );
 
 class ApiClient<R> with DomainHooks<R> {
-  final Client _client = Client();
+  Dispatcher dispatcher = HttpClientDispatcher();
   final ResponseTransformer<R?> transformResponse;
   final List<ResponseProcessor<R>> _responseProcessors = [];
 
@@ -71,7 +72,7 @@ class ApiClient<R> with DomainHooks<R> {
     _responseProcessors.remove(processor);
   }
 
-  FutureOr<ApiErrorResponse?> sendRequest(
+  Future<ApiErrorResponse?> sendRequest(
     BaseRequest request, {
     FutureOr<void> Function(R?)? callback,
     dynamic tag,
@@ -82,20 +83,22 @@ class ApiClient<R> with DomainHooks<R> {
     try {
       logger?.d('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);
-      final response = await _client.send(request);
+      final response = await dispatcher.dispatch(request);
 
-      final responseString = await response.stream.bytesToString();
       // Show request result
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        await processResponseString(responseString,
-            callback: callback, tag: tag);
+        await processResponseString(
+          response.body,
+          callback: callback,
+          tag: tag,
+        );
         return null;
       } else {
         return ApiErrorResponse(
             statusCode: response.statusCode,
-            message: responseString.isEmpty
+            message: response.bodyBytes.isEmpty
                 ? 'Unknown Server Error'
-                : responseString);
+                : response.body);
       }
     } on SocketException {
       return ApiErrorResponse(message: 'Server Unreachable');
