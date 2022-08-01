@@ -26,6 +26,7 @@ class Domain<R> {
   final ApiClient<R> api;
   final List<Box> openBoxes = [];
   late final Box _persist;
+  final bool clear;
   final _ongoingOperations = _Counter();
   final List<DomainHooks<R>> _hooks = [];
 
@@ -38,7 +39,7 @@ class Domain<R> {
   Domain({
     required this.id,
     required this.api,
-    bool clear = false,
+    this.clear = false,
   }) {
     openBox('persist').then((box) async {
       if (clear) {
@@ -121,6 +122,9 @@ class Domain<R> {
 
   Future<Box<T>> openBox<T>(String name) async {
     final box = await Hive.openBox<T>('$id-$name');
+    if (clear) {
+      await box.clear();
+    }
     openBoxes.add(box);
     return box;
   }
