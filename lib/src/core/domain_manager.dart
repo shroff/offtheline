@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:hive/hive.dart';
 import 'package:meta/meta.dart';
+import 'package:offtheline/offtheline.dart';
 import 'package:state_notifier/state_notifier.dart';
 
 import 'domain.dart';
@@ -21,69 +22,75 @@ class DomainManagerState<D extends Domain> {
 abstract class DomainManager<D extends Domain>
     extends StateNotifier<DomainManagerState<D>> with LocatorMixin {
   late final Box _persist;
-  final Map<String, D> _domainMap = {};
-
-  List<String> _domainIdList = List.unmodifiable([]);
-  List<String> get domainIdList => _domainIdList;
-  set domainIdList(List<String> domainIds) {
-    _domainIdList = List.unmodifiable(domainIds);
-    _persist.put(_persistKeyDomainIds, domainIds);
-  }
 
   Domain? get currentDomain => state.currentDomain;
 
-  String? get currentDomainId => _persist.get(_persistKeyCurrentDomain);
-  set currentDomainId(String? value) {
-    final domain = _domainMap[value];
-    _persist.put(_persistKeyCurrentDomain, value);
-    state = DomainManagerState(state.domainMap, domain);
-  }
+  D? getDomain(String domainId) => state.domainMap[domainId];
 
   DomainManager() : super(const DomainManagerState({}, null));
 
   Future<void> initialize() async {
     _persist = await Hive.openBox(_boxName);
-    final List<String> domainIds =
+    final List<String> persistedDomainIds =
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
-    await Future.wait(domainIds.map((domainId) async {
+    String? currentDomainId = _persist.get(_persistKeyCurrentDomain);
+
+    final domainMap = <String, D>{};
+    bool invalidDomains = false;
+    for (final domainId in persistedDomainIds) {
       logger?.d('[domain-manager] Restoring domain $domainId');
       final domain = await restoreDomain(domainId);
       if (domain == null) {
-        logger?.e('Domain is invalid. Deleting $domainId');
+        logger?.e('[domain-manager] Domain $domainId is invalid. Deleting.');
+        invalidDomains = true;
         await clearDomain(domainId);
       } else {
-        await addDomain(domain);
+        domainMap[domainId] = domain;
       }
-    }));
-    if (!_domainMap.containsKey(currentDomainId)) {
-      currentDomainId = domainIdList.isEmpty ? null : domainIdList[0];
     }
-  }
+    if (invalidDomains) {
+      _persist.put(
+          _persistKeyDomainIds, domainMap.keys.toList(growable: false));
+    }
 
-  Future<void> addDomain(D domain) async {
-    if (!domainIdList.contains(domain.id)) {
-      domainIdList = List.from(domainIdList)..add(domain.id);
-      _domainMap[domain.id] = domain;
-      await initializeDomain(domain);
-      currentDomainId ??= domainIdList.isEmpty ? null : domainIdList[0];
+    bool invalidCurrentDomain = false;
+    if (currentDomainId == null && domainMap.isNotEmpty) {
+      invalidCurrentDomain = true;
+      currentDomainId = domainMap.keys.first;
+    } else if (currentDomainId != null &&
+        !domainMap.containsKey(currentDomainId)) {
+      currentDomainId = domainMap.isEmpty ? null : domainMap.keys.first;
     }
+    if (invalidCurrentDomain) {
+      _persist.put(_persistKeyCurrentDomain, currentDomainId);
+    }
+
+    final currentDomain = domainMap[_persist.get(_persistKeyCurrentDomain)];
+
+    state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
   }
 
   @protected
   FutureOr<D?> restoreDomain(String id);
 
-  @protected
-  FutureOr<void> initializeDomain(D domain) {}
-
-  FutureOr<void> clearDomain(String domainId) {
-    final domain = _domainMap[domainId];
-    _domainMap.remove(domainId);
-    domainIdList = List.from(domainIdList)..remove(domainId);
-    if (currentDomainId == domainId) {
-      currentDomainId = domainIdList.isEmpty ? null : domainIdList[0];
+  void addDomain(D domain) async {
+    if (!state.domainMap.containsKey(domain.id)) {
+      final domainMap = Map.of(state.domainMap);
+      domainMap[domain.id] = domain;
+      final currentDomain = state.currentDomain ?? domain;
+      state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
     }
-    return domain?.delete();
   }
 
-  D? getDomain(String domainId) => _domainMap[domainId];
+  FutureOr<void> clearDomain(String domainId) {
+    final domainMap = Map.of(state.domainMap);
+    final removed = domainMap.remove(domainId);
+    if (removed != null) {
+      final currentDomain = state.currentDomain?.id == domainId
+          ? (domainMap.isEmpty ? null : domainMap.values.first)
+          : state.currentDomain;
+      state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
+      return removed.delete();
+    }
+  }
 }
