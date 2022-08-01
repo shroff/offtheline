@@ -5,6 +5,7 @@ import 'package:http/http.dart';
 import 'package:meta/meta.dart';
 import 'package:uri/uri.dart';
 
+import 'api_error_response.dart';
 import 'logger.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
@@ -75,12 +76,12 @@ class ApiClient<R> with DomainHooks<R> {
     _responseProcessors.remove(processor);
   }
 
-  Future<String?> sendRequest(
+  Future<ApiErrorResponse?> sendRequest(
     BaseRequest request, {
-    bool Function(R?)? callback,
+    FutureOr<void> Function(R?)? callback,
     dynamic tag,
   }) async {
-    if (closed) return "Client Closed";
+    if (closed) return ApiErrorResponse(message: "Client Closed");
     final completer = Completer();
     domain.registerOngoingOperation(completer.future);
     try {
@@ -91,15 +92,20 @@ class ApiClient<R> with DomainHooks<R> {
       final responseString = await response.stream.bytesToString();
       // Show request result
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        await processResponseString(responseString, callback: callback);
+        await processResponseString(responseString,
+            callback: callback, tag: tag);
         return null;
       } else {
-        return responseString.isEmpty ? 'Unknown Server Error' : responseString;
+        return ApiErrorResponse(
+            statusCode: response.statusCode,
+            message: responseString.isEmpty
+                ? 'Unknown Server Error'
+                : responseString);
       }
     } on SocketException {
-      return "Server Unreachable";
+      return ApiErrorResponse(message: 'Server Unreachable');
     } catch (e) {
-      return e.toString();
+      return ApiErrorResponse(message: e.toString());
     } finally {
       completer.complete();
     }
@@ -107,7 +113,7 @@ class ApiClient<R> with DomainHooks<R> {
 
   Future<void> processResponseString(
     String responseString, {
-    bool Function(R?)? callback,
+    FutureOr<void> Function(R?)? callback,
     dynamic tag,
   }) async {
     processResponse(
@@ -120,14 +126,14 @@ class ApiClient<R> with DomainHooks<R> {
   @nonVirtual
   Future<void> processResponse(
     R? response, {
-    bool Function(R?)? callback,
+    FutureOr<void> Function(R?)? callback,
     dynamic tag,
   }) async {
     final completer = Completer<void>();
     domain.registerOngoingOperation(completer.future);
     try {
       logger?.d('[api] Processing response');
-      if (callback != null && !callback(response)) return;
+      if (callback != null) await callback.call(response);
       for (final processResponse in _responseProcessors) {
         await processResponse(response, tag);
       }

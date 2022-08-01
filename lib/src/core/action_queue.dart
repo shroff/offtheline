@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 import 'package:state_notifier/state_notifier.dart';
 
 import '../actions/api_action.dart';
+import 'api_error_response.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
 import 'logger.dart';
@@ -13,7 +14,7 @@ class ApiActionQueueState {
   final List<ApiAction> actions;
   final bool paused;
   final bool submitting;
-  final String? error;
+  final ApiErrorResponse? error;
 
   ApiActionQueueState(this.actions, this.paused, this.submitting, this.error);
 }
@@ -21,13 +22,14 @@ class ApiActionQueueState {
 class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     with DomainHooks<R>, LocatorMixin {
   late final Box<ApiAction<Domain<R>>> _actionsBox;
+  late final Function() _removeListener;
   Iterable<ApiAction> get actions => List.unmodifiable(state.actions);
 
   bool get paused => state.paused;
 
   bool get submitting => state.submitting;
 
-  String? get error => state.error;
+  ApiErrorResponse? get error => state.error;
 
   ApiActionQueue() : super(ApiActionQueueState([], false, false, null));
 
@@ -43,8 +45,13 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
     state = ApiActionQueueState(actions, paused, submitting, error);
 
-    _actionsBox.watch().listen((event) {
-      _sendNextAction();
+    _removeListener = addListener((state) {
+      if (!state.paused &&
+          !state.submitting &&
+          state.actions.isNotEmpty &&
+          state.error == null) {
+        _sendNextAction();
+      }
     });
     domain.initialized.then((value) => _sendNextAction());
   }
@@ -54,6 +61,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
   Future<void> close() async {
     logger?.d('[actions][${domain.id}] Closing');
     super.close();
+    _removeListener();
     _actionsBox.close();
   }
 
@@ -66,10 +74,10 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     logger?.i(
         '[actions][${domain.id}] Adding action: ${action.generateDescription(domain)}');
     await action.applyOptimisticUpdate(domain);
-    state =
-        ApiActionQueueState([...actions, action], paused, submitting, error);
     _actionsBox.add(action);
     _actionsBox.flush();
+    state =
+        ApiActionQueueState([...actions, action], paused, submitting, error);
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
@@ -80,16 +88,15 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
     final actions = List.of(state.actions);
     final action = actions.removeAt(index);
-    if (revert) {
-      await action.revertOptimisticUpdate(domain);
-    }
 
-    logger?.i(
+    logger?.d(
         '[actions][${domain.id}] Removing action: ${action.generateDescription(domain)}');
     final error = index == 0 ? null : this.error;
     _actionsBox.deleteAt(index);
     _actionsBox.flush();
     state = ApiActionQueueState(actions, paused, submitting, error);
+
+    return action.revertOptimisticUpdate(domain);
   }
 
   void pause() {
@@ -100,32 +107,36 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
   void resume() {
     logger?.d('[actions][${domain.id}] Resuming');
     state = ApiActionQueueState(state.actions, false, submitting, null);
-    _sendNextAction();
   }
 
   void _sendNextAction() async {
-    final actions = state.actions;
     if (closed ||
-        actions.isEmpty ||
-        (this.error?.isNotEmpty ?? false) ||
+        state.actions.isEmpty ||
+        this.error != null ||
         paused ||
         submitting) {
       return;
     }
 
-    state = ApiActionQueueState(state.actions, paused, submitting, '');
+    state = ApiActionQueueState(state.actions, paused, true, null);
 
-    final action = actions.first;
-    logger?.i(
+    final action = state.actions.first;
+    logger?.d(
         '[actions][${domain.id}] Submitting ${action.generateDescription(domain)}');
     final request = action.createRequest(domain.api);
 
     final error = await domain.api.sendRequest(request);
-    state = ApiActionQueueState(state.actions, paused, false, error);
-
+    final actions = (error == null) ? state.actions.sublist(1) : state.actions;
     if (error == null) {
-      removeActionAt(0, revert: false);
+      logger?.d('[actions][${domain.id}] Success');
+      if (!closed) {
+        _actionsBox.deleteAt(0);
+        _actionsBox.flush();
+      }
+    } else {
+      logger?.d('[actions][${domain.id}] Error: $error');
     }
+    state = ApiActionQueueState(actions, paused, false, error);
   }
 
   @override

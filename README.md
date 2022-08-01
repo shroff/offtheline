@@ -1,5 +1,4 @@
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+Add offline capability to your Dart/Flutter app
 
 ## Features
 
