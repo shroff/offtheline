@@ -10,7 +10,7 @@ import 'logger.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
 
-const _persistKeyApiBaseUrl = "apiBaseUrl";
+const _persistKeyApiBaseUrl = 'apiBaseUrl';
 
 typedef ResponseTransformer<R> = FutureOr<R?> Function(String);
 typedef ResponseProcessor<R> = FutureOr<void> Function(
@@ -38,7 +38,7 @@ class ApiClient<R> with DomainHooks<R> {
   Future<void> initialize(Domain<R> domain) async {
     await super.initialize(domain);
     _apiBaseUrl =
-        Uri.tryParse(domain.getPersisted(_persistKeyApiBaseUrl) ?? "") ?? Uri();
+        Uri.tryParse(domain.getPersisted(_persistKeyApiBaseUrl) ?? '') ?? Uri();
   }
 
   Map<String, String> _requestHeaders = Map.unmodifiable({});
@@ -71,12 +71,12 @@ class ApiClient<R> with DomainHooks<R> {
     _responseProcessors.remove(processor);
   }
 
-  Future<ApiErrorResponse?> sendRequest(
+  FutureOr<ApiErrorResponse?> sendRequest(
     BaseRequest request, {
     FutureOr<void> Function(R?)? callback,
     dynamic tag,
   }) async {
-    if (closed) return ApiErrorResponse(message: "Client Closed");
+    if (closed) return ApiErrorResponse(message: 'Client Closed');
     final completer = Completer();
     domain.registerOngoingOperation(completer.future);
     try {

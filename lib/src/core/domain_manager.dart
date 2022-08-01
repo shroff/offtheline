@@ -7,9 +7,9 @@ import 'package:state_notifier/state_notifier.dart';
 import 'domain.dart';
 import 'logger.dart';
 
-const _boxName = "domains";
-const _persistKeyCurrentDomain = "currentDomain";
-const _persistKeyDomainIds = "domains";
+const _boxName = 'domains';
+const _persistKeyCurrentDomain = 'currentDomain';
+const _persistKeyDomainIds = 'domains';
 
 class DomainManagerState<D extends Domain> {
   final Map<String, D> domainMap;
@@ -46,10 +46,10 @@ abstract class DomainManager<D extends Domain>
     final List<String> domainIds =
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
     await Future.wait(domainIds.map((domainId) async {
-      logger?.d("[domain-manager] Restoring domain $domainId");
+      logger?.d('[domain-manager] Restoring domain $domainId');
       final domain = await restoreDomain(domainId);
       if (domain == null) {
-        logger?.e("Domain is invalid. Deleting $domainId");
+        logger?.e('Domain is invalid. Deleting $domainId');
         await clearDomain(domainId);
       } else {
         await addDomain(domain);

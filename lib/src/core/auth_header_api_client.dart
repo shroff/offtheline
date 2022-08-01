@@ -1,7 +1,7 @@
 import 'api_client.dart';
 import 'domain.dart';
 
-const _persistKeyAuthorization = "authorization";
+const _persistKeyAuthorization = 'authorization';
 
 class AuthHeaderApiClient<R> extends ApiClient<R> {
   AuthHeaderApiClient({required ResponseTransformer<R> transformResponse})

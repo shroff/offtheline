@@ -1,7 +1,7 @@
 import 'api_client.dart';
 import 'domain.dart';
 
-const _persistKeySessionId = "sessionID";
+const _persistKeySessionId = 'sessionID';
 
 class SessionIdAuthHeaderApiClient<R> extends ApiClient<R> {
   SessionIdAuthHeaderApiClient(
@@ -12,7 +12,7 @@ class SessionIdAuthHeaderApiClient<R> extends ApiClient<R> {
   Future<void> initialize(Domain<R> domain) async {
     await super.initialize(domain);
     setHeader('Authorization',
-        "SessionId ${domain.getPersisted(_persistKeySessionId)}");
+        'SessionId ${domain.getPersisted(_persistKeySessionId)}');
   }
 
   String? get sessionId => domain.getPersisted(_persistKeySessionId);
