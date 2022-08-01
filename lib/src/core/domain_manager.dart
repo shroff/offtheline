@@ -43,7 +43,6 @@ abstract class DomainManager<D extends Domain>
       if (domain == null) {
         logger?.e('[domain-manager] Domain $domainId is invalid. Deleting.');
         invalidDomains = true;
-        await clearDomain(domainId);
       } else {
         domainMap[domainId] = domain;
       }
@@ -82,7 +81,7 @@ abstract class DomainManager<D extends Domain>
     }
   }
 
-  FutureOr<void> clearDomain(String domainId) {
+  FutureOr<void> removeDomain(String domainId) {
     final domainMap = Map.of(state.domainMap);
     final removed = domainMap.remove(domainId);
     if (removed != null) {
