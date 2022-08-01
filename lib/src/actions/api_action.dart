@@ -13,15 +13,15 @@ abstract class ApiAction<D extends Domain> with HiveObjectMixin {
 
   dynamic get binaryData => null;
 
-  String generateDescription(D api);
+  String generateDescription(D domain);
 
   String generatePayloadDetails();
 
   BaseRequest createRequest(ApiClient api);
 
-  FutureOr<void> applyOptimisticUpdate(D api);
+  FutureOr<void> applyOptimisticUpdate(D domain);
 
-  FutureOr<void> revertOptimisticUpdate(D api);
+  FutureOr<void> revertOptimisticUpdate(D domain);
 
   Map<String, dynamic> toMap();
 }

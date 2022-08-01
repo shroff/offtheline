@@ -30,6 +30,7 @@ class UnknownAction extends ApiAction {
   @override
   void revertOptimisticUpdate(Domain domain) {}
 
+  @override
   Map<String, dynamic> toMap() => props;
 
   @override

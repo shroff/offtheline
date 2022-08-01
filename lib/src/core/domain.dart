@@ -83,9 +83,9 @@ class Domain<R> {
 
     logger?.i('[domain][$id] Logging Out');
 
-    _hooks.forEach((hooks) {
-      hooks.close();
-    });
+    for (final hooks in _hooks) {
+      await hooks.close();
+    }
 
     // Wait for pending operations
     final completer = Completer();

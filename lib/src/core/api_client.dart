@@ -34,6 +34,7 @@ class ApiClient<R> with DomainHooks<R> {
     required this.transformResponse,
   });
 
+  @override
   Future<void> initialize(Domain<R> domain) async {
     await super.initialize(domain);
     _apiBaseUrl =

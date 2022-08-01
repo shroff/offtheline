@@ -8,6 +8,7 @@ class SessionIdAuthHeaderApiClient<R> extends ApiClient<R> {
       {required ResponseTransformer<R> transformResponse})
       : super(transformResponse: transformResponse);
 
+  @override
   Future<void> initialize(Domain<R> domain) async {
     await super.initialize(domain);
     setHeader('Authorization',

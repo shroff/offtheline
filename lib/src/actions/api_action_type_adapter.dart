@@ -40,13 +40,13 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
   int get typeId => 0;
 
   @override
-  void write(BinaryWriter writer, ApiAction<D> action) {
+  void write(BinaryWriter writer, ApiAction<D> obj) {
     writer.writeByte(3);
     writer.writeByte(_fieldName);
-    writer.write(action.name);
+    writer.write(obj.name);
     writer.writeByte(_fieldProps);
-    writer.write(action.toMap());
+    writer.write(obj.toMap());
     writer.writeByte(_fieldBinaryData);
-    writer.write(action.binaryData);
+    writer.write(obj.binaryData);
   }
 }

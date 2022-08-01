@@ -10,5 +10,9 @@ dependencies:
   hive: ^2.0.0
   http: ^0.13.0
   logger: 
+  meta:
   state_notifier:
   uri:
+
+dev_dependencies: 
+  lints: ^2.0.0

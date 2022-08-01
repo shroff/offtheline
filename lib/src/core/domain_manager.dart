@@ -66,8 +66,7 @@ abstract class DomainManager<D extends Domain>
       domainIdList = List.from(domainIdList)..add(domain.id);
       domain.api.userAgent = userAgent;
       _domainMap[domain.id] = domain;
-      if (currentDomainId == null)
-        currentDomainId = domainIdList.isEmpty ? null : domainIdList[0];
+      currentDomainId ??= domainIdList.isEmpty ? null : domainIdList[0];
     }
   }
 
@@ -81,8 +80,9 @@ abstract class DomainManager<D extends Domain>
     final domain = _domainMap[domainId];
     _domainMap.remove(domainId);
     domainIdList = List.from(domainIdList)..remove(domainId);
-    if (currentDomainId == domainId)
+    if (currentDomainId == domainId) {
       currentDomainId = domainIdList.isEmpty ? null : domainIdList[0];
+    }
     return domain?.delete();
   }
 
