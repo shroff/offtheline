@@ -13,8 +13,13 @@ typedef ApiActionDeserializer<D extends Domain> = ApiAction<D> Function(
 
 class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
   final Map<String, ApiActionDeserializer<D>> deserializers;
+  @override
+  final int typeId;
 
-  ApiActionTypeAdapter(this.deserializers);
+  ApiActionTypeAdapter(
+    this.deserializers, {
+    this.typeId = 0,
+  });
 
   @override
   ApiAction<D> read(BinaryReader reader) {
@@ -35,9 +40,6 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
     }
     return deserializer!.call(props, data);
   }
-
-  @override
-  int get typeId => 0;
 
   @override
   void write(BinaryWriter writer, ApiAction<D> obj) {
