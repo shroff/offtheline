@@ -1,24 +1,30 @@
 import 'package:example/models/note.dart';
-import 'package:hive/hive.dart';
+import 'package:flutter/foundation.dart';
+import 'package:isar/isar.dart';
 import 'package:offtheline/offtheline.dart';
-
-const _boxNameNotes = 'notes';
+import 'package:path_provider/path_provider.dart';
 
 class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
-  late final Box<Note> notes;
+  late final Isar isar;
 
   @override
   Future<void> initialize(Domain<Map<String, dynamic>> domain) async {
     super.initialize(domain);
 
-    notes = await domain.openBox<Note>(_boxNameNotes);
+    final dir = kIsWeb ? null : await getApplicationSupportDirectory();
+
+    isar = await Isar.open(
+      schemas: [NoteSchema],
+      directory: dir?.path,
+    );
+
     domain.api.addResponseProcessor(processResponse);
   }
 
   @override
   Future<void> close() async {
     super.close();
-    await notes.close();
+    await isar.close();
   }
 
   Future<void> processResponse(Map<String, dynamic>? data, dynamic tag) async {
@@ -26,10 +32,9 @@ class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
 
     if (tag == 'all-notes') {
       final list = (data['notes'] as List).cast<Map<String, dynamic>>();
-      notes.clear();
-      for (final map in list) {
-        notes.add(Note.fromMap(map));
-      }
+      await isar.notes.clear();
+      isar.writeTxn((isar) => isar.notes
+          .putAll(list.map((e) => Note.fromMap(e)).toList(growable: false)));
     }
   }
 }

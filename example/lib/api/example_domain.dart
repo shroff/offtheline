@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:offtheline/offtheline.dart';
 
-import 'example_domain_manager.dart';
 import 'user_agent.dart';
 
 const _persistKeyAuthToken = 'authToken';

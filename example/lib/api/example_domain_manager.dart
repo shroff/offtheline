@@ -1,9 +1,12 @@
+import 'package:example/api/actions/edit_starred_action.dart';
 import 'package:offtheline/offtheline.dart';
 
 import 'example_domain.dart';
 import 'user_agent.dart';
 
-const actionDeserializers = <String, ApiActionDeserializer>{};
+const actionDeserializers = {
+  EditStarredAction.actionName: EditStarredAction.deserialize,
+};
 
 class ExampleDomainManager extends DomainManager<ExampleDomain> {
   ExampleDomainManager._();

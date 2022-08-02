@@ -1,31 +1,21 @@
-import 'package:hive/hive.dart';
+import 'package:isar/isar.dart';
 
 part 'note.g.dart';
 
-@HiveType(typeId: 1)
-class Note with HiveObjectMixin {
-  @HiveField(0)
+@Collection()
+class Note {
+  @Id()
+  int? id;
   DateTime creationTime;
-
-  @HiveField(1)
   DateTime updateTime;
-
-  @HiveField(2)
   String title;
-
-  @HiveField(4)
   String? color;
-
-  @HiveField(3)
   String? details;
-
-  @HiveField(5)
   bool starred;
-
-  @HiveField(6)
   bool archived;
 
   Note({
+    required this.id,
     required this.creationTime,
     required this.updateTime,
     required this.title,
@@ -37,6 +27,7 @@ class Note with HiveObjectMixin {
 
   factory Note.fromMap(Map<String, dynamic> map) {
     return Note(
+      id: map['id'],
       creationTime: DateTime.parse(map['creationTime']),
       updateTime: DateTime.parse(map['updateTime']),
       title: map['title'] ?? '',
