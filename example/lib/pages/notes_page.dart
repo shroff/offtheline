@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:example/api/actions/add_note_action.dart';
 import 'package:example/api/actions/set_starred_action.dart';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
@@ -45,49 +46,111 @@ class _NotesPageState extends State<NotesPage> {
       appBar: AppBar(
         title: const Text('All Notes'),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () {
-        context
-            .read<ExampleDomain>()
-            .datastore
-            .isar
-            .writeTxn((isar) => isar.notes.put(Note(
-                  id: null,
-                  creationTime: DateTime.now(),
-                  updateTime: DateTime.now(),
-                  title: 'Note Title ${Random().nextInt(42)}',
-                  color: null,
-                  details: null,
-                  starred: false,
-                  archived: false,
-                )));
-      }),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final domain = context.read<ExampleDomain>();
+          final draft = await showNewNoteDialog();
+          if (draft == null) {
+            return;
+          }
+          domain.addAction(AddNoteAction(
+            noteId: Random().nextInt(1 << 31),
+            title: draft.title,
+            color: null,
+            details: draft.details,
+          ));
+        },
+        child: const Icon(Icons.add),
+      ),
       body: StreamBuilder(
-        builder: (context, snapshot) => ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: snapshot.hasData
-              ? ListView(
-                  children: [
-                    for (final note in snapshot.data as List<Note>)
-                      ListTile(
-                        title: Text('${note.id} - ${note.title}'),
-                        onTap: () {
-                          context
-                              .read<ExampleDomain>()
-                              .addAction(SetStarredAction(
-                                noteId: note.id!,
-                                starred: !note.starred,
-                              ));
-                        },
-                        subtitle:
-                            note.details == null ? null : Text(note.details!),
-                        trailing: note.starred ? const Icon(Icons.star) : null,
-                      )
-                  ],
-                )
-              : const Center(child: CircularProgressIndicator()),
+        builder: (context, snapshot) => Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: snapshot.hasData
+                ? ListView(
+                    children: [
+                      for (final note in snapshot.data as List<Note>)
+                        ListTile(
+                          title: Text('${note.id} - ${note.title}'),
+                          onTap: () {
+                            context
+                                .read<ExampleDomain>()
+                                .addAction(SetStarredAction(
+                                  noteId: note.id!,
+                                  starred: !note.starred,
+                                ));
+                          },
+                          subtitle: note.details?.isEmpty ?? true
+                              ? null
+                              : Text(note.details!),
+                          trailing:
+                              note.starred ? const Icon(Icons.star) : null,
+                        )
+                    ],
+                  )
+                : const Center(child: CircularProgressIndicator()),
+          ),
         ),
         stream: stream,
       ),
     );
   }
+
+  Future<NoteDraft?> showNewNoteDialog() async {
+    String title = '';
+    String details = '';
+    return showDialog<NoteDraft>(
+      context: context,
+      builder: (conext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  label: Text('Note Title'),
+                  border: null,
+                  contentPadding: EdgeInsets.all(16.0),
+                ),
+                onChanged: (value) {
+                  setState(() => title = value);
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Details...',
+                  border: null,
+                  contentPadding: EdgeInsets.all(16.0),
+                ),
+                minLines: 5,
+                maxLines: 8,
+                onChanged: (value) {
+                  details = value;
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: title.isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(NoteDraft(title, details)),
+              child: const Text('Create'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NoteDraft {
+  final String title;
+  final String details;
+
+  NoteDraft(this.title, this.details);
 }

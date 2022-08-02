@@ -7,16 +7,12 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   static const String actionName = 'addNote';
 
   final int noteId;
-  final DateTime creationTime;
-  final DateTime updateTime;
   final String title;
   final String? color;
   final String? details;
 
   AddNoteAction({
     required this.noteId,
-    required this.creationTime,
-    required this.updateTime,
     required this.title,
     required this.color,
     required this.details,
@@ -37,11 +33,12 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
 
   @override
   FutureOr<void> applyOptimisticUpdate(ExampleDomain domain) {
+    final timestamp = DateTime.now();
     return domain.datastore.isar.writeTxn((isar) async {
       await domain.datastore.isar.notes.put(Note(
         id: noteId,
-        creationTime: creationTime,
-        updateTime: updateTime,
+        creationTime: timestamp,
+        updateTime: timestamp,
         title: title,
         color: color,
         details: details,
@@ -61,8 +58,6 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   @override
   Map<String, dynamic>? generateRequestBody() => {
         'id': noteId,
-        'creationTime': creationTime.millisecondsSinceEpoch,
-        'updateTime': updateTime.millisecondsSinceEpoch,
         'title': title,
         'color': color,
         'details': details,
@@ -71,8 +66,7 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   @override
   Map<String, dynamic> toMap() => {
         'noteId': noteId,
-        'creationTime': creationTime.millisecondsSinceEpoch,
-        'updateTime': updateTime.millisecondsSinceEpoch,
+        'timestamp': DateTime.now(),
         'title': title,
         'color': color,
         'details': details,
@@ -81,8 +75,6 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   static AddNoteAction deserialize(Map<String, dynamic> map, dynamic data) =>
       AddNoteAction(
         noteId: map['noteId'],
-        creationTime: DateTime.fromMillisecondsSinceEpoch(map['creationTime']),
-        updateTime: DateTime.fromMillisecondsSinceEpoch(map['updateTime']),
         title: map['title'],
         color: map['color'],
         details: map['details'],
