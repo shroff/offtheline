@@ -41,7 +41,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
     _actionsBox = await domain.openBox('actions');
     final actions = _actionsBox.values.toList()
-      ..sort((a, b) => a.id.compareTo(b.id));
+      ..sort((a, b) => a.key.compareTo(b.key));
 
     state = ApiActionQueueState(actions, paused, submitting, error);
 
