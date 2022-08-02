@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
 
-class EditArchivedAction extends ApiAction<ExampleDomain> with JsonApiAction {
-  static const String actionName = 'editArchived';
+class SetArchivedAction extends ApiAction<ExampleDomain> with JsonApiAction {
+  static const String actionName = 'setArchived';
 
   final int noteId;
   final bool archived;
 
-  EditArchivedAction({required this.noteId, required this.archived});
+  SetArchivedAction({required this.noteId, required this.archived});
 
   @override
   String get name => actionName;
@@ -55,9 +55,9 @@ class EditArchivedAction extends ApiAction<ExampleDomain> with JsonApiAction {
         'archived': archived,
       };
 
-  static EditArchivedAction deserialize(
+  static SetArchivedAction deserialize(
           Map<String, dynamic> map, dynamic data) =>
-      EditArchivedAction(
+      SetArchivedAction(
         noteId: map['noteId'],
         archived: map['archived'],
       );

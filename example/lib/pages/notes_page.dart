@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:example/api/actions/edit_starred_action.dart';
+import 'package:example/api/actions/set_starred_action.dart';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
 import 'package:flutter/material.dart';
@@ -73,7 +73,7 @@ class _NotesPageState extends State<NotesPage> {
                         onTap: () {
                           context
                               .read<ExampleDomain>()
-                              .addAction(EditStarredAction(
+                              .addAction(SetStarredAction(
                                 noteId: note.id!,
                                 starred: !note.starred,
                               ));

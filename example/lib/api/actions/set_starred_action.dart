@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
 
-class EditStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
-  static const String actionName = 'editStarred';
+class SetStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
+  static const String actionName = 'setStarred';
 
   final int noteId;
   final bool starred;
 
-  EditStarredAction({required this.noteId, required this.starred});
+  SetStarredAction({required this.noteId, required this.starred});
 
   @override
   String get name => actionName;
@@ -55,9 +55,8 @@ class EditStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
         'starred': starred,
       };
 
-  static EditStarredAction deserialize(
-          Map<String, dynamic> map, dynamic data) =>
-      EditStarredAction(
+  static SetStarredAction deserialize(Map<String, dynamic> map, dynamic data) =>
+      SetStarredAction(
         noteId: map['noteId'],
         starred: map['starred'],
       );
