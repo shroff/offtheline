@@ -71,8 +71,12 @@ class _NotesPageState extends State<NotesPage> {
                       ListTile(
                         title: Text('${note.id} - ${note.title}'),
                         onTap: () {
-                          context.read<ExampleDomain>().addAction(
-                              EditStarredAction(note.id!, !note.starred));
+                          context
+                              .read<ExampleDomain>()
+                              .addAction(EditStarredAction(
+                                noteId: note.id!,
+                                starred: !note.starred,
+                              ));
                         },
                         subtitle:
                             note.details == null ? null : Text(note.details!),

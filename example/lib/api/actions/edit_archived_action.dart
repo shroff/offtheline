@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
 
-class EditStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
-  static const String actionName = 'editStarred';
+class EditArchivedAction extends ApiAction<ExampleDomain> with JsonApiAction {
+  static const String actionName = 'editArchived';
 
   final int noteId;
-  final bool starred;
+  final bool archived;
 
-  EditStarredAction({required this.noteId, required this.starred});
+  EditArchivedAction({required this.noteId, required this.archived});
 
   @override
   String get name => actionName;
@@ -21,7 +21,7 @@ class EditStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
   @override
   String generateDescription(ExampleDomain domain) {
     final note = domain.datastore.isar.notes.getSync(noteId);
-    return '${starred ? 'Adding' : 'Removing'} start for ${note?.title}';
+    return '${archived ? 'Archiving' : 'Unarchiving'} start for ${note?.title}';
   }
 
   @override
@@ -29,7 +29,7 @@ class EditStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
     domain.datastore.isar.writeTxn((isar) async {
       final note = await domain.datastore.isar.notes.get(noteId);
       if (note != null) {
-        note.starred = starred;
+        note.archived = archived;
         isar.notes.put(note);
       }
     });
@@ -40,25 +40,25 @@ class EditStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
     domain.datastore.isar.writeTxn((isar) async {
       final note = await domain.datastore.isar.notes.get(noteId);
       if (note != null) {
-        note.starred = !starred;
+        note.archived = !archived;
         isar.notes.put(note);
       }
     });
   }
 
   @override
-  Map<String, dynamic>? generateRequestBody() => {'starred': starred};
+  Map<String, dynamic>? generateRequestBody() => {'archived': archived};
 
   @override
   Map<String, dynamic> toMap() => {
         'noteId': noteId,
-        'starred': starred,
+        'archived': archived,
       };
 
-  static EditStarredAction deserialize(
+  static EditArchivedAction deserialize(
           Map<String, dynamic> map, dynamic data) =>
-      EditStarredAction(
+      EditArchivedAction(
         noteId: map['noteId'],
-        starred: map['starred'],
+        archived: map['archived'],
       );
 }
