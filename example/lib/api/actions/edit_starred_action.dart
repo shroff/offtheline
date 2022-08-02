@@ -6,17 +6,17 @@ import 'package:example/models/note.dart';
 class EditStarredAction extends ApiAction<ExampleDomain> with JsonApiAction {
   static const String actionName = 'editStarred';
 
+  final int noteId;
+  final bool starred;
+
+  EditStarredAction(this.noteId, this.starred);
+
   @override
   String get name => actionName;
   @override
   String get method => 'put';
   @override
   String get endpoint => '/notes/$noteId';
-
-  final int noteId;
-  final bool starred;
-
-  EditStarredAction(this.noteId, this.starred);
 
   @override
   String generateDescription(ExampleDomain domain) {
