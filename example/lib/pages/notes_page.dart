@@ -108,8 +108,8 @@ class _NotesPageState extends State<NotesPage> {
             children: [
               TextField(
                 decoration: const InputDecoration(
-                  label: Text('Note Title'),
-                  border: null,
+                  hintText: 'Title',
+                  border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16.0),
                 ),
                 onChanged: (value) {
@@ -119,7 +119,7 @@ class _NotesPageState extends State<NotesPage> {
               TextField(
                 decoration: const InputDecoration(
                   hintText: 'Details...',
-                  border: null,
+                  border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16.0),
                 ),
                 minLines: 5,
