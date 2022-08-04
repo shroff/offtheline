@@ -64,17 +64,16 @@ class ApiClient<R> with DomainHooks<R> {
     return builder;
   }
 
-  void addResponseProcessor(ResponseProcessor<R> processor) {
+  void Function() addResponseProcessor(ResponseProcessor<R> processor) {
     _responseProcessors.add(processor);
-  }
-
-  void removeResponseProcessor(ResponseProcessor<R> processor) {
-    _responseProcessors.remove(processor);
+    return () {
+      _responseProcessors.remove(processor);
+    };
   }
 
   Future<ApiErrorResponse?> sendRequest(
     BaseRequest request, {
-    FutureOr<void> Function(R?)? callback,
+    FutureOr<bool> Function(R?)? callback,
     dynamic tag,
   }) async {
     if (closed) return ApiErrorResponse(message: 'Client Closed');
@@ -111,7 +110,7 @@ class ApiClient<R> with DomainHooks<R> {
 
   Future<void> processResponseString(
     String responseString, {
-    FutureOr<void> Function(R?)? callback,
+    FutureOr<bool> Function(R?)? callback,
     dynamic tag,
   }) async {
     processResponse(
@@ -124,14 +123,16 @@ class ApiClient<R> with DomainHooks<R> {
   @nonVirtual
   Future<void> processResponse(
     R? response, {
-    FutureOr<void> Function(R?)? callback,
+    FutureOr<bool> Function(R?)? callback,
     dynamic tag,
   }) async {
     final completer = Completer<void>();
     domain.registerOngoingOperation(completer.future);
     try {
       logger?.d('[api] Processing response');
-      if (callback != null) await callback.call(response);
+      if (callback != null && !await callback.call(response)) {
+        return;
+      }
       for (final processResponse in _responseProcessors) {
         await processResponse(response, tag);
       }
