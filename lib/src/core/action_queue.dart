@@ -75,7 +75,6 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
         '[actions][${domain.id}] Adding action: ${action.generateDescription(domain)}');
     await action.applyOptimisticUpdate(domain);
     _actionsBox.add(action);
-    _actionsBox.flush();
     state =
         ApiActionQueueState([...actions, action], paused, submitting, error);
   }
@@ -93,7 +92,6 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
         '[actions][${domain.id}] Removing action: ${action.generateDescription(domain)}');
     final error = index == 0 ? null : this.error;
     _actionsBox.deleteAt(index);
-    _actionsBox.flush();
     state = ApiActionQueueState(actions, paused, submitting, error);
 
     return action.revertOptimisticUpdate(domain);
@@ -131,7 +129,6 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
       logger?.d('[actions][${domain.id}] Success');
       if (!closed) {
         _actionsBox.deleteAt(0);
-        _actionsBox.flush();
       }
     } else {
       logger?.d('[actions][${domain.id}] Error: $error');
