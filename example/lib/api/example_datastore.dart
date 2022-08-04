@@ -34,9 +34,11 @@ class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
 
     if (data.containsKey('notes')) {
       final list = (data['notes'] as List).cast<Map<String, dynamic>>();
-      await isar.notes.clear();
-      isar.writeTxn((isar) => isar.notes
-          .putAll(list.map((e) => Note.fromMap(e)).toList(growable: false)));
+      final notes = list.map((e) => Note.fromMap(e)).toList(growable: false);
+      isar.writeTxn((isar) async {
+        await isar.notes.clear();
+        return isar.notes.putAll(notes);
+      });
     }
   }
 }

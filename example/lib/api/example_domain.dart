@@ -69,6 +69,7 @@ class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
     await super.initialize();
     _setAuthorizationHeader(_authToken);
     await registerHooks(datastore);
+    await registerHooks(idAllocator);
   }
 
   static Future<ExampleDomain> createFromLoginResponse(
