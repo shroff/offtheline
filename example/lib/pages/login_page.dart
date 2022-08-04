@@ -184,6 +184,10 @@ class LoginPageState extends State<LoginPage> {
                         },
                         'data': {
                           'notes': [],
+                          'id_block': 1,
+                        },
+                        'config': {
+                          'id_block_size': 30,
                         },
                       };
                       final domain =

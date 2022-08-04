@@ -54,7 +54,7 @@ class _NotesPageState extends State<NotesPage> {
             return;
           }
           domain.addAction(AddNoteAction(
-            noteId: Random().nextInt(1 << 31),
+            noteId: await domain.generateId(),
             title: draft.title,
             color: null,
             details: draft.details,

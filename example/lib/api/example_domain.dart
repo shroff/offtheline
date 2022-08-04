@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:offtheline/offtheline.dart';
 
+import 'example_id_allocator.dart';
 import 'user_agent.dart';
 
 const _persistKeyAuthToken = 'authToken';
@@ -16,6 +17,8 @@ const _persistKeyUseFakeDispatcher = 'useFakeDispatcher';
 
 class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
   final datastore = ExampleDatastore();
+  final idAllocator = ExampleIdAllocator();
+
   ExampleDomain({required super.id, required super.api, required super.clear});
 
   String? get _authToken => getPersisted(_persistKeyAuthToken);
@@ -74,6 +77,7 @@ class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
   }) async {
     final sessionMap = (response['session'] as Map).cast<String, dynamic>();
     final dataMap = (response['data'] as Map).cast<String, dynamic>();
+    final configMap = (response['config'] as Map).cast<String, dynamic>();
 
     final domain =
         await ExampleDomain.open(sessionMap['domain_id'], clear: true);
@@ -83,7 +87,8 @@ class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
     domain.domainDisplayName = sessionMap['domain_display_name'];
 
     domain._authToken = sessionMap['auth_token'];
-    domain.api.processResponse(dataMap, tag: 'all-notes');
+    domain.idAllocator.idBlockSize = configMap['id_block_size'];
+    domain.api.processResponse(dataMap);
 
     if (useFakeDispatcher) {
       domain.api.dispatcher = _FakeDispatcher();
@@ -95,6 +100,10 @@ class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
 
   void _setAuthorizationHeader(String? token) {
     api.setHeader('Authorization', token == null ? null : 'Bearer $token');
+  }
+
+  Future<int> generateId() {
+    return idAllocator.generateId();
   }
 }
 

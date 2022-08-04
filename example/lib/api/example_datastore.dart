@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
   late final Isar isar;
+  late final void Function() removeResponseProcessor;
 
   @override
   Future<void> initialize(Domain<Map<String, dynamic>> domain) async {
@@ -18,19 +19,20 @@ class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
       directory: dir?.path,
     );
 
-    domain.api.addResponseProcessor(processResponse);
+    removeResponseProcessor = domain.api.addResponseProcessor(processResponse);
   }
 
   @override
   Future<void> close() async {
     super.close();
+    removeResponseProcessor();
     await isar.close();
   }
 
   Future<void> processResponse(Map<String, dynamic>? data, dynamic tag) async {
     if (data == null) return;
 
-    if (tag == 'all-notes') {
+    if (data.containsKey('notes')) {
       final list = (data['notes'] as List).cast<Map<String, dynamic>>();
       await isar.notes.clear();
       isar.writeTxn((isar) => isar.notes
