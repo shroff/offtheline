@@ -16,6 +16,7 @@ class NotesPage extends StatefulWidget {
 }
 
 class _NotesPageState extends State<NotesPage> {
+  final selectedIds = <int>{};
   @override
   void initState() {
     super.initState();
@@ -30,6 +31,7 @@ class _NotesPageState extends State<NotesPage> {
   Widget build(BuildContext context) {
     bool hideArchived = false;
     bool showOnlyStarred = false;
+    bool selecting = selectedIds.isNotEmpty;
     final stream = context
         .read<ExampleDomain>()
         .datastore
@@ -44,7 +46,18 @@ class _NotesPageState extends State<NotesPage> {
         .watch(initialReturn: true);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('All Notes'),
+        title: selecting
+            ? Text('${selectedIds.length} selected')
+            : const Text('Notes'),
+        leading: selecting
+            ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    selectedIds.clear();
+                  });
+                },
+                icon: const Icon(Icons.close))
+            : null,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -71,15 +84,33 @@ class _NotesPageState extends State<NotesPage> {
                     children: [
                       for (final note in snapshot.data as List<Note>)
                         ListTile(
-                          title: Text('${note.id} - ${note.title}'),
-                          onTap: () {
-                            context
-                                .read<ExampleDomain>()
-                                .addAction(SetStarredAction(
-                                  noteId: note.id!,
-                                  starred: !note.starred,
-                                ));
-                          },
+                          title: Text(note.title),
+                          onTap: selecting
+                              ? () {
+                                  setState(() {
+                                    if (!selectedIds.add(note.id!)) {
+                                      selectedIds.remove(note.id);
+                                    }
+                                  });
+                                }
+                              : () {
+                                  context
+                                      .read<ExampleDomain>()
+                                      .addAction(SetStarredAction(
+                                        noteId: note.id!,
+                                        starred: !note.starred,
+                                      ));
+                                },
+                          selected: selectedIds.contains(note.id),
+                          onLongPress: selecting
+                              ? null
+                              : () {
+                                  setState(() {
+                                    if (!selectedIds.add(note.id!)) {
+                                      selectedIds.remove(note.id);
+                                    }
+                                  });
+                                },
                           subtitle: note.details?.isEmpty ?? true
                               ? null
                               : Text(note.details!),
