@@ -9,7 +9,7 @@ import 'domain.dart';
 import 'logger.dart';
 
 const _boxName = 'domains';
-const _persistKeyCurrentDomain = 'currentDomain';
+const _persistKeyCurrentDomainId = 'currentDomainId';
 const _persistKeyDomainIds = 'domains';
 
 class DomainManagerState<D extends Domain> {
@@ -33,7 +33,7 @@ abstract class DomainManager<D extends Domain>
     _persist = await Hive.openBox(_boxName);
     final List<String> persistedDomainIds =
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
-    String? currentDomainId = _persist.get(_persistKeyCurrentDomain);
+    String? currentDomainId = _persist.get(_persistKeyCurrentDomainId);
 
     final domainMap = <String, D>{};
     bool invalidDomains = false;
@@ -61,10 +61,10 @@ abstract class DomainManager<D extends Domain>
       currentDomainId = domainMap.isEmpty ? null : domainMap.keys.first;
     }
     if (invalidCurrentDomain) {
-      _persist.put(_persistKeyCurrentDomain, currentDomainId);
+      _persist.put(_persistKeyCurrentDomainId, currentDomainId);
     }
 
-    final currentDomain = domainMap[_persist.get(_persistKeyCurrentDomain)];
+    final currentDomain = domainMap[_persist.get(_persistKeyCurrentDomainId)];
 
     state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
   }
@@ -76,7 +76,13 @@ abstract class DomainManager<D extends Domain>
     if (!state.domainMap.containsKey(domain.id)) {
       final domainMap = Map.of(state.domainMap);
       domainMap[domain.id] = domain;
+      _persist.put(
+          _persistKeyDomainIds, domainMap.keys.toList(growable: false));
+
       final currentDomain = state.currentDomain ?? domain;
+      if (currentDomain != state.currentDomain) {
+        _persist.put(_persistKeyCurrentDomainId, currentDomain.id);
+      }
       state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
     }
   }
@@ -85,9 +91,16 @@ abstract class DomainManager<D extends Domain>
     final domainMap = Map.of(state.domainMap);
     final removed = domainMap.remove(domainId);
     if (removed != null) {
+      _persist.put(
+          _persistKeyDomainIds, domainMap.keys.toList(growable: false));
+
       final currentDomain = state.currentDomain?.id == domainId
           ? (domainMap.isEmpty ? null : domainMap.values.first)
           : state.currentDomain;
+
+      if (currentDomain != state.currentDomain) {
+        _persist.put(_persistKeyCurrentDomainId, currentDomain?.id);
+      }
       state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
       return removed.delete();
     }
