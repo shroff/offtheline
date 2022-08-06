@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:example/api/actions/add_note_action.dart';
+import 'package:example/api/actions/set_archived_action.dart';
 import 'package:example/api/actions/set_starred_action.dart';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
@@ -29,17 +30,14 @@ class _NotesPageState extends State<NotesPage> {
 
   @override
   Widget build(BuildContext context) {
-    bool hideArchived = false;
-    bool showOnlyStarred = false;
+    bool hideArchived = true;
     bool selecting = selectedIds.isNotEmpty;
-    final stream = context
-        .read<ExampleDomain>()
-        .datastore
-        .isar
-        .notes
+
+    final domain = context.read<ExampleDomain>();
+    final stream = domain.datastore.isar.notes
         .filter()
-        .optional(hideArchived, (q) => q.archivedEqualTo(false))
-        .optional(showOnlyStarred, (q) => q.starredEqualTo(true))
+        .archivedEqualTo(false)
+        // .optional(true, (q) => q.archivedEqualTo(false))
         .sortByStarredDesc()
         .thenByCreationTime()
         .build()
@@ -58,10 +56,46 @@ class _NotesPageState extends State<NotesPage> {
                 },
                 icon: const Icon(Icons.close))
             : null,
+        actions: selecting
+            ? [
+                IconButton(
+                    onPressed: () {
+                      for (final id in selectedIds) {
+                        domain.addAction(
+                            SetStarredAction(noteId: id, starred: false));
+                      }
+                      setState(() {
+                        selectedIds.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.star_outline)),
+                IconButton(
+                    onPressed: () {
+                      for (final id in selectedIds) {
+                        domain.addAction(
+                            SetStarredAction(noteId: id, starred: true));
+                      }
+                      setState(() {
+                        selectedIds.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.star)),
+                IconButton(
+                    onPressed: () {
+                      for (final id in selectedIds) {
+                        domain.addAction(
+                            SetArchivedAction(noteId: id, archived: true));
+                      }
+                      setState(() {
+                        selectedIds.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.archive)),
+              ]
+            : null,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final domain = context.read<ExampleDomain>();
           final draft = await showNewNoteDialog();
           if (draft == null) {
             return;
@@ -76,52 +110,52 @@ class _NotesPageState extends State<NotesPage> {
         child: const Icon(Icons.add),
       ),
       body: StreamBuilder(
-        builder: (context, snapshot) => Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: snapshot.hasData
-                ? ListView(
-                    children: [
-                      for (final note in snapshot.data as List<Note>)
-                        ListTile(
-                          title: Text(note.title),
-                          onTap: selecting
-                              ? () {
-                                  setState(() {
-                                    if (!selectedIds.add(note.id!)) {
-                                      selectedIds.remove(note.id);
-                                    }
-                                  });
-                                }
-                              : () {
-                                  context
-                                      .read<ExampleDomain>()
-                                      .addAction(SetStarredAction(
-                                        noteId: note.id!,
-                                        starred: !note.starred,
-                                      ));
-                                },
-                          selected: selectedIds.contains(note.id),
-                          onLongPress: selecting
-                              ? null
-                              : () {
-                                  setState(() {
-                                    if (!selectedIds.add(note.id!)) {
-                                      selectedIds.remove(note.id);
-                                    }
-                                  });
-                                },
-                          subtitle: note.details?.isEmpty ?? true
-                              ? null
-                              : Text(note.details!),
-                          trailing:
-                              note.starred ? const Icon(Icons.star) : null,
-                        )
-                    ],
-                  )
-                : const Center(child: CircularProgressIndicator()),
-          ),
-        ),
+        builder: (context, snapshot) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: snapshot.hasData
+                  ? ListView(
+                      children: [
+                        for (final note in snapshot.data as List<Note>)
+                          ListTile(
+                            title: Text(note.title),
+                            onTap: selecting
+                                ? () {
+                                    setState(() {
+                                      if (!selectedIds.add(note.id!)) {
+                                        selectedIds.remove(note.id);
+                                      }
+                                    });
+                                  }
+                                : () {
+                                    domain.addAction(SetStarredAction(
+                                      noteId: note.id!,
+                                      starred: !note.starred,
+                                    ));
+                                  },
+                            selected: selectedIds.contains(note.id),
+                            onLongPress: selecting
+                                ? null
+                                : () {
+                                    setState(() {
+                                      if (!selectedIds.add(note.id!)) {
+                                        selectedIds.remove(note.id);
+                                      }
+                                    });
+                                  },
+                            subtitle: note.details?.isEmpty ?? true
+                                ? null
+                                : Text(note.details!),
+                            trailing:
+                                note.starred ? const Icon(Icons.star) : null,
+                          )
+                      ],
+                    )
+                  : const Center(child: CircularProgressIndicator()),
+            ),
+          );
+        },
         stream: stream,
       ),
     );
