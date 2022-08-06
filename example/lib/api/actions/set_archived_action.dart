@@ -26,8 +26,9 @@ class SetArchivedAction extends ApiAction<ExampleDomain> with JsonApiAction {
 
   @override
   FutureOr<void> applyOptimisticUpdate(ExampleDomain domain) {
-    domain.datastore.isar.writeTxn((isar) async {
-      final note = await domain.datastore.isar.notes.get(noteId);
+    final isar = domain.datastore.isar;
+    isar.writeTxn(() async {
+      final note = await isar.notes.get(noteId);
       if (note != null) {
         note.archived = archived;
         isar.notes.put(note);
@@ -37,8 +38,9 @@ class SetArchivedAction extends ApiAction<ExampleDomain> with JsonApiAction {
 
   @override
   FutureOr<void> revertOptimisticUpdate(ExampleDomain domain) {
-    domain.datastore.isar.writeTxn((isar) async {
-      final note = await domain.datastore.isar.notes.get(noteId);
+    final isar = domain.datastore.isar;
+    isar.writeTxn(() async {
+      final note = await isar.notes.get(noteId);
       if (note != null) {
         note.archived = !archived;
         isar.notes.put(note);

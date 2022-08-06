@@ -1,8 +1,6 @@
 import 'package:example/models/note.dart';
-import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:offtheline/offtheline.dart';
-import 'package:path_provider/path_provider.dart';
 
 class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
   late final Isar isar;
@@ -12,11 +10,9 @@ class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
   Future<void> initialize(Domain<Map<String, dynamic>> domain) async {
     super.initialize(domain);
 
-    final dir = kIsWeb ? null : await getApplicationSupportDirectory();
-
     isar = await Isar.open(
-      schemas: [NoteSchema],
-      directory: dir?.path,
+      [NoteSchema],
+      name: domain.id,
     );
 
     removeResponseProcessor = domain.api.addResponseProcessor(processResponse);
@@ -35,7 +31,7 @@ class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
     if (data.containsKey('notes')) {
       final list = (data['notes'] as List).cast<Map<String, dynamic>>();
       final notes = list.map((e) => Note.fromMap(e)).toList(growable: false);
-      isar.writeTxn((isar) async {
+      isar.writeTxn(() async {
         await isar.notes.clear();
         return isar.notes.putAll(notes);
       });

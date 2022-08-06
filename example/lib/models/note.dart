@@ -4,8 +4,7 @@ part 'note.g.dart';
 
 @Collection()
 class Note {
-  @Id()
-  int? id;
+  Id? id;
   DateTime creationTime;
   DateTime updateTime;
   String title;

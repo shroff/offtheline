@@ -34,8 +34,9 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   @override
   FutureOr<void> applyOptimisticUpdate(ExampleDomain domain) {
     final timestamp = DateTime.now();
-    return domain.datastore.isar.writeTxn((isar) async {
-      await domain.datastore.isar.notes.put(Note(
+    final isar = domain.datastore.isar;
+    return isar.writeTxn(() async {
+      await isar.notes.put(Note(
         id: noteId,
         creationTime: timestamp,
         updateTime: timestamp,
@@ -50,8 +51,9 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
 
   @override
   FutureOr<void> revertOptimisticUpdate(ExampleDomain domain) {
-    return domain.datastore.isar.writeTxn((isar) async {
-      await domain.datastore.isar.notes.delete(noteId);
+    final isar = domain.datastore.isar;
+    return isar.writeTxn(() async {
+      await isar.notes.delete(noteId);
     });
   }
 
