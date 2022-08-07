@@ -30,14 +30,9 @@ class NotesPage extends StatelessWidget {
       );
 }
 
-class NotesPageContent extends StatefulWidget {
+class NotesPageContent extends StatelessWidget {
   const NotesPageContent({Key? key}) : super(key: key);
 
-  @override
-  State<NotesPageContent> createState() => _NotesPageContentState();
-}
-
-class _NotesPageContentState extends State<NotesPageContent> {
   @override
   Widget build(BuildContext context) {
     final viewPrefs = context.watch<ViewPrefs>();
@@ -54,10 +49,10 @@ class _NotesPageContentState extends State<NotesPageContent> {
         .watch(initialReturn: true);
 
     return Scaffold(
-      appBar: buildAppBar(viewPrefs, selection),
+      appBar: buildAppBar(context),
       floatingActionButton: const AddNoteButton(),
       body: StreamBuilder(
-        key: ValueKey(stream),
+        key: ValueKey(viewPrefs),
         builder: (context, AsyncSnapshot<List<Note>> snapshot) {
           final data = snapshot.data;
           return Center(
@@ -106,10 +101,12 @@ class _NotesPageContentState extends State<NotesPageContent> {
     );
   }
 
-  AppBar buildAppBar(ViewPrefs viewPrefs, Set<int> selection) {
+  AppBar buildAppBar(BuildContext context) {
+    final viewPrefs = context.watch<ViewPrefs>();
+    final selection = context.watch<Set<int>>();
+    final domain = context.read<ExampleDomain>();
     bool selecting = selection.isNotEmpty;
 
-    final domain = context.read<ExampleDomain>();
     return AppBar(
       title: selecting
           ? Text('${selection.length} selected')

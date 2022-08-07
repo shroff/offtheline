@@ -13,4 +13,12 @@ class ViewPrefs {
   final bool showArchived;
 
   const ViewPrefs({required this.showArchived});
+
+  @override
+  bool operator ==(dynamic other) {
+    return other is ViewPrefs && showArchived == other.showArchived;
+  }
+
+  @override
+  int get hashCode => showArchived.hashCode;
 }
