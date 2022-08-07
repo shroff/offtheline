@@ -1,7 +1,8 @@
-import 'package:example/pages/notes_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:example/api/api.dart';
+
+import 'pages/notes/notes_page.dart';
 
 Map<String, Widget Function(BuildContext)> _pageBuilders = {
   '/': (context) => const NotesPage(),

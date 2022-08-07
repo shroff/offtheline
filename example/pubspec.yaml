@@ -19,6 +19,7 @@ dependencies:
   http:
   package_info:
   provider:
+  state_notifier:
   uri:
 
 dev_dependencies:
