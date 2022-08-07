@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import 'add_note_button.dart';
 import 'multiselect_manager.dart';
+import 'notes_list.dart';
 import 'view_prefs.dart';
 
 class NotesPage extends StatelessWidget {
@@ -35,69 +36,10 @@ class NotesPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewPrefs = context.watch<ViewPrefs>();
-    final selection = context.watch<Set<int>>();
-    bool selecting = selection.isNotEmpty;
-
-    final domain = context.read<ExampleDomain>();
-    final stream = domain.datastore.isar.notes
-        .filter()
-        .optional(!viewPrefs.showArchived, (q) => q.archivedEqualTo(false))
-        .sortByStarredDesc()
-        .thenByCreationTime()
-        .build()
-        .watch(initialReturn: true);
-
     return Scaffold(
       appBar: buildAppBar(context),
       floatingActionButton: const AddNoteButton(),
-      body: StreamBuilder(
-        key: ValueKey(viewPrefs),
-        builder: (context, AsyncSnapshot<List<Note>> snapshot) {
-          final data = snapshot.data;
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: data != null
-                  ? ListView(
-                      children: [
-                        for (final note in data)
-                          ListTile(
-                            title: Text(note.title),
-                            onTap: selecting
-                                ? () {
-                                    context
-                                        .read<MultiSelectManager>()
-                                        .toggle(note.id!);
-                                  }
-                                : () {
-                                    domain.addAction(SetStarredAction(
-                                      noteId: note.id!,
-                                      starred: !note.starred,
-                                    ));
-                                  },
-                            selected: selection.contains(note.id),
-                            onLongPress: selecting
-                                ? null
-                                : () {
-                                    context
-                                        .read<MultiSelectManager>()
-                                        .toggle(note.id!);
-                                  },
-                            subtitle: note.details?.isEmpty ?? true
-                                ? null
-                                : Text(note.details!),
-                            trailing:
-                                note.starred ? const Icon(Icons.star) : null,
-                          )
-                      ],
-                    )
-                  : const Center(child: CircularProgressIndicator()),
-            ),
-          );
-        },
-        stream: stream,
-      ),
+      body: const NotesList(),
     );
   }
 
