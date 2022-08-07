@@ -8,14 +8,14 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
 
   final int noteId;
   final String title;
+  final String details;
   final String? color;
-  final String? details;
 
   AddNoteAction({
     required this.noteId,
     required this.title,
-    required this.color,
     required this.details,
+    required this.color,
   });
 
   @override
@@ -41,8 +41,8 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
         creationTime: timestamp,
         updateTime: timestamp,
         title: title,
-        color: color,
         details: details,
+        color: color,
         starred: false,
         archived: false,
       ));
@@ -61,8 +61,8 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   Map<String, dynamic>? generateRequestBody() => {
         'id': noteId,
         'title': title,
-        'color': color,
         'details': details,
+        'color': color,
       };
 
   @override
@@ -70,15 +70,15 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
         'noteId': noteId,
         'timestamp': DateTime.now(),
         'title': title,
-        'color': color,
         'details': details,
+        'color': color,
       };
 
   static AddNoteAction deserialize(Map<String, dynamic> map, dynamic data) =>
       AddNoteAction(
         noteId: map['noteId'],
         title: map['title'],
-        color: map['color'],
         details: map['details'],
+        color: map['color'],
       );
 }

@@ -4,12 +4,12 @@ part 'note.g.dart';
 
 @Collection()
 class Note {
-  Id? id;
+  Id id;
   DateTime creationTime;
   DateTime updateTime;
   String title;
+  String details;
   String? color;
-  String? details;
   bool starred;
   bool archived;
 
@@ -18,8 +18,8 @@ class Note {
     required this.creationTime,
     required this.updateTime,
     required this.title,
-    required this.color,
     required this.details,
+    required this.color,
     required this.starred,
     required this.archived,
   });
@@ -29,9 +29,9 @@ class Note {
       id: map['id'],
       creationTime: DateTime.parse(map['creationTime']),
       updateTime: DateTime.parse(map['updateTime']),
-      title: map['title'] ?? '',
-      color: map['color'],
+      title: map['title'],
       details: map['detail'],
+      color: map['color'],
       starred: map['starred'] == 1,
       archived: map['archived'] == 1,
     );

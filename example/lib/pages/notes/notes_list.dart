@@ -1,4 +1,4 @@
-import 'package:example/api/actions/set_starred_action.dart';
+import 'package:example/api/actions/edit_note_action.dart';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
 import 'package:example/pages/notes/multiselect_manager.dart';
@@ -64,11 +64,11 @@ class _NotesListState extends State<NotesList> {
                               ? () {
                                   context
                                       .read<MultiSelectManager>()
-                                      .toggle(note.id!);
+                                      .toggle(note.id);
                                 }
                               : () {
-                                  domain.addAction(SetStarredAction(
-                                    noteId: note.id!,
+                                  domain.addAction(EditNoteAction(
+                                    note: note,
                                     starred: !note.starred,
                                   ));
                                 },
@@ -78,11 +78,10 @@ class _NotesListState extends State<NotesList> {
                               : () {
                                   context
                                       .read<MultiSelectManager>()
-                                      .toggle(note.id!);
+                                      .toggle(note.id);
                                 },
-                          subtitle: note.details?.isEmpty ?? true
-                              ? null
-                              : Text(note.details!),
+                          subtitle:
+                              note.details.isEmpty ? null : Text(note.details),
                           trailing:
                               note.starred ? const Icon(Icons.star) : null,
                         )

@@ -1,10 +1,7 @@
-import 'package:example/api/actions/set_archived_action.dart';
-import 'package:example/api/actions/set_starred_action.dart';
+import 'package:example/api/actions/edit_note_action.dart';
 import 'package:example/api/api.dart';
-import 'package:example/models/note.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_state_notifier/flutter_state_notifier.dart';
-import 'package:isar/isar.dart';
 import 'package:provider/provider.dart';
 
 import 'add_note_button.dart';
@@ -66,7 +63,7 @@ class NotesPageContent extends StatelessWidget {
                   onPressed: () {
                     for (final id in selection) {
                       domain.addAction(
-                          SetStarredAction(noteId: id, starred: false));
+                          EditNoteAction.star(noteId: id, starred: false));
                     }
                     context.read<MultiSelectManager>().clear();
                   },
@@ -75,7 +72,7 @@ class NotesPageContent extends StatelessWidget {
                   onPressed: () {
                     for (final id in selection) {
                       domain.addAction(
-                          SetStarredAction(noteId: id, starred: true));
+                          EditNoteAction.star(noteId: id, starred: true));
                     }
                     context.read<MultiSelectManager>().clear();
                   },
@@ -84,7 +81,7 @@ class NotesPageContent extends StatelessWidget {
                   onPressed: () {
                     for (final id in selection) {
                       domain.addAction(
-                          SetArchivedAction(noteId: id, archived: true));
+                          EditNoteAction.archive(noteId: id, archived: true));
                     }
                     context.read<MultiSelectManager>().clear();
                   },
