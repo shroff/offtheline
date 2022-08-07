@@ -40,6 +40,7 @@ class MyApp extends StatelessWidget {
       );
 
   Widget buildLoginPage(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
         key: _loginAppKey,
         title: 'OffTheLine Example Login',
         theme: ThemeData(

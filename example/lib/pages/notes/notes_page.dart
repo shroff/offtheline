@@ -91,13 +91,20 @@ class NotesPageContent extends StatelessWidget {
                   icon: const Icon(Icons.archive)),
             ]
           : [
-              IconButton(
-                onPressed: () {
-                  context.read<ViewPrefsManager>().showArchived =
-                      !viewPrefs.showArchived;
-                },
-                icon: const Icon(Icons.filter_alt),
-              )
+              if (viewPrefs.showArchived)
+                IconButton(
+                  onPressed: () {
+                    context.read<ViewPrefsManager>().showArchived = false;
+                  },
+                  icon: const Icon(Icons.archive),
+                )
+              else
+                IconButton(
+                  onPressed: () {
+                    context.read<ViewPrefsManager>().showArchived = true;
+                  },
+                  icon: const Icon(Icons.archive_outlined),
+                )
             ],
     );
   }

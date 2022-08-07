@@ -53,6 +53,7 @@ class _WelcomeAppState extends State<_WelcomeAppContent>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'OffTheLine Example',
       theme: ThemeData(
         primarySwatch: Colors.blue,
