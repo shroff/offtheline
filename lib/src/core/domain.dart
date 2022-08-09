@@ -8,7 +8,7 @@ import 'action_queue.dart';
 import '../actions/api_action.dart';
 import 'api_client.dart';
 import 'domain_hooks.dart';
-import 'logger.dart';
+import 'global.dart';
 
 class _Counter extends StateNotifier<int> {
   _Counter() : super(0);
@@ -43,7 +43,8 @@ class Domain<R> {
   }) {
     openBox('persist').then((box) async {
       if (clear) {
-        logger?.i('[domain][$id] Clearing ${box.values.length} stale entries');
+        OTL.logger
+            ?.i('[domain][$id] Clearing ${box.values.length} stale entries');
         await box.clear();
       }
       _persist = box;
@@ -82,7 +83,7 @@ class Domain<R> {
     if (_closed) return;
     _closed = true;
 
-    logger?.i('[domain][$id] Logging Out');
+    OTL.logger?.i('[domain][$id] Logging Out');
 
     for (final hooks in _hooks) {
       await hooks.close();

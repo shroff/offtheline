@@ -32,13 +32,13 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
     final props = (fields[_fieldProps] as Map).cast<String, dynamic>();
     final data = fields[_fieldBinaryData];
     if (deserializer == null) {
-      UnknownAction(
+      return UnknownAction<D>(
         name: name,
         props: props,
         binaryData: data,
       );
     }
-    return deserializer!.call(props, data);
+    return deserializer.call(props, data);
   }
 
   @override

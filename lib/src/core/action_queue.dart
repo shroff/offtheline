@@ -8,7 +8,7 @@ import '../actions/api_action.dart';
 import 'api_error_response.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
-import 'logger.dart';
+import 'global.dart';
 
 class ApiActionQueueState {
   final List<ApiAction> actions;
@@ -36,7 +36,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
   @protected
   @override
   Future<void> initialize(Domain<R> domain) async {
-    logger?.d('[actions][${domain.id}] Initializing');
+    OTL.logger?.d('[actions][${domain.id}] Initializing');
     super.initialize(domain);
 
     _actionsBox = await domain.openBox('actions');
@@ -59,7 +59,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
   @protected
   @override
   Future<void> close() async {
-    logger?.d('[actions][${domain.id}] Closing');
+    OTL.logger?.d('[actions][${domain.id}] Closing');
     super.close();
     _removeListener();
     _actionsBox.close();
@@ -71,7 +71,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
   Future<void> addAction(ApiAction<Domain<R>> action) async {
     if (closed) return;
-    logger?.i(
+    OTL.logger?.i(
         '[actions][${domain.id}] Adding action: ${action.generateDescription(domain)}');
     await action.applyOptimisticUpdate(domain);
     _actionsBox.add(action);
@@ -88,7 +88,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     final actions = List.of(state.actions);
     final action = actions.removeAt(index);
 
-    logger?.d(
+    OTL.logger?.d(
         '[actions][${domain.id}] Removing action: ${action.generateDescription(domain)}');
     final error = index == 0 ? null : this.error;
     _actionsBox.deleteAt(index);
@@ -98,16 +98,17 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
   }
 
   void pause() {
-    logger?.d('[actions][${domain.id}] Pausing');
+    OTL.logger?.d('[actions][${domain.id}] Pausing');
     state = ApiActionQueueState(state.actions, true, submitting, error);
   }
 
   void resume() {
-    logger?.d('[actions][${domain.id}] Resuming');
+    OTL.logger?.d('[actions][${domain.id}] Resuming');
     state = ApiActionQueueState(state.actions, false, submitting, null);
   }
 
   void _sendNextAction() async {
+    await domain.initialized;
     if (closed ||
         state.actions.isEmpty ||
         this.error != null ||
@@ -119,19 +120,19 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     state = ApiActionQueueState(state.actions, paused, true, null);
 
     final action = state.actions.first;
-    logger?.d(
+    OTL.logger?.d(
         '[actions][${domain.id}] Submitting ${action.generateDescription(domain)}');
     final request = action.createRequest(domain.api);
 
     final error = await domain.api.sendRequest(request, tag: action.tag);
     final actions = (error == null) ? state.actions.sublist(1) : state.actions;
     if (error == null) {
-      logger?.d('[actions][${domain.id}] Success');
+      OTL.logger?.d('[actions][${domain.id}] Success');
       if (!closed) {
         _actionsBox.deleteAt(0);
       }
     } else {
-      logger?.d('[actions][${domain.id}] Error: $error');
+      OTL.logger?.d('[actions][${domain.id}] Error: $error');
     }
     state = ApiActionQueueState(actions, paused, false, error);
   }

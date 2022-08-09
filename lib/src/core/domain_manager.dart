@@ -1,12 +1,13 @@
 import 'dart:async';
 
 import 'package:hive/hive.dart';
+import 'package:logger/logger.dart';
 import 'package:meta/meta.dart';
 import 'package:offtheline/offtheline.dart';
 import 'package:state_notifier/state_notifier.dart';
 
 import 'domain.dart';
-import 'logger.dart';
+import 'global.dart';
 
 const _boxName = 'domains';
 const _persistKeyCurrentDomainId = 'currentDomainId';
@@ -38,10 +39,11 @@ abstract class DomainManager<D extends Domain>
     final domainMap = <String, D>{};
     bool invalidDomains = false;
     for (final domainId in persistedDomainIds) {
-      logger?.d('[domain-manager] Restoring domain $domainId');
+      OTL.logger?.d('[domain-manager] Restoring domain $domainId');
       final domain = await restoreDomain(domainId);
       if (domain == null) {
-        logger?.e('[domain-manager] Domain $domainId is invalid. Deleting.');
+        OTL.logger
+            ?.e('[domain-manager] Domain $domainId is invalid. Deleting.');
         invalidDomains = true;
       } else {
         domainMap[domainId] = domain;

@@ -8,3 +8,4 @@ export 'src/core/dispatcher.dart';
 export 'src/core/domain.dart';
 export 'src/core/domain_hooks.dart';
 export 'src/core/domain_manager.dart';
+export 'src/core/global.dart';

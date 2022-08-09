@@ -6,7 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:uri/uri.dart';
 
 import 'api_error_response.dart';
-import 'logger.dart';
+import 'global.dart';
 import 'dispatcher.dart';
 import 'domain.dart';
 import 'domain_hooks.dart';
@@ -80,7 +80,7 @@ class ApiClient<R> with DomainHooks<R> {
     final completer = Completer();
     domain.registerOngoingOperation(completer.future);
     try {
-      logger?.d('[api] Sending request to ${request.url}');
+      OTL.logger?.d('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);
       final response = await dispatcher.dispatch(request);
 
@@ -129,7 +129,7 @@ class ApiClient<R> with DomainHooks<R> {
     final completer = Completer<void>();
     domain.registerOngoingOperation(completer.future);
     try {
-      logger?.d('[api] Processing response');
+      OTL.logger?.d('[api] Processing response');
       if (callback != null && !await callback.call(response)) {
         return;
       }
@@ -138,7 +138,7 @@ class ApiClient<R> with DomainHooks<R> {
       }
     } finally {
       completer.complete();
-      logger?.d('[api] Response processed');
+      OTL.logger?.d('[api] Response processed');
     }
   }
 
