@@ -19,9 +19,13 @@ typedef ResponseProcessor<R> = FutureOr<void> Function(
   dynamic tag,
 );
 
+typedef ErrorResponseTransformer = FutureOr<ApiErrorResponse> Function(
+    Response response);
+
 class ApiClient<R> with DomainHooks<R> {
   Dispatcher dispatcher = HttpClientDispatcher();
   final ResponseTransformer<R?> transformResponse;
+  final ErrorResponseTransformer transformErrorResponse;
   final List<ResponseProcessor<R>> _responseProcessors = [];
 
   Uri _apiBaseUrl = Uri();
@@ -33,6 +37,7 @@ class ApiClient<R> with DomainHooks<R> {
 
   ApiClient({
     required this.transformResponse,
+    this.transformErrorResponse = _defaultErrorResponseTransformer,
   });
 
   @override
@@ -93,11 +98,7 @@ class ApiClient<R> with DomainHooks<R> {
         );
         return null;
       } else {
-        return ApiErrorResponse(
-            statusCode: response.statusCode,
-            message: response.bodyBytes.isEmpty
-                ? 'Unknown Server Error'
-                : response.body);
+        return transformErrorResponse(response);
       }
     } on SocketException {
       return ApiErrorResponse(message: 'Server Unreachable');
@@ -146,3 +147,10 @@ class ApiClient<R> with DomainHooks<R> {
   FutureOr<String> processErrorResponse(R errorResponse) =>
       errorResponse.toString();
 }
+
+ApiErrorResponse _defaultErrorResponseTransformer(Response response) =>
+    ApiErrorResponse(
+      statusCode: response.statusCode,
+      message:
+          response.bodyBytes.isEmpty ? 'Unknown Server Error' : response.body,
+    );
