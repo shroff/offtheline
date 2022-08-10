@@ -85,8 +85,7 @@ class EditNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
 
   @override
   String generateDescription(ExampleDomain domain) {
-    final note = domain.datastore.isar.notes.getSync(noteId);
-    return 'Editing note: ${note?.title}';
+    return 'Editing note $noteId';
   }
 
   @override

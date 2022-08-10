@@ -3,11 +3,13 @@ import 'package:example/pages/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_state_notifier/flutter_state_notifier.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
 
 void main() async {
+  OTL.logger = Logger();
   await Hive.initFlutter();
   Hive.registerAdapter(ApiActionTypeAdapter(actionDeserializers));
 

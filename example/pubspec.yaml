@@ -16,6 +16,7 @@ dependencies:
   hive_flutter:
   isar: 3.0.0-dev.8
   isar_flutter_libs: 3.0.0-dev.8
+  logger:
   http:
   package_info:
   provider:

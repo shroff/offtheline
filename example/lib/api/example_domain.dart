@@ -109,6 +109,7 @@ class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
 }
 
 class _FakeDispatcher with Dispatcher {
+  final response = "{}".codeUnits;
   @override
-  Response dispatch(BaseRequest request) => Response.bytes([], 200);
+  Response dispatch(BaseRequest request) => Response.bytes(response, 200);
 }

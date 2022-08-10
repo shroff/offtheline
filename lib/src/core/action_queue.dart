@@ -71,7 +71,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
   Future<void> addAction(ApiAction<Domain<R>> action) async {
     if (closed) return;
-    OTL.logger?.i(
+    OTL.logger?.d(
         '[actions][${domain.id}] Adding action: ${action.generateDescription(domain)}');
     await action.applyOptimisticUpdate(domain);
     _actionsBox.add(action);
@@ -121,18 +121,18 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
     final action = state.actions.first;
     OTL.logger?.d(
-        '[actions][${domain.id}] Submitting ${action.generateDescription(domain)}');
+        '[actions][${domain.id}] Submitting Action: ${action.generateDescription(domain)}');
     final request = action.createRequest(domain.api);
 
     final error = await domain.api.sendRequest(request, tag: action.tag);
     final actions = (error == null) ? state.actions.sublist(1) : state.actions;
     if (error == null) {
-      OTL.logger?.d('[actions][${domain.id}] Success');
+      OTL.logger?.d('[actions][${domain.id}] Successfully completed');
       if (!closed) {
         _actionsBox.deleteAt(0);
       }
     } else {
-      OTL.logger?.d('[actions][${domain.id}] Error: $error');
+      OTL.logger?.d('[actions][${domain.id}] Error: ${error.message}');
     }
     state = ApiActionQueueState(actions, paused, false, error);
   }
