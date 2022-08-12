@@ -61,7 +61,7 @@ class LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-    final domainManager = context.read<ExampleDomainManager>();
+    final domainManager = context.read<DomainManager>();
 
     try {
       final response = await _client.send(request);
@@ -172,8 +172,7 @@ class LoginPageState extends State<LoginPage> {
                   ),
                   TextButton(
                     onPressed: () async {
-                      final domainManager =
-                          context.read<ExampleDomainManager>();
+                      final domainManager = context.read<DomainManager>();
                       final rid = Random().nextInt(1 << 31);
                       final responseMap = <String, dynamic>{
                         'session': {

@@ -1,13 +1,8 @@
 import 'dart:async';
 
 import 'package:hive/hive.dart';
-import 'package:logger/logger.dart';
-import 'package:meta/meta.dart';
 import 'package:offtheline/offtheline.dart';
 import 'package:state_notifier/state_notifier.dart';
-
-import 'domain.dart';
-import 'global.dart';
 
 const _boxName = 'domains';
 const _persistKeyCurrentDomainId = 'currentDomainId';
@@ -20,15 +15,25 @@ class DomainManagerState<D extends Domain> {
   const DomainManagerState(this.domainMap, this.currentDomain);
 }
 
-abstract class DomainManager<D extends Domain>
+class DomainManager<D extends Domain>
     extends StateNotifier<DomainManagerState<D>> with LocatorMixin {
+  final FutureOr<D?> Function(String domainId) restoreDomain;
   late final Box _persist;
 
   Domain? get currentDomain => state.currentDomain;
 
   D? getDomain(String domainId) => state.domainMap[domainId];
 
-  DomainManager() : super(const DomainManagerState({}, null));
+  DomainManager._(this.restoreDomain)
+      : super(const DomainManagerState({}, null));
+
+  static Future<DomainManager<D>> create<D extends Domain>(
+    FutureOr<D?> Function(String domainId) restoreDomain,
+  ) async {
+    final domainManager = DomainManager._(restoreDomain);
+    await domainManager.initialize();
+    return domainManager;
+  }
 
   Future<void> initialize() async {
     _persist = await Hive.openBox(_boxName);
@@ -70,9 +75,6 @@ abstract class DomainManager<D extends Domain>
 
     state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
   }
-
-  @protected
-  FutureOr<D?> restoreDomain(String id);
 
   void addDomain(D domain) async {
     if (!state.domainMap.containsKey(domain.id)) {

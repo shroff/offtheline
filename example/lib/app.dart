@@ -18,7 +18,7 @@ class ExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final domain =
-        Provider.of<ExampleDomainManager>(context).getDomain(domainId);
+        Provider.of<DomainManager<ExampleDomain>>(context).getDomain(domainId);
     if (domain == null) return Container();
     return MultiProvider(
       providers: [
