@@ -6,8 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:offtheline/offtheline.dart';
 
+import 'api.dart';
 import 'example_id_allocator.dart';
-import 'user_agent.dart';
 
 const _persistKeyAuthToken = 'authToken';
 const _persistKeyUserName = 'userName';
@@ -59,7 +59,7 @@ class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
     if (domain.getPersisted(_persistKeyUseFakeDispatcher) == true) {
       domain.api.dispatcher = _FakeDispatcher();
     }
-    domain.api.setHeader('User-Agent', userAgent);
+    domain.api.setHeader('User-Agent', Api.userAgent);
 
     return domain;
   }

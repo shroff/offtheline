@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import 'api/actions/deserializers.dart';
 import 'api/api.dart';
-import 'api/user_agent.dart';
 import 'app.dart';
 import 'pages/login_page.dart';
 
@@ -15,7 +14,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(ApiActionTypeAdapter(actionDeserializers));
 
-  await initilizeUserAgent();
+  await Api.initilizeUserAgent();
   final domainManger = await DomainManager.create<ExampleDomain>(
     (domainId) => ExampleDomain.open(domainId, clear: false),
   );
