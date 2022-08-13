@@ -18,17 +18,16 @@ void main() async {
   final domainManger = await DomainManager.create<ExampleDomain>(
     (domainId) => ExampleDomain.open(domainId, clear: false),
   );
-  runApp(MyApp(
+  runApp(DomainSelector(
     domainManager: domainManger,
   ));
 }
 
-class MyApp extends StatelessWidget {
+class DomainSelector extends StatelessWidget {
   final DomainManager<ExampleDomain> domainManager;
-
   final _loginAppKey = UniqueKey();
 
-  MyApp({Key? key, required this.domainManager}) : super(key: key);
+  DomainSelector({Key? key, required this.domainManager}) : super(key: key);
 
   @override
   Widget build(BuildContext context) => StateNotifierProvider<
@@ -36,21 +35,23 @@ class MyApp extends StatelessWidget {
           DomainManagerState<ExampleDomain>>.value(
         value: domainManager,
         builder: (context, child) {
-          debugPrint('Building Main');
-          final domainManager =
-              context.watch<DomainManagerState<ExampleDomain>>();
+          final domain =
+              context.select<DomainManagerState<ExampleDomain>, ExampleDomain?>(
+                  (state) => state.currentDomain);
 
-          final domain = domainManager.currentDomain;
-          if (domain == null) {
-            return buildLoginPage(context);
-          }
-          return ExampleApp(key: ValueKey(domain.id), domainId: domain.id);
+          return domain == null
+              ? _LoginApp(key: _loginAppKey)
+              : ExampleApp(key: ValueKey(domain.id), domainId: domain.id);
         },
       );
+}
 
-  Widget buildLoginPage(BuildContext context) => MaterialApp(
+class _LoginApp extends StatelessWidget {
+  const _LoginApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        key: _loginAppKey,
         title: 'OffTheLine Example Login',
         theme: ThemeData(
           primarySwatch: Colors.blue,
