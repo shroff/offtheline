@@ -7,6 +7,7 @@ import '../core/api_client.dart';
 import '../core/domain.dart';
 
 abstract class ApiAction<D extends Domain> with HiveObjectMixin {
+  @override
   int get key => super.key;
 
   String get name;

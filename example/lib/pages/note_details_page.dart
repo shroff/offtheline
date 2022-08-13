@@ -13,6 +13,7 @@ class NoteDetailsPage extends StatelessWidget {
     final stream =
         domain.datastore.isar.notes.watchObject(noteId, initialReturn: true);
     return StreamBuilder(
+      stream: stream,
       builder: (context, snapshot) {
         final note = snapshot.data as Note;
         return Scaffold(

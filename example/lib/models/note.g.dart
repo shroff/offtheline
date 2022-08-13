@@ -68,17 +68,13 @@ void _noteSerializeNative(IsarCollection<Note> collection, IsarCObject cObj,
   if (color$Value != null) {
     color$Bytes = IsarBinaryWriter.utf8Encoder.convert(color$Value);
   }
-  IsarUint8List? details$Bytes;
-  final details$Value = object.details;
-  if (details$Value != null) {
-    details$Bytes = IsarBinaryWriter.utf8Encoder.convert(details$Value);
-  }
+  final details$Bytes = IsarBinaryWriter.utf8Encoder.convert(object.details);
   final title$Bytes = IsarBinaryWriter.utf8Encoder.convert(object.title);
   final size = (staticSize +
       3 +
       (color$Bytes?.length ?? 0) +
       3 +
-      (details$Bytes?.length ?? 0) +
+      (details$Bytes.length) +
       3 +
       (title$Bytes.length)) as int;
   cObj.buffer = alloc(size);
@@ -123,7 +119,7 @@ P _noteDeserializePropNative<P>(
     case 2:
       return (reader.readDateTime(offset)) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
@@ -160,7 +156,7 @@ Note _noteDeserializeWeb(IsarCollection<Note> collection, Object jsObj) {
                 isUtc: true)
             .toLocal()
         : DateTime.fromMillisecondsSinceEpoch(0),
-    details: IsarNative.jsObjectGet(jsObj, r'details'),
+    details: IsarNative.jsObjectGet(jsObj, r'details') ?? '',
     id: IsarNative.jsObjectGet(jsObj, r'id'),
     starred: IsarNative.jsObjectGet(jsObj, r'starred') ?? false,
     title: IsarNative.jsObjectGet(jsObj, r'title') ?? '',
@@ -188,7 +184,7 @@ P _noteDeserializePropWeb<P>(Object jsObj, String propertyName) {
               .toLocal()
           : DateTime.fromMillisecondsSinceEpoch(0)) as P;
     case r'details':
-      return (IsarNative.jsObjectGet(jsObj, r'details')) as P;
+      return (IsarNative.jsObjectGet(jsObj, r'details') ?? '') as P;
     case r'id':
       return (IsarNative.jsObjectGet(jsObj, r'id')) as P;
     case r'starred':
@@ -465,16 +461,8 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Note, Note, QAfterFilterCondition> detailsIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'details',
-      ));
-    });
-  }
-
   QueryBuilder<Note, Note, QAfterFilterCondition> detailsEqualTo(
-    String? value, {
+    String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -487,7 +475,7 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
   }
 
   QueryBuilder<Note, Note, QAfterFilterCondition> detailsGreaterThan(
-    String? value, {
+    String value, {
     bool caseSensitive = true,
     bool include = false,
   }) {
@@ -502,7 +490,7 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
   }
 
   QueryBuilder<Note, Note, QAfterFilterCondition> detailsLessThan(
-    String? value, {
+    String value, {
     bool caseSensitive = true,
     bool include = false,
   }) {
@@ -517,8 +505,8 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
   }
 
   QueryBuilder<Note, Note, QAfterFilterCondition> detailsBetween(
-    String? lower,
-    String? upper, {
+    String lower,
+    String upper, {
     bool caseSensitive = true,
     bool includeLower = true,
     bool includeUpper = true,
@@ -579,14 +567,6 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
         property: r'details',
         wildcard: pattern,
         caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Note, Note, QAfterFilterCondition> idIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'id',
       ));
     });
   }
@@ -1074,7 +1054,7 @@ extension NoteQueryProperty on QueryBuilder<Note, Note, QQueryProperty> {
     });
   }
 
-  QueryBuilder<Note, String?, QQueryOperations> detailsProperty() {
+  QueryBuilder<Note, String, QQueryOperations> detailsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'details');
     });

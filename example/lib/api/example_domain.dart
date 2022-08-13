@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:example/api/example_datastore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
-import 'package:offtheline/offtheline.dart';
 
 import 'api.dart';
 import 'example_id_allocator.dart';
