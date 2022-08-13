@@ -6,7 +6,7 @@ import 'api_action.dart';
 import '../core/api_client.dart';
 import '../core/domain.dart';
 
-class UnknownAction<D extends Domain> extends ApiAction<D> {
+class UnknownAction<A extends Account> extends ApiAction<A> {
   @override
   final String name;
   final Map<String, dynamic> props;
@@ -20,15 +20,15 @@ class UnknownAction<D extends Domain> extends ApiAction<D> {
   });
 
   @override
-  String generateDescription(D domain) {
+  String generateDescription(A account) {
     return 'Nop Action';
   }
 
   @override
-  void applyOptimisticUpdate(D domain) {}
+  void applyOptimisticUpdate(A account) {}
 
   @override
-  void revertOptimisticUpdate(D domain) {}
+  void revertOptimisticUpdate(A account) {}
 
   @override
   Map<String, dynamic> toMap() => props;

@@ -15,7 +15,7 @@ void main() async {
   Hive.registerAdapter(ApiActionTypeAdapter(actionDeserializers));
 
   await Api.initilizeUserAgent();
-  final domainManger = await DomainManager.restore<ExampleDomain>(
+  final domainManger = await AccountManager.restore<ExampleDomain>(
     (domainId) => ExampleDomain.open(domainId, clear: false),
   );
   runApp(DomainSelector(
@@ -24,20 +24,19 @@ void main() async {
 }
 
 class DomainSelector extends StatelessWidget {
-  final DomainManager<ExampleDomain> domainManager;
+  final AccountManager<ExampleDomain> domainManager;
   final _loginAppKey = UniqueKey();
 
   DomainSelector({Key? key, required this.domainManager}) : super(key: key);
 
   @override
   Widget build(BuildContext context) => StateNotifierProvider<
-          DomainManager<ExampleDomain>,
-          DomainManagerState<ExampleDomain>>.value(
+          AccountManager<ExampleDomain>,
+          AccountManagerState<ExampleDomain>>.value(
         value: domainManager,
         builder: (context, child) {
-          final domain =
-              context.select<DomainManagerState<ExampleDomain>, ExampleDomain?>(
-                  (state) => state.currentDomain);
+          final domain = context.select<AccountManagerState<ExampleDomain>,
+              ExampleDomain?>((state) => state.selectedAccount);
 
           return domain == null
               ? _LoginApp(key: _loginAppKey)

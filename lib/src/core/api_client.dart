@@ -32,7 +32,7 @@ class ApiClient<R> with DomainHooks<R> {
   Uri get apiBaseUrl => _apiBaseUrl;
   set apiBaseUrl(Uri url) {
     _apiBaseUrl = url;
-    domain.persist(_persistKeyApiBaseUrl, url.toString());
+    account.persist(_persistKeyApiBaseUrl, url.toString());
   }
 
   ApiClient({
@@ -41,10 +41,11 @@ class ApiClient<R> with DomainHooks<R> {
   });
 
   @override
-  Future<void> initialize(Domain<R> domain) async {
-    await super.initialize(domain);
+  Future<void> initialize(Account<R> account) async {
+    await super.initialize(account);
     _apiBaseUrl =
-        Uri.tryParse(domain.getPersisted(_persistKeyApiBaseUrl) ?? '') ?? Uri();
+        Uri.tryParse(account.getPersisted(_persistKeyApiBaseUrl) ?? '') ??
+            Uri();
   }
 
   Map<String, String> _requestHeaders = Map.unmodifiable({});
@@ -83,7 +84,7 @@ class ApiClient<R> with DomainHooks<R> {
   }) async {
     if (closed) return ApiErrorResponse(message: 'Client Closed');
     final completer = Completer();
-    domain.registerOngoingOperation(completer.future);
+    account.registerOngoingOperation(completer.future);
     try {
       OTL.logger?.d('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);
@@ -128,7 +129,7 @@ class ApiClient<R> with DomainHooks<R> {
     dynamic tag,
   }) async {
     final completer = Completer<void>();
-    domain.registerOngoingOperation(completer.future);
+    account.registerOngoingOperation(completer.future);
     try {
       OTL.logger?.d('[api] Processing response');
       if (callback != null && !await callback.call(response)) {

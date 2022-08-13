@@ -14,7 +14,7 @@ const _persistKeyUserDisplayName = 'userDisplayName';
 const _persistKeyDomainDisplayName = 'domainDisplayName';
 const _persistKeyUseFakeDispatcher = 'useFakeDispatcher';
 
-class ExampleDomain extends Domain<Map<String, dynamic>> with ChangeNotifier {
+class ExampleDomain extends Account<Map<String, dynamic>> with ChangeNotifier {
   final datastore = ExampleDatastore();
   final idAllocator = ExampleIdAllocator();
 

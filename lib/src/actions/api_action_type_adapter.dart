@@ -8,11 +8,12 @@ const _fieldName = 0;
 const _fieldProps = 1;
 const _fieldBinaryData = 2;
 
-typedef ApiActionDeserializer<D extends Domain> = ApiAction<D> Function(
+typedef ApiActionDeserializer<A extends Account> = ApiAction<A> Function(
     Map<String, dynamic> props, dynamic data);
 
-class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
-  final Map<String, ApiActionDeserializer<D>> deserializers;
+class ApiActionTypeAdapter<A extends Account>
+    extends TypeAdapter<ApiAction<A>> {
+  final Map<String, ApiActionDeserializer<A>> deserializers;
   @override
   final int typeId;
 
@@ -22,7 +23,7 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
   });
 
   @override
-  ApiAction<D> read(BinaryReader reader) {
+  ApiAction<A> read(BinaryReader reader) {
     int n = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < n; i++) reader.readByte(): reader.read(),
@@ -32,7 +33,7 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
     final props = (fields[_fieldProps] as Map).cast<String, dynamic>();
     final data = fields[_fieldBinaryData];
     if (deserializer == null) {
-      return UnknownAction<D>(
+      return UnknownAction<A>(
         name: name,
         props: props,
         binaryData: data,
@@ -42,7 +43,7 @@ class ApiActionTypeAdapter<D extends Domain> extends TypeAdapter<ApiAction<D>> {
   }
 
   @override
-  void write(BinaryWriter writer, ApiAction<D> obj) {
+  void write(BinaryWriter writer, ApiAction<A> obj) {
     writer.writeByte(3);
     writer.writeByte(_fieldName);
     writer.write(obj.name);

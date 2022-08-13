@@ -6,7 +6,7 @@ import 'package:http/http.dart';
 import '../core/api_client.dart';
 import '../core/domain.dart';
 
-abstract class ApiAction<D extends Domain> with HiveObjectMixin {
+abstract class ApiAction<A extends Account> with HiveObjectMixin {
   @override
   int get key => super.key;
 
@@ -16,15 +16,15 @@ abstract class ApiAction<D extends Domain> with HiveObjectMixin {
 
   dynamic get tag => null;
 
-  String generateDescription(D domain);
+  String generateDescription(A account);
 
   String generatePayloadDetails();
 
   BaseRequest createRequest(ApiClient api);
 
-  FutureOr<void> applyOptimisticUpdate(D domain);
+  FutureOr<void> applyOptimisticUpdate(A account);
 
-  FutureOr<void> revertOptimisticUpdate(D domain);
+  FutureOr<void> revertOptimisticUpdate(A account);
 
   Map<String, dynamic> toMap();
 }

@@ -4,108 +4,108 @@ import 'package:hive/hive.dart';
 import 'package:offtheline/offtheline.dart';
 import 'package:state_notifier/state_notifier.dart';
 
-const _boxName = 'domains';
-const _persistKeyCurrentDomainId = 'currentDomainId';
-const _persistKeyDomainIds = 'domains';
+const _boxName = 'account_manager';
+const _persistKeySelectedAccountId = 'selectedAccountId';
+const _persistKeyAccountIds = 'accountIds';
 
-class DomainManagerState<D extends Domain> {
-  final Map<String, D> domainMap;
-  final D? currentDomain;
+class AccountManagerState<A extends Account> {
+  final Map<String, A> accounts;
+  final A? selectedAccount;
 
-  const DomainManagerState(this.domainMap, this.currentDomain);
+  const AccountManagerState(this.accounts, this.selectedAccount);
 }
 
-/// Maintain a list of logged-in [Domain]s
-class DomainManager<D extends Domain>
-    extends StateNotifier<DomainManagerState<D>> with LocatorMixin {
-  final FutureOr<D?> Function(String domainId) restoreDomain;
+/// Maintain a list of logged-in [Account]s
+class AccountManager<A extends Account>
+    extends StateNotifier<AccountManagerState<A>> with LocatorMixin {
+  final FutureOr<A?> Function(String accountId) restoreAccount;
   late final Box _persist;
 
-  DomainManager._(this.restoreDomain)
-      : super(const DomainManagerState({}, null));
+  AccountManager._(this.restoreAccount)
+      : super(const AccountManagerState({}, null));
 
-  /// Restore this instance and all managed [Domain]s from persistance
-  static Future<DomainManager<D>> restore<D extends Domain>(
-    FutureOr<D?> Function(String domainId) restoreDomain,
+  /// Restore this instance and all managed [Account]s from persistance
+  static Future<AccountManager<D>> restore<D extends Account>(
+    FutureOr<D?> Function(String accountId) restoreAccount,
   ) async {
-    final domainManager = DomainManager._(restoreDomain);
-    await domainManager._initialize();
-    return domainManager;
+    final accountManager = AccountManager._(restoreAccount);
+    await accountManager._initialize();
+    return accountManager;
   }
 
   Future<void> _initialize() async {
     _persist = await Hive.openBox(_boxName);
-    final List<String> persistedDomainIds =
-        _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
-    String? currentDomainId = _persist.get(_persistKeyCurrentDomainId);
+    final List<String> persistedAccountIds =
+        _persist.get(_persistKeyAccountIds)?.cast<String>() ?? <String>[];
+    String? currentDomainId = _persist.get(_persistKeySelectedAccountId);
 
-    final domainMap = <String, D>{};
-    bool invalidDomains = false;
-    for (final domainId in persistedDomainIds) {
-      OTL.logger?.d('[domain-manager] Restoring domain $domainId');
-      final domain = await restoreDomain(domainId);
-      if (domain == null) {
+    final accounts = <String, A>{};
+    bool invalidAccounts = false;
+    for (final accountId in persistedAccountIds) {
+      OTL.logger?.d('[account-manager] Restoring account $accountId');
+      final account = await restoreAccount(accountId);
+      if (account == null) {
         OTL.logger
-            ?.e('[domain-manager] Domain $domainId is invalid. Deleting.');
-        invalidDomains = true;
+            ?.e('[account-manager] Account $accountId is invalid. Deleting.');
+        invalidAccounts = true;
       } else {
-        domainMap[domainId] = domain;
+        accounts[accountId] = account;
       }
     }
-    if (invalidDomains) {
+    if (invalidAccounts) {
       _persist.put(
-          _persistKeyDomainIds, domainMap.keys.toList(growable: false));
+          _persistKeyAccountIds, accounts.keys.toList(growable: false));
     }
 
     bool invalidCurrentDomain = false;
-    if (currentDomainId == null && domainMap.isNotEmpty) {
+    if (currentDomainId == null && accounts.isNotEmpty) {
       invalidCurrentDomain = true;
-      currentDomainId = domainMap.keys.first;
+      currentDomainId = accounts.keys.first;
     } else if (currentDomainId != null &&
-        !domainMap.containsKey(currentDomainId)) {
-      currentDomainId = domainMap.isEmpty ? null : domainMap.keys.first;
+        !accounts.containsKey(currentDomainId)) {
+      currentDomainId = accounts.isEmpty ? null : accounts.keys.first;
     }
     if (invalidCurrentDomain) {
-      _persist.put(_persistKeyCurrentDomainId, currentDomainId);
+      _persist.put(_persistKeySelectedAccountId, currentDomainId);
     }
 
-    final currentDomain = domainMap[_persist.get(_persistKeyCurrentDomainId)];
+    final currentDomain = accounts[_persist.get(_persistKeySelectedAccountId)];
 
-    state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
+    state = AccountManagerState(Map.unmodifiable(accounts), currentDomain);
   }
 
-  /// Add a [Domain] to the list of logged-in domains
-  void addDomain(D domain) async {
-    if (!state.domainMap.containsKey(domain.id)) {
-      final domainMap = Map.of(state.domainMap);
-      domainMap[domain.id] = domain;
+  /// Add an [Account] to the list of logged-in accounts
+  void addAccount(A account) async {
+    if (!state.accounts.containsKey(account.id)) {
+      final accounts = Map.of(state.accounts);
+      accounts[account.id] = account;
       _persist.put(
-          _persistKeyDomainIds, domainMap.keys.toList(growable: false));
+          _persistKeyAccountIds, accounts.keys.toList(growable: false));
 
-      final currentDomain = state.currentDomain ?? domain;
-      if (currentDomain != state.currentDomain) {
-        _persist.put(_persistKeyCurrentDomainId, currentDomain.id);
+      final currentDomain = state.selectedAccount ?? account;
+      if (currentDomain != state.selectedAccount) {
+        _persist.put(_persistKeySelectedAccountId, currentDomain.id);
       }
-      state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
+      state = AccountManagerState(Map.unmodifiable(accounts), currentDomain);
     }
   }
 
-  /// Remove a [Domain] from the list of logged-in domains, and perform cleanup
-  FutureOr<void> removeDomain(String domainId) {
-    final domainMap = Map.of(state.domainMap);
-    final removed = domainMap.remove(domainId);
+  /// Remove an [Account] from the list of logged-in accounts, and perform cleanup
+  FutureOr<void> removeDomain(String accountId) {
+    final accounts = Map.of(state.accounts);
+    final removed = accounts.remove(accountId);
     if (removed != null) {
       _persist.put(
-          _persistKeyDomainIds, domainMap.keys.toList(growable: false));
+          _persistKeyAccountIds, accounts.keys.toList(growable: false));
 
-      final currentDomain = state.currentDomain?.id == domainId
-          ? (domainMap.isEmpty ? null : domainMap.values.first)
-          : state.currentDomain;
+      final currentDomain = state.selectedAccount?.id == accountId
+          ? (accounts.isEmpty ? null : accounts.values.first)
+          : state.selectedAccount;
 
-      if (currentDomain != state.currentDomain) {
-        _persist.put(_persistKeyCurrentDomainId, currentDomain?.id);
+      if (currentDomain != state.selectedAccount) {
+        _persist.put(_persistKeySelectedAccountId, currentDomain?.id);
       }
-      state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
+      state = AccountManagerState(Map.unmodifiable(accounts), currentDomain);
       return removed.delete();
     }
   }

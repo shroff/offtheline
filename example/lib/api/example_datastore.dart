@@ -7,7 +7,7 @@ class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
   late final void Function() removeResponseProcessor;
 
   @override
-  Future<void> initialize(Domain<Map<String, dynamic>> domain) async {
+  Future<void> initialize(Account<Map<String, dynamic>> domain) async {
     super.initialize(domain);
 
     isar = await Isar.open(

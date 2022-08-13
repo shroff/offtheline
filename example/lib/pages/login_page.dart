@@ -61,7 +61,7 @@ class LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-    final domainManager = context.read<DomainManager>();
+    final domainManager = context.read<AccountManager>();
 
     try {
       final response = await _client.send(request);
@@ -82,7 +82,7 @@ class LoginPageState extends State<LoginPage> {
             (jsonDecode(responseString) as Map).cast<String, dynamic>();
         final domain = await ExampleDomain.createFromLoginResponse(responseMap);
         domain.api.apiBaseUrl = apiBaseUrl ?? Uri();
-        domainManager.addDomain(domain);
+        domainManager.addAccount(domain);
       }
     } on SocketException {
       if (mounted) {
@@ -172,7 +172,7 @@ class LoginPageState extends State<LoginPage> {
                   ),
                   TextButton(
                     onPressed: () async {
-                      final domainManager = context.read<DomainManager>();
+                      final domainManager = context.read<AccountManager>();
                       final rid = Random().nextInt(1 << 31);
                       final responseMap = <String, dynamic>{
                         'session': {
@@ -194,7 +194,7 @@ class LoginPageState extends State<LoginPage> {
                         responseMap,
                         useFakeDispatcher: true,
                       );
-                      domainManager.addDomain(domain);
+                      domainManager.addAccount(domain);
                     },
                     child: const Text('Log in without server'),
                   ),

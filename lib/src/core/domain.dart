@@ -10,7 +10,7 @@ import 'api_client.dart';
 import 'domain_hooks.dart';
 import 'global.dart';
 
-class Domain<R> {
+class Account<R> {
   final String id;
   final ApiActionQueue<R> actionQueue = ApiActionQueue();
   final ApiClient<R> api;
@@ -26,7 +26,7 @@ class Domain<R> {
 
   bool _closed = false;
 
-  Domain({
+  Account({
     required this.id,
     required this.api,
     this.clear = false,
@@ -34,7 +34,7 @@ class Domain<R> {
     openBox('persist').then((box) async {
       if (clear) {
         OTL.logger
-            ?.i('[domain][$id] Clearing ${box.values.length} stale entries');
+            ?.i('[accuont][$id] Clearing ${box.values.length} stale entries');
         await box.clear();
       }
       _persist = box;
@@ -73,7 +73,7 @@ class Domain<R> {
     if (_closed) return;
     _closed = true;
 
-    OTL.logger?.i('[domain][$id] Logging Out');
+    OTL.logger?.i('[account][$id] Logging Out');
 
     for (final hooks in _hooks) {
       await hooks.close();
@@ -95,7 +95,7 @@ class Domain<R> {
     }
   }
 
-  Future<void> addAction(ApiAction<Domain<R>> action) async {
+  Future<void> addAction(ApiAction<Account<R>> action) async {
     return actionQueue.addAction(action);
   }
 

@@ -5,17 +5,17 @@ import 'package:meta/meta.dart';
 import 'domain.dart';
 
 mixin DomainHooks<R> {
-  late final Domain<R> _domain;
+  late final Account<R> _account;
   @protected
-  Domain<R> get domain => _domain;
+  Account<R> get account => _account;
 
   bool _closed = false;
   @protected
   bool get closed => _closed;
 
   @mustCallSuper
-  FutureOr<void> initialize(Domain<R> domain) {
-    _domain = domain;
+  FutureOr<void> initialize(Account<R> account) {
+    _account = account;
   }
 
   @mustCallSuper

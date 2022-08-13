@@ -18,8 +18,8 @@ class ExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final domain =
-        context.select<DomainManagerState<ExampleDomain>, ExampleDomain?>(
-            (state) => state.domainMap[domainId]);
+        context.select<AccountManagerState<ExampleDomain>, ExampleDomain?>(
+            (state) => state.accounts[domainId]);
     if (domain == null) return Container();
     return MultiProvider(
       providers: [
