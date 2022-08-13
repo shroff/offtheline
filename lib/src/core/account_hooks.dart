@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-import 'domain.dart';
+import 'account.dart';
 
-mixin DomainHooks<R> {
+mixin AccountHooks<R> {
   late final Account<R> _account;
   @protected
   Account<R> get account => _account;

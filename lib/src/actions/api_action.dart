@@ -4,7 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart';
 
 import '../core/api_client.dart';
-import '../core/domain.dart';
+import '../core/account.dart';
 
 abstract class ApiAction<A extends Account> with HiveObjectMixin {
   @override

@@ -5,7 +5,7 @@ import 'package:http/http.dart';
 
 import 'api_action.dart';
 import '../core/api_client.dart';
-import '../core/domain.dart';
+import '../core/account.dart';
 
 mixin FileUploadApiAction<D extends Account> on ApiAction<D> {
   @override

@@ -2,7 +2,7 @@ import 'package:hive/hive.dart';
 
 import 'unknown_action.dart';
 import 'api_action.dart';
-import '../core/domain.dart';
+import '../core/account.dart';
 
 const _fieldName = 0;
 const _fieldProps = 1;

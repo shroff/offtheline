@@ -4,7 +4,7 @@ const _persistKeyIdBlockSize = 'idBlockSize';
 const _persistKeyUsedIds = 'usedIds';
 const _persistKeyIdBlocks = 'idBlocks';
 
-class ExampleIdAllocator with DomainHooks<Map<String, dynamic>> {
+class ExampleIdAllocator with AccountHooks<Map<String, dynamic>> {
   late final void Function() removeResponseProcessor;
 
   @override

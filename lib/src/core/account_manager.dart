@@ -37,7 +37,7 @@ class AccountManager<A extends Account>
     _persist = await Hive.openBox(_boxName);
     final List<String> persistedAccountIds =
         _persist.get(_persistKeyAccountIds)?.cast<String>() ?? <String>[];
-    String? currentDomainId = _persist.get(_persistKeySelectedAccountId);
+    String? selectedAccountId = _persist.get(_persistKeySelectedAccountId);
 
     final accounts = <String, A>{};
     bool invalidAccounts = false;
@@ -57,21 +57,21 @@ class AccountManager<A extends Account>
           _persistKeyAccountIds, accounts.keys.toList(growable: false));
     }
 
-    bool invalidCurrentDomain = false;
-    if (currentDomainId == null && accounts.isNotEmpty) {
-      invalidCurrentDomain = true;
-      currentDomainId = accounts.keys.first;
-    } else if (currentDomainId != null &&
-        !accounts.containsKey(currentDomainId)) {
-      currentDomainId = accounts.isEmpty ? null : accounts.keys.first;
+    bool invalidCurrentAccount = false;
+    if (selectedAccountId == null && accounts.isNotEmpty) {
+      invalidCurrentAccount = true;
+      selectedAccountId = accounts.keys.first;
+    } else if (selectedAccountId != null &&
+        !accounts.containsKey(selectedAccountId)) {
+      selectedAccountId = accounts.isEmpty ? null : accounts.keys.first;
     }
-    if (invalidCurrentDomain) {
-      _persist.put(_persistKeySelectedAccountId, currentDomainId);
+    if (invalidCurrentAccount) {
+      _persist.put(_persistKeySelectedAccountId, selectedAccountId);
     }
 
-    final currentDomain = accounts[_persist.get(_persistKeySelectedAccountId)];
+    final currentAccount = accounts[_persist.get(_persistKeySelectedAccountId)];
 
-    state = AccountManagerState(Map.unmodifiable(accounts), currentDomain);
+    state = AccountManagerState(Map.unmodifiable(accounts), currentAccount);
   }
 
   /// Add an [Account] to the list of logged-in accounts
@@ -82,30 +82,30 @@ class AccountManager<A extends Account>
       _persist.put(
           _persistKeyAccountIds, accounts.keys.toList(growable: false));
 
-      final currentDomain = state.selectedAccount ?? account;
-      if (currentDomain != state.selectedAccount) {
-        _persist.put(_persistKeySelectedAccountId, currentDomain.id);
+      final currentAccount = state.selectedAccount ?? account;
+      if (currentAccount != state.selectedAccount) {
+        _persist.put(_persistKeySelectedAccountId, currentAccount.id);
       }
-      state = AccountManagerState(Map.unmodifiable(accounts), currentDomain);
+      state = AccountManagerState(Map.unmodifiable(accounts), currentAccount);
     }
   }
 
   /// Remove an [Account] from the list of logged-in accounts, and perform cleanup
-  FutureOr<void> removeDomain(String accountId) {
+  FutureOr<void> removeAccount(String accountId) {
     final accounts = Map.of(state.accounts);
     final removed = accounts.remove(accountId);
     if (removed != null) {
       _persist.put(
           _persistKeyAccountIds, accounts.keys.toList(growable: false));
 
-      final currentDomain = state.selectedAccount?.id == accountId
+      final currentAccount = state.selectedAccount?.id == accountId
           ? (accounts.isEmpty ? null : accounts.values.first)
           : state.selectedAccount;
 
-      if (currentDomain != state.selectedAccount) {
-        _persist.put(_persistKeySelectedAccountId, currentDomain?.id);
+      if (currentAccount != state.selectedAccount) {
+        _persist.put(_persistKeySelectedAccountId, currentAccount?.id);
       }
-      state = AccountManagerState(Map.unmodifiable(accounts), currentDomain);
+      state = AccountManagerState(Map.unmodifiable(accounts), currentAccount);
       return removed.delete();
     }
   }

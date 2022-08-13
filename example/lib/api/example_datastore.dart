@@ -2,7 +2,7 @@ import 'package:example/models/note.dart';
 import 'package:isar/isar.dart';
 import 'package:offtheline/offtheline.dart';
 
-class ExampleDatastore with DomainHooks<Map<String, dynamic>> {
+class ExampleDatastore with AccountHooks<Map<String, dynamic>> {
   late final Isar isar;
   late final void Function() removeResponseProcessor;
 

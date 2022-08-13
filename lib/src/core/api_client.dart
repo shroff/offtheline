@@ -8,8 +8,8 @@ import 'package:uri/uri.dart';
 import 'api_error_response.dart';
 import 'global.dart';
 import 'dispatcher.dart';
-import 'domain.dart';
-import 'domain_hooks.dart';
+import 'account.dart';
+import 'account_hooks.dart';
 
 const _persistKeyApiBaseUrl = 'apiBaseUrl';
 
@@ -22,7 +22,7 @@ typedef ResponseProcessor<R> = FutureOr<void> Function(
 typedef ErrorResponseTransformer = FutureOr<ApiErrorResponse> Function(
     Response response);
 
-class ApiClient<R> with DomainHooks<R> {
+class ApiClient<R> with AccountHooks<R> {
   Dispatcher dispatcher = HttpClientDispatcher();
   final ResponseTransformer<R?> transformResponse;
   final ErrorResponseTransformer transformErrorResponse;

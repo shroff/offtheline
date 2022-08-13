@@ -6,8 +6,8 @@ import 'package:state_notifier/state_notifier.dart';
 
 import '../actions/api_action.dart';
 import 'api_error_response.dart';
-import 'domain.dart';
-import 'domain_hooks.dart';
+import 'account.dart';
+import 'account_hooks.dart';
 import 'global.dart';
 
 class ApiActionQueueState {
@@ -20,7 +20,7 @@ class ApiActionQueueState {
 }
 
 class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
-    with DomainHooks<R>, LocatorMixin {
+    with AccountHooks<R>, LocatorMixin {
   late final Box<ApiAction<Account<R>>> _actionsBox;
   late final Function() _removeListener;
   Iterable<ApiAction> get actions => List.unmodifiable(state.actions);

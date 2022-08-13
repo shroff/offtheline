@@ -7,7 +7,7 @@ import 'package:state_notifier/state_notifier.dart';
 import 'action_queue.dart';
 import '../actions/api_action.dart';
 import 'api_client.dart';
-import 'domain_hooks.dart';
+import 'account_hooks.dart';
 import 'global.dart';
 
 class Account<R> {
@@ -18,7 +18,7 @@ class Account<R> {
   late final Box _persist;
   final bool clear;
   final _ongoingOperations = _Counter();
-  final List<DomainHooks<R>> _hooks = [];
+  final List<AccountHooks<R>> _hooks = [];
 
   final _boxOpenedCompleter = Completer();
   final _initializationCompleter = Completer();
@@ -51,7 +51,7 @@ class Account<R> {
   Future<void> initialize() async {}
 
   @nonVirtual
-  FutureOr<void> registerHooks(DomainHooks<R> hooks) async {
+  FutureOr<void> registerHooks(AccountHooks<R> hooks) async {
     if (_closed) return null;
     await _boxOpenedCompleter.future;
     _hooks.add(hooks);
