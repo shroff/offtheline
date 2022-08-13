@@ -15,27 +15,25 @@ class DomainManagerState<D extends Domain> {
   const DomainManagerState(this.domainMap, this.currentDomain);
 }
 
+/// Maintain a list of logged-in [Domain]s
 class DomainManager<D extends Domain>
     extends StateNotifier<DomainManagerState<D>> with LocatorMixin {
   final FutureOr<D?> Function(String domainId) restoreDomain;
   late final Box _persist;
 
-  Domain? get currentDomain => state.currentDomain;
-
-  D? getDomain(String domainId) => state.domainMap[domainId];
-
   DomainManager._(this.restoreDomain)
       : super(const DomainManagerState({}, null));
 
-  static Future<DomainManager<D>> create<D extends Domain>(
+  /// Restore this instance and all managed [Domain]s from persistance
+  static Future<DomainManager<D>> restore<D extends Domain>(
     FutureOr<D?> Function(String domainId) restoreDomain,
   ) async {
     final domainManager = DomainManager._(restoreDomain);
-    await domainManager.initialize();
+    await domainManager._initialize();
     return domainManager;
   }
 
-  Future<void> initialize() async {
+  Future<void> _initialize() async {
     _persist = await Hive.openBox(_boxName);
     final List<String> persistedDomainIds =
         _persist.get(_persistKeyDomainIds)?.cast<String>() ?? <String>[];
@@ -76,6 +74,7 @@ class DomainManager<D extends Domain>
     state = DomainManagerState(Map.unmodifiable(domainMap), currentDomain);
   }
 
+  /// Add a [Domain] to the list of logged-in domains
   void addDomain(D domain) async {
     if (!state.domainMap.containsKey(domain.id)) {
       final domainMap = Map.of(state.domainMap);
@@ -91,6 +90,7 @@ class DomainManager<D extends Domain>
     }
   }
 
+  /// Remove a [Domain] from the list of logged-in domains, and perform cleanup
   FutureOr<void> removeDomain(String domainId) {
     final domainMap = Map.of(state.domainMap);
     final removed = domainMap.remove(domainId);

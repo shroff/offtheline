@@ -10,16 +10,6 @@ import 'api_client.dart';
 import 'domain_hooks.dart';
 import 'global.dart';
 
-class _Counter extends StateNotifier<int> {
-  _Counter() : super(0);
-
-  int get value => state;
-
-  void increment() => state = state + 1;
-
-  void decrement() => state = state - 1;
-}
-
 class Domain<R> {
   final String id;
   final ApiActionQueue<R> actionQueue = ApiActionQueue();
@@ -133,4 +123,14 @@ class Domain<R> {
   Stream<BoxEvent> watchMetadata({dynamic key}) {
     return _persist.watch(key: key);
   }
+}
+
+class _Counter extends StateNotifier<int> {
+  _Counter() : super(0);
+
+  int get value => state;
+
+  void increment() => state = state + 1;
+
+  void decrement() => state = state - 1;
 }

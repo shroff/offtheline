@@ -15,7 +15,7 @@ void main() async {
   Hive.registerAdapter(ApiActionTypeAdapter(actionDeserializers));
 
   await Api.initilizeUserAgent();
-  final domainManger = await DomainManager.create<ExampleDomain>(
+  final domainManger = await DomainManager.restore<ExampleDomain>(
     (domainId) => ExampleDomain.open(domainId, clear: false),
   );
   runApp(DomainSelector(
