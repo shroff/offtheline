@@ -14,7 +14,7 @@ import 'account_hooks.dart';
 const _persistKeyApiBaseUrl = 'apiBaseUrl';
 
 typedef ResponseTransformer<R> = FutureOr<R?> Function(String);
-typedef ResponseProcessor<R> = FutureOr<void> Function(
+typedef ResponseListener<R> = FutureOr<void> Function(
   R? response,
   dynamic tag,
 );
@@ -26,7 +26,7 @@ class ApiClient<R> with AccountHooks<R> {
   Dispatcher dispatcher = HttpClientDispatcher();
   final ResponseTransformer<R?> transformResponse;
   final ErrorResponseTransformer transformErrorResponse;
-  final List<ResponseProcessor<R>> _responseProcessors = [];
+  final List<ResponseListener<R>> _responseListeners = [];
 
   Uri _apiBaseUrl = Uri();
   Uri get apiBaseUrl => _apiBaseUrl;
@@ -70,10 +70,10 @@ class ApiClient<R> with AccountHooks<R> {
     return builder;
   }
 
-  void Function() addResponseProcessor(ResponseProcessor<R> processor) {
-    _responseProcessors.add(processor);
+  void Function() addResponseListener(ResponseListener<R> listener) {
+    _responseListeners.add(listener);
     return () {
-      _responseProcessors.remove(processor);
+      _responseListeners.remove(listener);
     };
   }
 
@@ -135,7 +135,7 @@ class ApiClient<R> with AccountHooks<R> {
       if (callback != null && !await callback.call(response)) {
         return;
       }
-      for (final processResponse in _responseProcessors) {
+      for (final processResponse in _responseListeners) {
         await processResponse(response, tag);
       }
     } finally {

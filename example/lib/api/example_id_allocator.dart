@@ -5,18 +5,18 @@ const _persistKeyUsedIds = 'usedIds';
 const _persistKeyIdBlocks = 'idBlocks';
 
 class ExampleIdAllocator with AccountHooks<Map<String, dynamic>> {
-  late final void Function() removeResponseProcessor;
+  late final void Function() removeResponseListener;
 
   @override
   Future<void> initialize(Account<Map<String, dynamic>> account) async {
     super.initialize(account);
-    removeResponseProcessor = account.api.addResponseProcessor(processResponse);
+    removeResponseListener = account.api.addResponseListener(parseIdBlock);
   }
 
   @override
   Future<void> close() async {
     super.close();
-    removeResponseProcessor();
+    removeResponseListener();
   }
 
   int get idBlockSize => account.getPersisted(_persistKeyIdBlockSize) ?? 0;
@@ -31,7 +31,7 @@ class ExampleIdAllocator with AccountHooks<Map<String, dynamic>> {
           idBlockSize) -
       _usedIds;
 
-  void processResponse(Map<String, dynamic>? data, dynamic tag) {
+  void parseIdBlock(Map<String, dynamic>? data, dynamic tag) {
     if (data != null && data.containsKey('id_block')) {
       final List<int> blocks =
           account.getPersisted(_persistKeyIdBlocks)?.cast<int>() ?? [];

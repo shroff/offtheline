@@ -4,7 +4,7 @@ import 'package:offtheline/offtheline.dart';
 
 class ExampleDatastore with AccountHooks<Map<String, dynamic>> {
   late final Isar isar;
-  late final void Function() removeResponseProcessor;
+  late final void Function() removeResponseListener;
 
   @override
   Future<void> initialize(Account<Map<String, dynamic>> account) async {
@@ -15,17 +15,17 @@ class ExampleDatastore with AccountHooks<Map<String, dynamic>> {
       name: account.id,
     );
 
-    removeResponseProcessor = account.api.addResponseProcessor(processResponse);
+    removeResponseListener = account.api.addResponseListener(parseData);
   }
 
   @override
   Future<void> close() async {
     super.close();
-    removeResponseProcessor();
+    removeResponseListener();
     await isar.close();
   }
 
-  Future<void> processResponse(Map<String, dynamic>? data, dynamic tag) async {
+  Future<void> parseData(Map<String, dynamic>? data, dynamic tag) async {
     if (data == null) return;
 
     if (data.containsKey('notes')) {
