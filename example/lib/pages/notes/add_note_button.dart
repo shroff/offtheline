@@ -8,15 +8,15 @@ class AddNoteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final domain = context.read<ExampleDomain>();
+    final account = context.read<ExampleAccount>();
     return FloatingActionButton(
       onPressed: () async {
         final draft = await _showNewNoteDialog(context);
         if (draft == null) {
           return;
         }
-        domain.addAction(AddNoteAction(
-          noteId: await domain.generateId(),
+        account.addAction(AddNoteAction(
+          noteId: await account.generateId(),
           title: draft.title,
           color: null,
           details: draft.details,

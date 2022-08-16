@@ -61,7 +61,7 @@ class LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-    final domainManager = context.read<AccountManager>();
+    final accountManager = context.read<AccountManager>();
 
     try {
       final response = await _client.send(request);
@@ -80,9 +80,10 @@ class LoginPageState extends State<LoginPage> {
       } else {
         final responseMap =
             (jsonDecode(responseString) as Map).cast<String, dynamic>();
-        final domain = await ExampleDomain.createFromLoginResponse(responseMap);
-        domain.api.apiBaseUrl = apiBaseUrl ?? Uri();
-        domainManager.addAccount(domain);
+        final account =
+            await ExampleAccount.createFromLoginResponse(responseMap);
+        account.api.apiBaseUrl = apiBaseUrl ?? Uri();
+        accountManager.addAccount(account);
       }
     } on SocketException {
       if (mounted) {
@@ -172,14 +173,14 @@ class LoginPageState extends State<LoginPage> {
                   ),
                   TextButton(
                     onPressed: () async {
-                      final domainManager = context.read<AccountManager>();
+                      final accountManager = context.read<AccountManager>();
                       final rid = Random().nextInt(1 << 31);
                       final responseMap = <String, dynamic>{
                         'session': {
                           'domain_id': 'offline-$rid',
                           'user_name': 'user-$rid',
-                          'user_display_name': 'Test $rid',
-                          'domain_display_name': 'Domain $rid',
+                          'user_display_name': 'Tux',
+                          'account_provider_name': 'Offline $rid',
                         },
                         'data': {
                           'notes': [],
@@ -189,12 +190,12 @@ class LoginPageState extends State<LoginPage> {
                           'id_block_size': 30,
                         },
                       };
-                      final domain =
-                          await ExampleDomain.createFromLoginResponse(
+                      final account =
+                          await ExampleAccount.createFromLoginResponse(
                         responseMap,
                         useFakeDispatcher: true,
                       );
-                      domainManager.addAccount(domain);
+                      accountManager.addAccount(account);
                     },
                     child: const Text('Log in without server'),
                   ),

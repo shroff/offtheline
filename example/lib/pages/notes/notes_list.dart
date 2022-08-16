@@ -27,7 +27,7 @@ class _NotesListState extends State<NotesList> {
 
   void refilter(ViewPrefs viewPrefs) {
     final stream = context
-        .read<ExampleDomain>()
+        .read<ExampleAccount>()
         .datastore
         .isar
         .notes
@@ -45,7 +45,7 @@ class _NotesListState extends State<NotesList> {
   @override
   Widget build(BuildContext context) {
     final selection = context.watch<Set<int>>();
-    final domain = context.read<ExampleDomain>();
+    final account = context.read<ExampleAccount>();
     bool selecting = selection.isNotEmpty;
 
     return StreamBuilder(
@@ -67,7 +67,7 @@ class _NotesListState extends State<NotesList> {
                                       .toggle(note.id);
                                 }
                               : () {
-                                  domain.addAction(EditNoteAction(
+                                  account.addAction(EditNoteAction(
                                     note: note,
                                     starred: !note.starred,
                                   ));

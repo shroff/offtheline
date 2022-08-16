@@ -11,19 +11,19 @@ Map<String, Widget Function(BuildContext)> _pageBuilders = {
 Map<String, Route<dynamic> Function(RouteSettings)> _routeBuilders = {};
 
 class ExampleApp extends StatelessWidget {
-  final String domainId;
+  final String accountId;
 
-  const ExampleApp({Key? key, required this.domainId}) : super(key: key);
+  const ExampleApp({Key? key, required this.accountId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final domain =
-        context.select<AccountManagerState<ExampleDomain>, ExampleDomain?>(
-            (state) => state.accounts[domainId]);
-    if (domain == null) return Container();
+    final account =
+        context.select<AccountManagerState<ExampleAccount>, ExampleAccount?>(
+            (state) => state.accounts[accountId]);
+    if (account == null) return Container();
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: domain),
+        ChangeNotifierProvider.value(value: account),
       ],
       child: const _WelcomeAppContent(),
     );

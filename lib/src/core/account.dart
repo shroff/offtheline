@@ -34,7 +34,7 @@ class Account<R> {
     openBox('persist').then((box) async {
       if (clear) {
         OTL.logger
-            ?.i('[accuont][$id] Clearing ${box.values.length} stale entries');
+            ?.i('[account][$id] Clearing ${box.values.length} stale entries');
         await box.clear();
       }
       _persist = box;

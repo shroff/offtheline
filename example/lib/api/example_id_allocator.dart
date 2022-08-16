@@ -8,9 +8,9 @@ class ExampleIdAllocator with AccountHooks<Map<String, dynamic>> {
   late final void Function() removeResponseProcessor;
 
   @override
-  Future<void> initialize(Account<Map<String, dynamic>> domain) async {
-    super.initialize(domain);
-    removeResponseProcessor = domain.api.addResponseProcessor(processResponse);
+  Future<void> initialize(Account<Map<String, dynamic>> account) async {
+    super.initialize(account);
+    removeResponseProcessor = account.api.addResponseProcessor(processResponse);
   }
 
   @override

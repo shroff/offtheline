@@ -7,15 +7,15 @@ class ExampleDatastore with AccountHooks<Map<String, dynamic>> {
   late final void Function() removeResponseProcessor;
 
   @override
-  Future<void> initialize(Account<Map<String, dynamic>> domain) async {
-    super.initialize(domain);
+  Future<void> initialize(Account<Map<String, dynamic>> account) async {
+    super.initialize(account);
 
     isar = await Isar.open(
       [NoteSchema],
-      name: domain.id,
+      name: account.id,
     );
 
-    removeResponseProcessor = domain.api.addResponseProcessor(processResponse);
+    removeResponseProcessor = account.api.addResponseProcessor(processResponse);
   }
 
   @override

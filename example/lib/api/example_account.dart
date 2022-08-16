@@ -11,14 +11,14 @@ import 'example_id_allocator.dart';
 const _persistKeyAuthToken = 'authToken';
 const _persistKeyUserName = 'userName';
 const _persistKeyUserDisplayName = 'userDisplayName';
-const _persistKeyDomainDisplayName = 'domainDisplayName';
+const _persistKeyAccuontProviderName = 'accountProviderName';
 const _persistKeyUseFakeDispatcher = 'useFakeDispatcher';
 
-class ExampleDomain extends Account<Map<String, dynamic>> with ChangeNotifier {
+class ExampleAccount extends Account<Map<String, dynamic>> with ChangeNotifier {
   final datastore = ExampleDatastore();
   final idAllocator = ExampleIdAllocator();
 
-  ExampleDomain({required super.id, required super.api, required super.clear});
+  ExampleAccount({required super.id, required super.api, required super.clear});
 
   String? get _authToken => getPersisted(_persistKeyAuthToken);
   set _authToken(String? value) {
@@ -38,29 +38,29 @@ class ExampleDomain extends Account<Map<String, dynamic>> with ChangeNotifier {
     notifyListeners();
   }
 
-  String get domainDisplayName => getPersisted(_persistKeyDomainDisplayName);
-  set domainDisplayName(String value) {
-    persist(_persistKeyDomainDisplayName, value);
+  String get providerName => getPersisted(_persistKeyAccuontProviderName);
+  set providerName(String value) {
+    persist(_persistKeyAccuontProviderName, value);
     notifyListeners();
   }
 
-  static Future<ExampleDomain> restore(String id) {
+  static Future<ExampleAccount> restore(String id) {
     return open(id, clear: false);
   }
 
-  static Future<ExampleDomain> open(String id, {bool clear = true}) async {
+  static Future<ExampleAccount> open(String id, {bool clear = true}) async {
     final api = ApiClient(
         transformResponse: (response) =>
             jsonDecode(response) as Map<String, dynamic>?);
-    final domain = ExampleDomain(id: id, api: api, clear: clear);
-    await domain.initialized;
+    final account = ExampleAccount(id: id, api: api, clear: clear);
+    await account.initialized;
 
-    if (domain.getPersisted(_persistKeyUseFakeDispatcher) == true) {
-      domain.api.dispatcher = _FakeDispatcher();
+    if (account.getPersisted(_persistKeyUseFakeDispatcher) == true) {
+      account.api.dispatcher = _FakeDispatcher();
     }
-    domain.api.setHeader('User-Agent', Api.userAgent);
+    account.api.setHeader('User-Agent', Api.userAgent);
 
-    return domain;
+    return account;
   }
 
   @override
@@ -71,7 +71,7 @@ class ExampleDomain extends Account<Map<String, dynamic>> with ChangeNotifier {
     await registerHooks(idAllocator);
   }
 
-  static Future<ExampleDomain> createFromLoginResponse(
+  static Future<ExampleAccount> createFromLoginResponse(
     Map<String, dynamic> response, {
     bool useFakeDispatcher = false,
   }) async {
@@ -79,23 +79,23 @@ class ExampleDomain extends Account<Map<String, dynamic>> with ChangeNotifier {
     final dataMap = (response['data'] as Map).cast<String, dynamic>();
     final configMap = (response['config'] as Map).cast<String, dynamic>();
 
-    final domain =
-        await ExampleDomain.open(sessionMap['domain_id'], clear: true);
+    final account =
+        await ExampleAccount.open(sessionMap['domain_id'], clear: true);
 
-    domain.userName = sessionMap['user_name'];
-    domain.userDisplayName = sessionMap['user_display_name'];
-    domain.domainDisplayName = sessionMap['domain_display_name'];
+    account.userName = sessionMap['user_name'];
+    account.userDisplayName = sessionMap['user_display_name'];
+    account.providerName = sessionMap['account_provider_name'];
 
-    domain._authToken = sessionMap['auth_token'];
-    domain.idAllocator.idBlockSize = configMap['id_block_size'];
-    domain.api.processResponse(dataMap);
+    account._authToken = sessionMap['auth_token'];
+    account.idAllocator.idBlockSize = configMap['id_block_size'];
+    account.api.processResponse(dataMap);
 
     if (useFakeDispatcher) {
-      domain.api.dispatcher = _FakeDispatcher();
-      domain.persist(_persistKeyUseFakeDispatcher, true);
+      account.api.dispatcher = _FakeDispatcher();
+      account.persist(_persistKeyUseFakeDispatcher, true);
     }
 
-    return domain;
+    return account;
   }
 
   void _setAuthorizationHeader(String? token) {

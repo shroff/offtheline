@@ -15,32 +15,32 @@ void main() async {
   Hive.registerAdapter(ApiActionTypeAdapter(actionDeserializers));
 
   await Api.initilizeUserAgent();
-  final domainManger = await AccountManager.restore<ExampleDomain>(
-    (domainId) => ExampleDomain.open(domainId, clear: false),
+  final accountManager = await AccountManager.restore<ExampleAccount>(
+    (accountId) => ExampleAccount.open(accountId, clear: false),
   );
-  runApp(DomainSelector(
-    domainManager: domainManger,
+  runApp(AccountSelector(
+    accountManager: accountManager,
   ));
 }
 
-class DomainSelector extends StatelessWidget {
-  final AccountManager<ExampleDomain> domainManager;
+class AccountSelector extends StatelessWidget {
+  final AccountManager<ExampleAccount> accountManager;
   final _loginAppKey = UniqueKey();
 
-  DomainSelector({Key? key, required this.domainManager}) : super(key: key);
+  AccountSelector({Key? key, required this.accountManager}) : super(key: key);
 
   @override
   Widget build(BuildContext context) => StateNotifierProvider<
-          AccountManager<ExampleDomain>,
-          AccountManagerState<ExampleDomain>>.value(
-        value: domainManager,
+          AccountManager<ExampleAccount>,
+          AccountManagerState<ExampleAccount>>.value(
+        value: accountManager,
         builder: (context, child) {
-          final domain = context.select<AccountManagerState<ExampleDomain>,
-              ExampleDomain?>((state) => state.selectedAccount);
+          final account = context.select<AccountManagerState<ExampleAccount>,
+              ExampleAccount?>((state) => state.selectedAccount);
 
-          return domain == null
+          return account == null
               ? _LoginApp(key: _loginAppKey)
-              : ExampleApp(key: ValueKey(domain.id), domainId: domain.id);
+              : ExampleApp(key: ValueKey(account.id), accountId: account.id);
         },
       );
 }

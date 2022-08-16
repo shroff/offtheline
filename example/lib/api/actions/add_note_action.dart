@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:example/api/api.dart';
 import 'package:example/models/note.dart';
 
-class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
+class AddNoteAction extends ApiAction<ExampleAccount> with JsonApiAction {
   static const String actionName = 'addNote';
 
   final int noteId;
@@ -26,14 +26,14 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   String get endpoint => '/notes/$noteId';
 
   @override
-  String generateDescription(ExampleDomain domain) {
+  String generateDescription(ExampleAccount account) {
     return 'Adding note: $title';
   }
 
   @override
-  FutureOr<void> applyOptimisticUpdate(ExampleDomain domain) {
+  FutureOr<void> applyOptimisticUpdate(ExampleAccount account) {
     final timestamp = DateTime.now();
-    final isar = domain.datastore.isar;
+    final isar = account.datastore.isar;
     return isar.writeTxn(() async {
       await isar.notes.put(Note(
         id: noteId,
@@ -49,8 +49,8 @@ class AddNoteAction extends ApiAction<ExampleDomain> with JsonApiAction {
   }
 
   @override
-  FutureOr<void> revertOptimisticUpdate(ExampleDomain domain) {
-    final isar = domain.datastore.isar;
+  FutureOr<void> revertOptimisticUpdate(ExampleAccount account) {
+    final isar = account.datastore.isar;
     return isar.writeTxn(() async {
       await isar.notes.delete(noteId);
     });

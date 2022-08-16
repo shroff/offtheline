@@ -43,7 +43,7 @@ class NotesPageContent extends StatelessWidget {
   AppBar buildAppBar(BuildContext context) {
     final viewPrefs = context.watch<ViewPrefs>();
     final selection = context.watch<Set<int>>();
-    final domain = context.read<ExampleDomain>();
+    final account = context.read<ExampleAccount>();
     bool selecting = selection.isNotEmpty;
 
     return AppBar(
@@ -62,7 +62,7 @@ class NotesPageContent extends StatelessWidget {
               IconButton(
                   onPressed: () {
                     for (final id in selection) {
-                      domain.addAction(
+                      account.addAction(
                           EditNoteAction.star(noteId: id, starred: false));
                     }
                     context.read<MultiSelectManager>().clear();
@@ -71,7 +71,7 @@ class NotesPageContent extends StatelessWidget {
               IconButton(
                   onPressed: () {
                     for (final id in selection) {
-                      domain.addAction(
+                      account.addAction(
                           EditNoteAction.star(noteId: id, starred: true));
                     }
                     context.read<MultiSelectManager>().clear();
@@ -80,7 +80,7 @@ class NotesPageContent extends StatelessWidget {
               IconButton(
                   onPressed: () {
                     for (final id in selection) {
-                      domain.addAction(
+                      account.addAction(
                           EditNoteAction.archive(noteId: id, archived: true));
                     }
                     context.read<MultiSelectManager>().clear();

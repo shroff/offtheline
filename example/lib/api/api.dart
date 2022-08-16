@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:package_info/package_info.dart';
 
 export 'package:offtheline/offtheline.dart';
-export 'example_domain.dart';
+export 'example_account.dart';
 
 class Api {
   static String? _userAgent;

@@ -9,9 +9,9 @@ class NoteDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final domain = context.read<ExampleDomain>();
+    final account = context.read<ExampleAccount>();
     final stream =
-        domain.datastore.isar.notes.watchObject(noteId, initialReturn: true);
+        account.datastore.isar.notes.watchObject(noteId, initialReturn: true);
     return StreamBuilder(
       stream: stream,
       builder: (context, snapshot) {
