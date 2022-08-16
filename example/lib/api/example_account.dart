@@ -67,8 +67,8 @@ class ExampleAccount extends Account<Map<String, dynamic>> with ChangeNotifier {
   Future<void> initialize() async {
     await super.initialize();
     _setAuthorizationHeader(_authToken);
-    await registerHooks(datastore);
-    await registerHooks(idAllocator);
+    await registerListener(datastore);
+    await registerListener(idAllocator);
   }
 
   static Future<ExampleAccount> createFromLoginResponse(

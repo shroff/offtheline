@@ -4,7 +4,7 @@ import 'package:meta/meta.dart';
 
 import 'account.dart';
 
-mixin AccountHooks<R> {
+mixin AccountListener<R> {
   late final Account<R> _account;
   @protected
   Account<R> get account => _account;
@@ -19,7 +19,7 @@ mixin AccountHooks<R> {
   }
 
   @mustCallSuper
-  FutureOr<void> close() {
+  FutureOr<void> delete() {
     _closed = true;
   }
 }

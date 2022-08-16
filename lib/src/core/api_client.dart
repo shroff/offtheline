@@ -9,7 +9,7 @@ import 'api_error_response.dart';
 import 'global.dart';
 import 'dispatcher.dart';
 import 'account.dart';
-import 'account_hooks.dart';
+import 'account_listener.dart';
 
 const _persistKeyApiBaseUrl = 'apiBaseUrl';
 
@@ -22,7 +22,7 @@ typedef ResponseListener<R> = FutureOr<void> Function(
 typedef ErrorResponseTransformer = FutureOr<ApiErrorResponse> Function(
     Response response);
 
-class ApiClient<R> with AccountHooks<R> {
+class ApiClient<R> with AccountListener<R> {
   Dispatcher dispatcher = HttpClientDispatcher();
   final ResponseTransformer<R?> transformResponse;
   final ErrorResponseTransformer transformErrorResponse;

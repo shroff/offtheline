@@ -4,6 +4,6 @@ export 'src/core/action_queue.dart';
 export 'src/core/api_client.dart';
 export 'src/core/dispatcher.dart';
 export 'src/core/account.dart';
-export 'src/core/account_hooks.dart';
+export 'src/core/account_listener.dart';
 export 'src/core/account_manager.dart';
 export 'src/core/global.dart';

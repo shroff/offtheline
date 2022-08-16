@@ -7,7 +7,7 @@ import 'package:state_notifier/state_notifier.dart';
 import '../actions/api_action.dart';
 import 'api_error_response.dart';
 import 'account.dart';
-import 'account_hooks.dart';
+import 'account_listener.dart';
 import 'global.dart';
 
 class ApiActionQueueState {
@@ -20,7 +20,7 @@ class ApiActionQueueState {
 }
 
 class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
-    with AccountHooks<R>, LocatorMixin {
+    with AccountListener<R>, LocatorMixin {
   late final Box<ApiAction<Account<R>>> _actionsBox;
   late final Function() _removeListener;
   Iterable<ApiAction> get actions => List.unmodifiable(state.actions);
@@ -58,9 +58,9 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
   @protected
   @override
-  Future<void> close() async {
+  Future<void> delete() async {
     OTL.logger?.d('[actions][${account.id}] Closing');
-    super.close();
+    super.delete();
     _removeListener();
     _actionsBox.close();
   }

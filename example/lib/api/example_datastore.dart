@@ -2,7 +2,7 @@ import 'package:example/models/note.dart';
 import 'package:isar/isar.dart';
 import 'package:offtheline/offtheline.dart';
 
-class ExampleDatastore with AccountHooks<Map<String, dynamic>> {
+class ExampleDatastore with AccountListener<Map<String, dynamic>> {
   late final Isar isar;
   late final void Function() removeResponseListener;
 
@@ -19,8 +19,8 @@ class ExampleDatastore with AccountHooks<Map<String, dynamic>> {
   }
 
   @override
-  Future<void> close() async {
-    super.close();
+  Future<void> delete() async {
+    super.delete();
     removeResponseListener();
     await isar.close();
   }

@@ -4,7 +4,7 @@ const _persistKeyIdBlockSize = 'idBlockSize';
 const _persistKeyUsedIds = 'usedIds';
 const _persistKeyIdBlocks = 'idBlocks';
 
-class ExampleIdAllocator with AccountHooks<Map<String, dynamic>> {
+class ExampleIdAllocator with AccountListener<Map<String, dynamic>> {
   late final void Function() removeResponseListener;
 
   @override
@@ -14,8 +14,8 @@ class ExampleIdAllocator with AccountHooks<Map<String, dynamic>> {
   }
 
   @override
-  Future<void> close() async {
-    super.close();
+  Future<void> delete() async {
+    super.delete();
     removeResponseListener();
   }
 

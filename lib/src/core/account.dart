@@ -7,7 +7,7 @@ import 'package:state_notifier/state_notifier.dart';
 import 'action_queue.dart';
 import '../actions/api_action.dart';
 import 'api_client.dart';
-import 'account_hooks.dart';
+import 'account_listener.dart';
 import 'global.dart';
 
 class Account<R> {
@@ -18,7 +18,7 @@ class Account<R> {
   late final Box _persist;
   final bool clear;
   final _ongoingOperations = _Counter();
-  final List<AccountHooks<R>> _hooks = [];
+  final List<AccountListener<R>> _listeners = [];
 
   final _boxOpenedCompleter = Completer();
   final _initializationCompleter = Completer();
@@ -39,8 +39,8 @@ class Account<R> {
       }
       _persist = box;
       _boxOpenedCompleter.complete();
-      await registerHooks(api);
-      await registerHooks(actionQueue);
+      await registerListener(api);
+      await registerListener(actionQueue);
       await initialize();
       _initializationCompleter.complete();
     });
@@ -51,11 +51,11 @@ class Account<R> {
   Future<void> initialize() async {}
 
   @nonVirtual
-  FutureOr<void> registerHooks(AccountHooks<R> hooks) async {
+  FutureOr<void> registerListener(AccountListener<R> listener) async {
     if (_closed) return null;
     await _boxOpenedCompleter.future;
-    _hooks.add(hooks);
-    return hooks.initialize(this);
+    _listeners.add(listener);
+    return listener.initialize(this);
   }
 
   @nonVirtual
@@ -75,8 +75,8 @@ class Account<R> {
 
     OTL.logger?.i('[account][$id] Logging Out');
 
-    for (final hooks in _hooks) {
-      await hooks.close();
+    for (final listeners in _listeners) {
+      await listeners.delete();
     }
 
     // Wait for pending operations
