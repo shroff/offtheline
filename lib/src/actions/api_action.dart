@@ -6,7 +6,7 @@ import 'package:http/http.dart';
 import '../core/api_client.dart';
 import '../core/account.dart';
 
-abstract class ApiAction<T, R extends ApiResponse<T>, A extends Account<T, R>>
+abstract class ApiAction<R extends ApiResponse, A extends Account<R>>
     with HiveObjectMixin {
   @override
   int get key => super.key;

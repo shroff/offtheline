@@ -10,15 +10,15 @@ import 'api_client.dart';
 import 'account_listener.dart';
 import 'global.dart';
 
-class Account<T, R extends ApiResponse<T>> {
+class Account<R extends ApiResponse> {
   final String id;
-  final ApiActionQueue<T, R> actionQueue = ApiActionQueue();
-  final ApiClient<T, R> api;
+  final ApiActionQueue<R> actionQueue = ApiActionQueue();
+  final ApiClient<R> api;
   final List<Box> openBoxes = [];
   late final Box _persist;
   final bool clear;
   final _ongoingOperations = _Counter();
-  final List<AccountListener<T, R>> _listeners = [];
+  final List<AccountListener<R>> _listeners = [];
 
   final _boxOpenedCompleter = Completer();
   final _initializationCompleter = Completer();
@@ -51,7 +51,7 @@ class Account<T, R extends ApiResponse<T>> {
   Future<void> initialize() async {}
 
   @nonVirtual
-  FutureOr<void> registerListener(AccountListener<T, R> listener) async {
+  FutureOr<void> registerListener(AccountListener<R> listener) async {
     if (_closed) return null;
     await _boxOpenedCompleter.future;
     _listeners.add(listener);
@@ -95,7 +95,7 @@ class Account<T, R extends ApiResponse<T>> {
     }
   }
 
-  Future<void> addAction(ApiAction<T, R, Account<T, R>> action) async {
+  Future<void> addAction(ApiAction<R, Account<R>> action) async {
     return actionQueue.addAction(action);
   }
 

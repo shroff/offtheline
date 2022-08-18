@@ -22,7 +22,7 @@ typedef ResponseListener<R> = FutureOr<void> Function(
   dynamic tag,
 );
 
-class ApiClient<T, R extends ApiResponse<T>> with AccountListener<T, R extends ApiResponse<T>> {
+class ApiClient<R extends ApiResponse> with AccountListener<R> {
   Dispatcher dispatcher = HttpClientDispatcher();
   final ResponseTransformer<R> transformResponse;
   final List<ResponseListener<R>> _responseListeners = [];
@@ -39,7 +39,7 @@ class ApiClient<T, R extends ApiResponse<T>> with AccountListener<T, R extends A
   });
 
   @override
-  Future<void> initialize(Account<T, R> account) async {
+  Future<void> initialize(Account<R> account) async {
     await super.initialize(account);
     _apiBaseUrl =
         Uri.tryParse(account.getPersisted(_persistKeyApiBaseUrl) ?? '') ??

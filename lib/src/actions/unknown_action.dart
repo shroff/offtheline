@@ -6,8 +6,8 @@ import 'api_action.dart';
 import '../core/api_client.dart';
 import '../core/account.dart';
 
-class UnknownAction<T, R extends ApiResponse<T>, A extends Account<T, R>>
-    extends ApiAction<T, R, A> {
+class UnknownAction<R extends ApiResponse, A extends Account<R>>
+    extends ApiAction<R, A> {
   @override
   final String name;
   final Map<String, dynamic> props;

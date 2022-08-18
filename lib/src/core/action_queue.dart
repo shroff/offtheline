@@ -20,10 +20,10 @@ class ApiActionQueueState {
   ApiActionQueueState(this.actions, this.paused, this.submitting, this.error);
 }
 
-class ApiActionQueue<T, R extends ApiResponse<T>>
+class ApiActionQueue<R extends ApiResponse>
     extends StateNotifier<ApiActionQueueState>
-    with AccountListener<T, R>, LocatorMixin {
-  late final Box<ApiAction<T, R, Account<T, R>>> _actionsBox;
+    with AccountListener<R>, LocatorMixin {
+  late final Box<ApiAction<R, Account<R>>> _actionsBox;
   late final Function() _removeListener;
   Iterable<ApiAction> get actions => List.unmodifiable(state.actions);
 
@@ -37,7 +37,7 @@ class ApiActionQueue<T, R extends ApiResponse<T>>
 
   @protected
   @override
-  Future<void> initialize(Account<T, R> account) async {
+  Future<void> initialize(Account<R> account) async {
     OTL.logger?.d('[actions][${account.id}] Initializing');
     super.initialize(account);
 
@@ -67,11 +67,11 @@ class ApiActionQueue<T, R extends ApiResponse<T>>
     _actionsBox.close();
   }
 
-  String generateDescription(ApiAction<T, R, Account<T, R>> action) {
+  String generateDescription(ApiAction<R, Account<R>> action) {
     return action.generateDescription(account);
   }
 
-  Future<void> addAction(ApiAction<T, R, Account<T, R>> action) async {
+  Future<void> addAction(ApiAction<R, Account<R>> action) async {
     if (closed) return;
     OTL.logger?.d(
         '[actions][${account.id}] Adding action: ${action.generateDescription(account)}');
