@@ -8,7 +8,8 @@ const _boxName = 'account_manager';
 const _persistKeySelectedAccountId = 'selectedAccountId';
 const _persistKeyAccountIds = 'accountIds';
 
-class AccountManagerState<A extends Account> {
+class AccountManagerState<T, R extends ApiResponse<T>,
+    A extends Account<T, R>> {
   final Map<String, A> accounts;
   final A? selectedAccount;
 
@@ -16,8 +17,8 @@ class AccountManagerState<A extends Account> {
 }
 
 /// Maintain a list of logged-in [Account]s
-class AccountManager<A extends Account>
-    extends StateNotifier<AccountManagerState<A>> with LocatorMixin {
+class AccountManager<T, R extends ApiResponse<T>, A extends Account<T, R>>
+    extends StateNotifier<AccountManagerState<T, R, A>> with LocatorMixin {
   final FutureOr<A?> Function(String accountId) restoreAccount;
   late final Box _persist;
 
@@ -25,8 +26,9 @@ class AccountManager<A extends Account>
       : super(const AccountManagerState({}, null));
 
   /// Restore this instance and all managed [Account]s from persistance
-  static Future<AccountManager<D>> restore<D extends Account>(
-    FutureOr<D?> Function(String accountId) restoreAccount,
+  static Future<AccountManager<T, R, A>>
+      restore<T, R extends ApiResponse<T>, A extends Account<T, R>>(
+    FutureOr<A?> Function(String accountId) restoreAccount,
   ) async {
     final accountManager = AccountManager._(restoreAccount);
     await accountManager._initialize();

@@ -7,7 +7,8 @@ import 'api_action.dart';
 import '../core/api_client.dart';
 import '../core/account.dart';
 
-mixin FileUploadApiAction<D extends Account> on ApiAction<D> {
+mixin FileUploadApiAction<T, R extends ApiResponse<T>, A extends Account<T, R>>
+    on ApiAction<T, R, A> {
   @override
   dynamic get binaryData => fileContents;
 

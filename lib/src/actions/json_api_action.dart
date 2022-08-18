@@ -8,7 +8,8 @@ import '../core/account.dart';
 
 const _contentType = 'application/json';
 
-mixin JsonApiAction<A extends Account> on ApiAction<A> {
+mixin JsonApiAction<T, R extends ApiResponse<T>, A extends Account<T, R>>
+    on ApiAction<T, R, A> {
   String get method;
   String get endpoint;
 

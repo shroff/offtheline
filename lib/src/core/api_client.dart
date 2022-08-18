@@ -13,19 +13,18 @@ import 'account_listener.dart';
 
 const _persistKeyApiBaseUrl = 'apiBaseUrl';
 
-typedef ResponseTransformer<R> = FutureOr<R?> Function(String);
+typedef ResponseTransformer<R extends ApiResponse> = FutureOr<R> Function(
+  Response response,
+  dynamic tag,
+);
 typedef ResponseListener<R> = FutureOr<void> Function(
   R? response,
   dynamic tag,
 );
 
-typedef ErrorResponseTransformer = FutureOr<ApiErrorResponse> Function(
-    Response response);
-
-class ApiClient<R> with AccountListener<R> {
+class ApiClient<T, R extends ApiResponse<T>> with AccountListener<T, R extends ApiResponse<T>> {
   Dispatcher dispatcher = HttpClientDispatcher();
-  final ResponseTransformer<R?> transformResponse;
-  final ErrorResponseTransformer transformErrorResponse;
+  final ResponseTransformer<R> transformResponse;
   final List<ResponseListener<R>> _responseListeners = [];
 
   Uri _apiBaseUrl = Uri();
@@ -37,11 +36,10 @@ class ApiClient<R> with AccountListener<R> {
 
   ApiClient({
     required this.transformResponse,
-    this.transformErrorResponse = _defaultErrorResponseTransformer,
   });
 
   @override
-  Future<void> initialize(Account<R> account) async {
+  Future<void> initialize(Account<T, R> account) async {
     await super.initialize(account);
     _apiBaseUrl =
         Uri.tryParse(account.getPersisted(_persistKeyApiBaseUrl) ?? '') ??
@@ -79,7 +77,7 @@ class ApiClient<R> with AccountListener<R> {
 
   Future<ApiErrorResponse?> sendRequest(
     BaseRequest request, {
-    FutureOr<bool> Function(R?)? callback,
+    Function(R)? callback,
     dynamic tag,
   }) async {
     if (closed) return ApiErrorResponse(message: 'Client Closed');
@@ -88,19 +86,16 @@ class ApiClient<R> with AccountListener<R> {
     try {
       OTL.logger?.d('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);
-      final response = await dispatcher.dispatch(request);
+      final httpResponse = await dispatcher.dispatch(request);
 
       // Show request result
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        await processResponseString(
-          response.body,
-          callback: callback,
-          tag: tag,
-        );
-        return null;
-      } else {
-        return transformErrorResponse(response);
+      final response = await transformResponse(httpResponse, tag);
+      processResponse(response, tag: tag);
+      callback?.call(response);
+      if (response.errorSummary != null) {
+        return ApiErrorResponse(message: response.errorSummary!);
       }
+      return null;
     } on SocketException {
       return ApiErrorResponse(message: 'Server Unreachable');
     } catch (e) {
@@ -110,31 +105,15 @@ class ApiClient<R> with AccountListener<R> {
     }
   }
 
-  Future<void> processResponseString(
-    String responseString, {
-    FutureOr<bool> Function(R?)? callback,
-    dynamic tag,
-  }) async {
-    processResponse(
-      await transformResponse(responseString),
-      callback: callback,
-      tag: tag,
-    );
-  }
-
   @nonVirtual
   Future<void> processResponse(
-    R? response, {
-    FutureOr<bool> Function(R?)? callback,
+    R response, {
     dynamic tag,
   }) async {
     final completer = Completer<void>();
     account.registerOngoingOperation(completer.future);
     try {
       OTL.logger?.d('[api] Processing response');
-      if (callback != null && !await callback.call(response)) {
-        return;
-      }
       for (final processResponse in _responseListeners) {
         await processResponse(response, tag);
       }
@@ -155,3 +134,9 @@ ApiErrorResponse _defaultErrorResponseTransformer(Response response) =>
       message:
           response.bodyBytes.isEmpty ? 'Unknown Server Error' : response.body,
     );
+
+abstract class ApiResponse<R> {
+  String? get errorSummary;
+  String? get errorDetails;
+  R? get data;
+}

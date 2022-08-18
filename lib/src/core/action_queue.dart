@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 import 'package:state_notifier/state_notifier.dart';
 
 import '../actions/api_action.dart';
+import 'api_client.dart';
 import 'api_error_response.dart';
 import 'account.dart';
 import 'account_listener.dart';
@@ -19,9 +20,10 @@ class ApiActionQueueState {
   ApiActionQueueState(this.actions, this.paused, this.submitting, this.error);
 }
 
-class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
-    with AccountListener<R>, LocatorMixin {
-  late final Box<ApiAction<Account<R>>> _actionsBox;
+class ApiActionQueue<T, R extends ApiResponse<T>>
+    extends StateNotifier<ApiActionQueueState>
+    with AccountListener<T, R>, LocatorMixin {
+  late final Box<ApiAction<T, R, Account<T, R>>> _actionsBox;
   late final Function() _removeListener;
   Iterable<ApiAction> get actions => List.unmodifiable(state.actions);
 
@@ -35,7 +37,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
   @protected
   @override
-  Future<void> initialize(Account<R> account) async {
+  Future<void> initialize(Account<T, R> account) async {
     OTL.logger?.d('[actions][${account.id}] Initializing');
     super.initialize(account);
 
@@ -65,11 +67,11 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     _actionsBox.close();
   }
 
-  String generateDescription(ApiAction<Account<R>> action) {
+  String generateDescription(ApiAction<T, R, Account<T, R>> action) {
     return action.generateDescription(account);
   }
 
-  Future<void> addAction(ApiAction<Account<R>> action) async {
+  Future<void> addAction(ApiAction<T, R, Account<T, R>> action) async {
     if (closed) return;
     OTL.logger?.d(
         '[actions][${account.id}] Adding action: ${action.generateDescription(account)}');

@@ -1,19 +1,21 @@
 import 'package:hive/hive.dart';
 
-import 'unknown_action.dart';
-import 'api_action.dart';
 import '../core/account.dart';
+import '../core/api_client.dart';
+import 'api_action.dart';
+import 'unknown_action.dart';
 
 const _fieldName = 0;
 const _fieldProps = 1;
 const _fieldBinaryData = 2;
 
-typedef ApiActionDeserializer<A extends Account> = ApiAction<A> Function(
-    Map<String, dynamic> props, dynamic data);
+typedef ApiActionDeserializer<T, R extends ApiResponse<T>,
+        A extends Account<T, R>>
+    = ApiAction<T, R, A> Function(Map<String, dynamic> props, dynamic data);
 
-class ApiActionTypeAdapter<A extends Account>
-    extends TypeAdapter<ApiAction<A>> {
-  final Map<String, ApiActionDeserializer<A>> deserializers;
+class ApiActionTypeAdapter<T, R extends ApiResponse<T>, A extends Account<T, R>>
+    extends TypeAdapter<ApiAction<T, R, A>> {
+  final Map<String, ApiActionDeserializer<T, R, A>> deserializers;
   @override
   final int typeId;
 
@@ -23,7 +25,7 @@ class ApiActionTypeAdapter<A extends Account>
   });
 
   @override
-  ApiAction<A> read(BinaryReader reader) {
+  ApiAction<T, R, A> read(BinaryReader reader) {
     int n = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < n; i++) reader.readByte(): reader.read(),
@@ -33,7 +35,7 @@ class ApiActionTypeAdapter<A extends Account>
     final props = (fields[_fieldProps] as Map).cast<String, dynamic>();
     final data = fields[_fieldBinaryData];
     if (deserializer == null) {
-      return UnknownAction<A>(
+      return UnknownAction<T, R, A>(
         name: name,
         props: props,
         binaryData: data,
@@ -43,7 +45,7 @@ class ApiActionTypeAdapter<A extends Account>
   }
 
   @override
-  void write(BinaryWriter writer, ApiAction<A> obj) {
+  void write(BinaryWriter writer, ApiAction<T, R, A> obj) {
     writer.writeByte(3);
     writer.writeByte(_fieldName);
     writer.write(obj.name);
