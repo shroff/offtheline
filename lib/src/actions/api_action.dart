@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:hive/hive.dart';
 import 'package:http/http.dart';
+import 'package:uri/uri.dart';
 
-import '../core/api_client.dart';
-import '../core/account.dart';
-
-abstract class ApiAction<R extends ApiResponse, A extends Account<R>>
-    with HiveObjectMixin {
+abstract class ApiAction<Datastore> with HiveObjectMixin {
   @override
   int get key => super.key;
 
@@ -17,15 +14,15 @@ abstract class ApiAction<R extends ApiResponse, A extends Account<R>>
 
   dynamic get tag => null;
 
-  String generateDescription(A account);
+  String generateDescription(Datastore datastore);
 
   String generatePayloadDetails();
 
-  BaseRequest createRequest(ApiClient api);
+  BaseRequest createRequest(UriBuilder uriBuilder);
 
-  FutureOr<void> applyOptimisticUpdate(A account);
+  FutureOr<void> applyOptimisticUpdate(Datastore datastore);
 
-  FutureOr<void> revertOptimisticUpdate(A account);
+  FutureOr<void> revertOptimisticUpdate(Datastore datastore);
 
   Map<String, dynamic> toMap();
 }

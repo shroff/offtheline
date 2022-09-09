@@ -17,36 +17,33 @@ typedef ResponseTransformer<R extends ApiResponse> = FutureOr<R> Function(
   Response response,
   dynamic tag,
 );
-typedef ResponseListener<R> = FutureOr<void> Function(
-  R? response,
+typedef ResponseListener = FutureOr<void> Function(
+  Response response,
   dynamic tag,
 );
 
-class ApiClient<R extends ApiResponse> with AccountListener<R> {
+class ApiClient<Datastore> with AccountListener<Datastore> {
   Dispatcher dispatcher = HttpClientDispatcher();
-  final ResponseTransformer<R> transformResponse;
-  final List<ResponseListener<R>> _responseListeners = [];
+  final List<ResponseListener> _responseListeners = [];
 
   Uri _apiBaseUrl = Uri();
   Uri get apiBaseUrl => _apiBaseUrl;
   set apiBaseUrl(Uri url) {
     _apiBaseUrl = url;
-    account.persist(_persistKeyApiBaseUrl, url.toString());
+    account.persistence.persist(_persistKeyApiBaseUrl, url.toString());
   }
 
-  ApiClient({
-    required this.transformResponse,
-  });
+  ApiClient();
 
   @override
-  Future<void> initialize(Account<R> account) async {
+  Future<void> initialize(Account<Datastore> account) async {
     await super.initialize(account);
-    _apiBaseUrl =
-        Uri.tryParse(account.getPersisted(_persistKeyApiBaseUrl) ?? '') ??
-            Uri();
+    _apiBaseUrl = Uri.tryParse(
+            account.persistence.getPersisted(_persistKeyApiBaseUrl) ?? '') ??
+        Uri();
   }
 
-  Map<String, String> _requestHeaders = Map.unmodifiable({});
+  Map<String, String> _requestHeaders = const {};
   Map<String, String> get requestHeaders => _requestHeaders;
   void setHeader(String key, String? value) {
     final headers = Map.from(_requestHeaders);
@@ -62,13 +59,15 @@ class ApiClient<R extends ApiResponse> with AccountListener<R> {
     return createUriBuilder(path).toString();
   }
 
-  UriBuilder createUriBuilder(String path) {
+  UriBuilder createUriBuilder([String? path]) {
     final builder = UriBuilder.fromUri(apiBaseUrl);
-    builder.path += path;
+    if (path != null) {
+      builder.path += path;
+    }
     return builder;
   }
 
-  void Function() addResponseListener(ResponseListener<R> listener) {
+  void Function() addResponseListener(ResponseListener listener) {
     _responseListeners.add(listener);
     return () {
       _responseListeners.remove(listener);
@@ -77,7 +76,6 @@ class ApiClient<R extends ApiResponse> with AccountListener<R> {
 
   Future<ApiErrorResponse?> sendRequest(
     BaseRequest request, {
-    Function(R)? callback,
     dynamic tag,
   }) async {
     if (closed) return ApiErrorResponse(message: 'Client Closed');
@@ -86,12 +84,9 @@ class ApiClient<R extends ApiResponse> with AccountListener<R> {
     try {
       OTL.logger?.d('[api] Sending request to ${request.url}');
       request.headers.addAll(requestHeaders);
-      final httpResponse = await dispatcher.dispatch(request);
+      final response = await dispatcher.dispatch(request);
 
-      // Show request result
-      final response = await transformResponse(httpResponse, tag);
       processResponse(response, tag: tag);
-      callback?.call(response);
       if (response.errorSummary != null) {
         return ApiErrorResponse(message: response.errorSummary!);
       }
@@ -107,25 +102,21 @@ class ApiClient<R extends ApiResponse> with AccountListener<R> {
 
   @nonVirtual
   Future<void> processResponse(
-    R response, {
+    Response response, {
     dynamic tag,
   }) async {
     final completer = Completer<void>();
     account.registerOngoingOperation(completer.future);
     try {
       OTL.logger?.d('[api] Processing response');
-      for (final processResponse in _responseListeners) {
-        await processResponse(response, tag);
+      for (final listener in _responseListeners) {
+        await listener(response, tag);
       }
     } finally {
       completer.complete();
       OTL.logger?.d('[api] Response processed');
     }
   }
-
-  @protected
-  FutureOr<String> processErrorResponse(R errorResponse) =>
-      errorResponse.toString();
 }
 
 ApiErrorResponse _defaultErrorResponseTransformer(Response response) =>

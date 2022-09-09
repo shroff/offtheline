@@ -1,21 +1,20 @@
 import 'dart:convert';
 
 import 'package:http/http.dart';
+import 'package:uri/uri.dart';
 
 import 'api_action.dart';
-import '../core/api_client.dart';
-import '../core/account.dart';
 
 const _contentType = 'application/json';
 
-mixin JsonApiAction<R extends ApiResponse, A extends Account<R>>
-    on ApiAction<R, A> {
+mixin JsonApiAction<Datastore> on ApiAction<Datastore> {
   String get method;
   String get endpoint;
 
   @override
-  BaseRequest createRequest(ApiClient api) {
-    final request = Request(method, api.createUriBuilder(endpoint).build());
+  BaseRequest createRequest(UriBuilder uriBuilder) {
+    uriBuilder.path += endpoint;
+    final request = Request(method, uriBuilder.build());
     request.headers['content-type'] = _contentType;
     final body = generateRequestBody();
     if (body != null) {

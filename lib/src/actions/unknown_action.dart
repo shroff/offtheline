@@ -1,13 +1,12 @@
 import 'dart:convert';
 
 import 'package:http/http.dart';
+import 'package:uri/uri.dart';
 
 import 'api_action.dart';
 import '../core/api_client.dart';
-import '../core/account.dart';
 
-class UnknownAction<R extends ApiResponse, A extends Account<R>>
-    extends ApiAction<R, A> {
+class UnknownAction<Datastore> extends ApiAction<Datastore> {
   @override
   final String name;
   final Map<String, dynamic> props;
@@ -21,15 +20,15 @@ class UnknownAction<R extends ApiResponse, A extends Account<R>>
   });
 
   @override
-  String generateDescription(A account) {
+  String generateDescription(Datastore datastore) {
     return 'Nop Action';
   }
 
   @override
-  void applyOptimisticUpdate(A account) {}
+  void applyOptimisticUpdate(Datastore datastore) {}
 
   @override
-  void revertOptimisticUpdate(A account) {}
+  void revertOptimisticUpdate(Datastore datastore) {}
 
   @override
   Map<String, dynamic> toMap() => props;
@@ -46,8 +45,8 @@ class UnknownAction<R extends ApiResponse, A extends Account<R>>
   }
 
   @override
-  BaseRequest createRequest(ApiClient api) {
-    return Request('nop', Uri());
+  BaseRequest createRequest(UriBuilder uriBuilder) {
+    return Request('nop', uriBuilder.build());
   }
 
   @override

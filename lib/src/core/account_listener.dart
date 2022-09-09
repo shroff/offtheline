@@ -3,19 +3,18 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 
 import 'account.dart';
-import 'api_client.dart';
 
-mixin AccountListener<R extends ApiResponse> {
-  late final Account<R> _account;
+mixin AccountListener<Datastore> {
+  late final Account<Datastore> _account;
   @protected
-  Account<R> get account => _account;
+  Account get account => _account;
 
   bool _closed = false;
   @protected
   bool get closed => _closed;
 
   @mustCallSuper
-  FutureOr<void> initialize(Account<R> account) {
+  FutureOr<void> initialize(Account<Datastore> account) {
     _account = account;
   }
 

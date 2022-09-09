@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:hive/hive.dart';
 import 'package:meta/meta.dart';
+import 'package:offtheline/src/core/persistence.dart';
 import 'package:state_notifier/state_notifier.dart';
 
 import '../actions/api_action.dart';
@@ -20,10 +21,9 @@ class ApiActionQueueState {
   ApiActionQueueState(this.actions, this.paused, this.submitting, this.error);
 }
 
-class ApiActionQueue<R extends ApiResponse>
-    extends StateNotifier<ApiActionQueueState>
-    with AccountListener<R>, LocatorMixin {
-  late final Box<ApiAction<R, Account<R>>> _actionsBox;
+class ApiActionQueue<Datastore> extends StateNotifier<ApiActionQueueState>
+    with AccountListener<Datastore>, LocatorMixin {
+  late final Box<ApiAction<Datastore>> _actionsBox;
   late final Function() _removeListener;
   Iterable<ApiAction> get actions => List.unmodifiable(state.actions);
 
@@ -37,11 +37,11 @@ class ApiActionQueue<R extends ApiResponse>
 
   @protected
   @override
-  Future<void> initialize(Account<R> account) async {
-    OTL.logger?.d('[actions][${account.id}] Initializing');
+  Future<void> initialize(Account<Datastore> account) async {
     super.initialize(account);
+    OTL.logger?.d('[actions][${account.id}] Initializing');
 
-    _actionsBox = await account.openBox('actions');
+    _actionsBox = await account.persistence.openBox('actions');
     final actions = _actionsBox.values.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
@@ -67,15 +67,15 @@ class ApiActionQueue<R extends ApiResponse>
     _actionsBox.close();
   }
 
-  String generateDescription(ApiAction<R, Account<R>> action) {
-    return action.generateDescription(account);
+  String generateDescription(ApiAction<Datastore> action) {
+    return action.generateDescription(account.datastore);
   }
 
-  Future<void> addAction(ApiAction<R, Account<R>> action) async {
+  Future<void> addAction(ApiAction<Datastore> action) async {
     if (closed) return;
     OTL.logger?.d(
-        '[actions][${account.id}] Adding action: ${action.generateDescription(account)}');
-    await action.applyOptimisticUpdate(account);
+        '[actions][${account.id}] Adding action: ${action.generateDescription(account.datastore)}');
+    await action.applyOptimisticUpdate(account.datastore);
     _actionsBox.add(action);
     state =
         ApiActionQueueState([...actions, action], paused, submitting, error);
@@ -124,7 +124,7 @@ class ApiActionQueue<R extends ApiResponse>
     final action = state.actions.first;
     OTL.logger?.d(
         '[actions][${account.id}] Submitting Action: ${action.generateDescription(account)}');
-    final request = action.createRequest(account.api);
+    final request = action.createRequest(account.api.createUriBuilder());
 
     final error = await account.api.sendRequest(request, tag: action.tag);
     final actions = (error == null) ? state.actions.sublist(1) : state.actions;

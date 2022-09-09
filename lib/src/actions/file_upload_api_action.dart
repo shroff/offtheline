@@ -2,13 +2,11 @@ import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:http/http.dart';
+import 'package:uri/uri.dart';
 
 import 'api_action.dart';
-import '../core/api_client.dart';
-import '../core/account.dart';
 
-mixin FileUploadApiAction<R extends ApiResponse, A extends Account<R>>
-    on ApiAction<R, A> {
+mixin FileUploadApiAction<Datastore> on ApiAction<Datastore> {
   @override
   dynamic get binaryData => fileContents;
 
@@ -20,9 +18,9 @@ mixin FileUploadApiAction<R extends ApiResponse, A extends Account<R>>
   Uint8List get fileContents;
 
   @override
-  BaseRequest createRequest(ApiClient api) {
-    final uri = api.createUriBuilder(endpoint).build();
-    final request = MultipartRequest(method, uri);
+  BaseRequest createRequest(UriBuilder uriBuilder) {
+    uriBuilder.path += endpoint;
+    final request = MultipartRequest(method, uriBuilder.build());
     request.fields.addAll(generateFormFields());
     final filePart = MultipartFile.fromBytes(
       fileFieldName,
