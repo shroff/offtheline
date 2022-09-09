@@ -101,7 +101,15 @@ class NotesPageContent extends StatelessWidget {
                     context.read<ViewPrefsManager>().showArchived = true;
                   },
                   icon: const Icon(Icons.archive_outlined),
-                )
+                ),
+              IconButton(
+                onPressed: () {
+                  context
+                      .read<AccountManager<ExampleAccount>>()
+                      .removeAccount(account.id);
+                },
+                icon: const Icon(Icons.exit_to_app),
+              ),
             ],
     );
   }

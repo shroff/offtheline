@@ -22,7 +22,7 @@ class ExampleDatastore with AccountListener<Map<String, dynamic>> {
   Future<void> delete() async {
     super.delete();
     removeResponseListener();
-    await isar.close();
+    await isar.close(deleteFromDisk: true);
   }
 
   Future<void> parseData(Map<String, dynamic>? data, dynamic tag) async {

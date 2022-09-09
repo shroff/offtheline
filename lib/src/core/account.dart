@@ -10,11 +10,12 @@ import 'api_client.dart';
 import 'account_listener.dart';
 import 'global.dart';
 
+const _boxNamePersist = 'persist';
+
 class Account<R> {
   final String id;
   final ApiActionQueue<R> actionQueue = ApiActionQueue();
   final ApiClient<R> api;
-  final List<Box> openBoxes = [];
   late final Box _persist;
   final bool clear;
   final _ongoingOperations = _Counter();
@@ -31,7 +32,7 @@ class Account<R> {
     required this.api,
     this.clear = false,
   }) {
-    openBox('persist').then((box) async {
+    openBox(_boxNamePersist).then((box) async {
       if (clear) {
         OTL.logger
             ?.i('[account][$id] Clearing ${box.values.length} stale entries');
@@ -89,10 +90,7 @@ class Account<R> {
     await completer.future;
     removeListener();
 
-    for (final box in openBoxes) {
-      await box.close();
-      await Hive.deleteBoxFromDisk(box.name);
-    }
+    _persist.deleteFromDisk();
   }
 
   Future<void> addAction(ApiAction<Account<R>> action) async {
@@ -116,8 +114,11 @@ class Account<R> {
     if (clear) {
       await box.clear();
     }
-    openBoxes.add(box);
     return box;
+  }
+
+  Future deleteBox(String name) {
+    return Hive.deleteBoxFromDisk(name);
   }
 
   Stream<BoxEvent> watchMetadata({dynamic key}) {

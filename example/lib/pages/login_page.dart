@@ -61,7 +61,7 @@ class LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-    final accountManager = context.read<AccountManager>();
+    final accountManager = context.read<AccountManager<ExampleAccount>>();
 
     try {
       final response = await _client.send(request);
@@ -173,7 +173,8 @@ class LoginPageState extends State<LoginPage> {
                   ),
                   TextButton(
                     onPressed: () async {
-                      final accountManager = context.read<AccountManager>();
+                      final accountManager =
+                          context.read<AccountManager<ExampleAccount>>();
                       final rid = Random().nextInt(1 << 31);
                       final responseMap = <String, dynamic>{
                         'session': {

@@ -10,6 +10,8 @@ import 'account.dart';
 import 'account_listener.dart';
 import 'global.dart';
 
+const _actionsBoxName = 'actions';
+
 class ApiActionQueueState {
   final List<ApiAction> actions;
   final bool paused;
@@ -39,7 +41,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     OTL.logger?.d('[actions][${account.id}] Initializing');
     super.initialize(account);
 
-    _actionsBox = await account.openBox('actions');
+    _actionsBox = await account.openBox(_actionsBoxName);
     final actions = _actionsBox.values.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
@@ -62,7 +64,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     OTL.logger?.d('[actions][${account.id}] Closing');
     super.delete();
     _removeListener();
-    _actionsBox.close();
+    _actionsBox.deleteFromDisk();
   }
 
   String generateDescription(ApiAction<Account<R>> action) {
