@@ -178,7 +178,6 @@ class LoginPageState extends State<LoginPage> {
                       final rid = Random().nextInt(1 << 31);
                       final responseMap = <String, dynamic>{
                         'session': {
-                          'domain_id': 'offline-$rid',
                           'user_name': 'user-$rid',
                           'user_display_name': 'Tux',
                           'account_provider_name': 'Offline $rid',

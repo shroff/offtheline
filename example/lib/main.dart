@@ -16,7 +16,11 @@ void main() async {
 
   await Api.initilizeUserAgent();
   final accountManager = await AccountManager.restore<ExampleAccount>(
-    (accountId) => ExampleAccount.open(accountId, clear: false),
+    (accountId) async {
+      final account = ExampleAccount(accountId);
+      await account.initialized;
+      return account;
+    },
   );
   runApp(AccountSelector(
     accountManager: accountManager,

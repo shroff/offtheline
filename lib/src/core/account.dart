@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:hive/hive.dart';
 import 'package:meta/meta.dart';
@@ -12,12 +13,15 @@ import 'global.dart';
 
 const _boxNamePersist = 'persist';
 
+const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+const _accountIdLength = 16;
+final _random = Random();
+
 class Account<R> {
   final String id;
   final ApiActionQueue<R> actionQueue = ApiActionQueue();
   final ApiClient<R> api;
   late final Box _persist;
-  final bool clear;
   final _ongoingOperations = _Counter();
   final List<AccountListener<R>> _listeners = [];
 
@@ -28,16 +32,10 @@ class Account<R> {
   bool _closed = false;
 
   Account({
-    required this.id,
+    String? id,
     required this.api,
-    this.clear = false,
-  }) {
+  }) : id = id ?? generateRandomId() {
     openBox(_boxNamePersist).then((box) async {
-      if (clear) {
-        OTL.logger
-            ?.i('[account][$id] Clearing ${box.values.length} stale entries');
-        await box.clear();
-      }
       _persist = box;
       _boxOpenedCompleter.complete();
       await registerListener(api);
@@ -45,6 +43,11 @@ class Account<R> {
       await initialize();
       _initializationCompleter.complete();
     });
+  }
+
+  static String generateRandomId() {
+    return String.fromCharCodes(Iterable.generate(_accountIdLength,
+        (_) => _chars.codeUnitAt(_random.nextInt(_chars.length))));
   }
 
   @protected
@@ -109,12 +112,8 @@ class Account<R> {
     }
   }
 
-  Future<Box<T>> openBox<T>(String name) async {
-    final box = await Hive.openBox<T>('$id-$name');
-    if (clear) {
-      await box.clear();
-    }
-    return box;
+  Future<Box<T>> openBox<T>(String name) {
+    return Hive.openBox<T>('$id-$name');
   }
 
   Future deleteBox(String name) {

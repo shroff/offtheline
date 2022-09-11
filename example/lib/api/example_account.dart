@@ -18,7 +18,13 @@ class ExampleAccount extends Account<Map<String, dynamic>> with ChangeNotifier {
   final datastore = ExampleDatastore();
   final idAllocator = ExampleIdAllocator();
 
-  ExampleAccount({required super.id, required super.api, required super.clear});
+  ExampleAccount([String? id])
+      : super(
+          id: id,
+          api: ApiClient(
+              transformResponse: (response) =>
+                  jsonDecode(response) as Map<String, dynamic>?),
+        );
 
   String? get _authToken => getPersisted(_persistKeyAuthToken);
   set _authToken(String? value) {
@@ -44,31 +50,17 @@ class ExampleAccount extends Account<Map<String, dynamic>> with ChangeNotifier {
     notifyListeners();
   }
 
-  static Future<ExampleAccount> restore(String id) {
-    return open(id, clear: false);
-  }
-
-  static Future<ExampleAccount> open(String id, {bool clear = true}) async {
-    final api = ApiClient(
-        transformResponse: (response) =>
-            jsonDecode(response) as Map<String, dynamic>?);
-    final account = ExampleAccount(id: id, api: api, clear: clear);
-    await account.initialized;
-
-    if (account.getPersisted(_persistKeyUseFakeDispatcher) == true) {
-      account.api.dispatcher = _FakeDispatcher();
-    }
-    account.api.setHeader('User-Agent', Api.userAgent);
-
-    return account;
-  }
-
   @override
   Future<void> initialize() async {
     await super.initialize();
     _setAuthorizationHeader(_authToken);
     await registerListener(datastore);
     await registerListener(idAllocator);
+
+    api.setHeader('User-Agent', Api.userAgent);
+    if (getPersisted(_persistKeyUseFakeDispatcher) == true) {
+      api.dispatcher = _FakeDispatcher();
+    }
   }
 
   static Future<ExampleAccount> createFromLoginResponse(
@@ -79,8 +71,8 @@ class ExampleAccount extends Account<Map<String, dynamic>> with ChangeNotifier {
     final dataMap = (response['data'] as Map).cast<String, dynamic>();
     final configMap = (response['config'] as Map).cast<String, dynamic>();
 
-    final account =
-        await ExampleAccount.open(sessionMap['domain_id'], clear: true);
+    final account = ExampleAccount();
+    await account.initialized;
 
     account.userName = sessionMap['user_name'];
     account.userDisplayName = sessionMap['user_display_name'];
