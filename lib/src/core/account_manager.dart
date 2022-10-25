@@ -21,6 +21,18 @@ class AccountManager<A extends Account>
   final FutureOr<A?> Function(String accountId) restoreAccount;
   late final Box _persist;
 
+  String? get selectedAccountId => state.selectedAccount?.id;
+  set selectedAccountId(String? value) {
+    if (!state.accounts.containsKey(value) ||
+        state.selectedAccount?.id == value) return;
+    final currentAccount = state.accounts[value];
+
+    if (currentAccount != state.selectedAccount) {
+      _persist.put(_persistKeySelectedAccountId, currentAccount?.id);
+    }
+    state = AccountManagerState(state.accounts, currentAccount);
+  }
+
   AccountManager._(this.restoreAccount)
       : super(const AccountManagerState({}, null));
 
