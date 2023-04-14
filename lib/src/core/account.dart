@@ -117,7 +117,7 @@ class Account<R> {
   }
 
   Future deleteBox(String name) {
-    return Hive.deleteBoxFromDisk(name);
+    return Hive.deleteBoxFromDisk('$id-$name');
   }
 
   Stream<BoxEvent> watchMetadata({dynamic key}) {
