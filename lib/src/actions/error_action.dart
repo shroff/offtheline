@@ -6,22 +6,24 @@ import 'api_action.dart';
 import '../core/api_client.dart';
 import '../core/account.dart';
 
-class UnknownAction<A extends Account> extends ApiAction<A> {
+class ErrorAction<A extends Account> extends ApiAction<A> {
   @override
   final String name;
+  final String error;
   final Map<String, dynamic> props;
   @override
   final dynamic binaryData;
 
-  UnknownAction({
+  ErrorAction({
     required this.name,
+    required this.error,
     required this.props,
     required this.binaryData,
   });
 
   @override
   String generateDescription(A account) {
-    return 'Nop Action';
+    return 'Error Action ($name): $error';
   }
 
   @override
@@ -36,7 +38,7 @@ class UnknownAction<A extends Account> extends ApiAction<A> {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is UnknownAction && other.props == props;
+    return other is ErrorAction && other.props == props;
   }
 
   @override
@@ -52,6 +54,7 @@ class UnknownAction<A extends Account> extends ApiAction<A> {
   @override
   String generatePayloadDetails() => json.encode({
         'name': name,
+        'error': error,
         'props': props,
       });
 }

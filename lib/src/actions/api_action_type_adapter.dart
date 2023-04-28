@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 
-import 'unknown_action.dart';
+import 'error_action.dart';
 import 'api_action.dart';
 import '../core/account.dart';
 
@@ -8,11 +8,9 @@ const _fieldName = 0;
 const _fieldProps = 1;
 const _fieldBinaryData = 2;
 
-typedef ApiActionDeserializer<A extends Account> = ApiAction<A> Function(
-    Map<String, dynamic> props, dynamic data);
+typedef ApiActionDeserializer<A extends Account> = ApiAction<A> Function(Map<String, dynamic> props, dynamic data);
 
-class ApiActionTypeAdapter<A extends Account>
-    extends TypeAdapter<ApiAction<A>> {
+class ApiActionTypeAdapter<A extends Account> extends TypeAdapter<ApiAction<A>> {
   final Map<String, ApiActionDeserializer<A>> deserializers;
   @override
   final int typeId;
@@ -33,13 +31,23 @@ class ApiActionTypeAdapter<A extends Account>
     final props = (fields[_fieldProps] as Map).cast<String, dynamic>();
     final data = fields[_fieldBinaryData];
     if (deserializer == null) {
-      return UnknownAction<A>(
+      return ErrorAction<A>(
         name: name,
+        error: 'Unknown Action',
         props: props,
         binaryData: data,
       );
     }
-    return deserializer.call(props, data);
+    try {
+      return deserializer.call(props, data);
+    } catch (e) {
+      return ErrorAction<A>(
+        name: name,
+        error: e.toString(),
+        props: props,
+        binaryData: data,
+      );
+    }
   }
 
   @override
