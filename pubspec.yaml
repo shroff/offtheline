@@ -8,7 +8,7 @@ environment:
 
 dependencies:
   hive: ^2.0.0
-  http: ^0.13.0
+  http: 
   logger: 
   meta:
   state_notifier:
