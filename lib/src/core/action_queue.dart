@@ -21,8 +21,7 @@ class ApiActionQueueState {
   ApiActionQueueState(this.actions, this.paused, this.submitting, this.error);
 }
 
-class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
-    with AccountListener<R>, LocatorMixin {
+class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState> with AccountListener<R>, LocatorMixin {
   late final Box<ApiAction<Account<R>>> _actionsBox;
   late final Function() _removeListener;
   Iterable<ApiAction> get actions => List.unmodifiable(state.actions);
@@ -42,16 +41,12 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     super.initialize(account);
 
     _actionsBox = await account.openBox(_actionsBoxName);
-    final actions = _actionsBox.values.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final actions = _actionsBox.values.toList()..sort((a, b) => a.key.compareTo(b.key));
 
     state = ApiActionQueueState(actions, paused, submitting, error);
 
     _removeListener = addListener((state) {
-      if (!state.paused &&
-          !state.submitting &&
-          state.actions.isNotEmpty &&
-          state.error == null) {
+      if (!state.paused && !state.submitting && state.actions.isNotEmpty && state.error == null) {
         _sendNextAction();
       }
     });
@@ -73,12 +68,10 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
   Future<void> addAction(ApiAction<Account<R>> action) async {
     if (closed) return;
-    OTL.logger?.d(
-        '[actions][${account.id}] Adding action: ${action.generateDescription(account)}');
+    OTL.logger?.d('[actions][${account.id}] Adding action: ${action.generateDescription(account)}');
     await action.applyOptimisticUpdate(account);
     _actionsBox.add(action);
-    state =
-        ApiActionQueueState([...actions, action], paused, submitting, error);
+    state = ApiActionQueueState([...actions, action], paused, submitting, error);
   }
 
   Future<void> removeActionAt(int index, {bool revert = true}) async {
@@ -90,8 +83,7 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
     final actions = List.of(state.actions);
     final action = actions.removeAt(index);
 
-    OTL.logger?.d(
-        '[actions][${account.id}] Removing action: ${action.generateDescription(account)}');
+    OTL.logger?.d('[actions][${account.id}] Removing action: ${action.generateDescription(account)}');
     final error = index == 0 ? null : this.error;
     _actionsBox.deleteAt(index);
     state = ApiActionQueueState(actions, paused, submitting, error);
@@ -111,22 +103,15 @@ class ApiActionQueue<R> extends StateNotifier<ApiActionQueueState>
 
   void _sendNextAction() async {
     await account.initialized;
-    if (closed ||
-        state.actions.isEmpty ||
-        this.error != null ||
-        paused ||
-        submitting) {
+    if (closed || state.actions.isEmpty || this.error != null || paused || submitting) {
       return;
     }
 
     state = ApiActionQueueState(state.actions, paused, true, null);
 
     final action = state.actions.first;
-    OTL.logger?.d(
-        '[actions][${account.id}] Submitting Action: ${action.generateDescription(account)}');
-    final request = action.createRequest(account.api);
-
-    final error = await account.api.sendRequest(request, tag: action.tag);
+    OTL.logger?.d('[actions][${account.id}] Submitting Action: ${action.generateDescription(account)}');
+    final error = await account.api.sendRequest(action);
     final actions = (error == null) ? state.actions.sublist(1) : state.actions;
     if (error == null) {
       OTL.logger?.d('[actions][${account.id}] Successfully completed');

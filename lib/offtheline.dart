@@ -2,6 +2,7 @@ export 'actions.dart';
 export 'src/core/api_error_response.dart';
 export 'src/core/action_queue.dart';
 export 'src/core/api_client.dart';
+export 'src/core/api_request.dart';
 export 'src/core/dispatcher.dart';
 export 'src/core/account.dart';
 export 'src/core/account_listener.dart';
