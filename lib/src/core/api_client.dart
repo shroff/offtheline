@@ -133,7 +133,8 @@ class ApiClient<R> with AccountListener<R> {
       if (callback != null && !await callback.call(response)) {
         return;
       }
-      for (final processResponse in _responseListeners) {
+      final listeners = List.of(_responseListeners);
+      for (final processResponse in listeners) {
         await processResponse(response, tag);
       }
     } finally {
